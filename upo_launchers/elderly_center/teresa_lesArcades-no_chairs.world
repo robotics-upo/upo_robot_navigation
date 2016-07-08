@@ -1,0 +1,228 @@
+include "map.inc"
+
+# this is very helpful if you have multiple CPU cores
+threads 4
+
+#----- BLOQUE --------------------------------------------------------
+define block model
+(
+  size [0.200 0.450 1.700]	
+  gui_nose 0
+  laser_return 1
+  ranger_return 0.500
+  obstacle_return 1
+  blob_return 1
+  fiducial_return 1
+  gui_move 1		
+)
+
+
+
+#----- HOKUYO LASER -----------------------------------------------------------
+define hokuyolaser ranger
+(
+  sensor( 			
+    # laser-specific properties
+    # factory settings for LMS200	
+    range [ 0.0  10.0 ]
+    fov 200.0 #180
+    samples 320 #270
+  )
+  # generic model properties
+  color "purple"
+  size [ 0.070 0.070 0.050 ] # dimensions from LMS200 data sheet	
+)
+
+#----- FIDUCIAL -----------------------------------------------------------
+define fidu fiducial
+(
+  color "purple"
+  size [ 0.070 0.070 0.050 ]
+  range_min 0.1   #meters
+  range_max 10    #meters
+  range_max_id 10 #meters
+  fov 350.0       #180.0  #field of view degrees	
+  ignore_zloc 1	
+)
+
+
+
+
+#------- GIRAFF BASE ------------------------------------------------------
+define giraff_base position 
+(
+  color "blue"			# Default color.
+  drive "diff"		 	# Differential steering model.
+  gui_nose 1                  	# Draw a nose on the robot so we can see which way it points
+  obstacle_return 1           	# Can hit things.
+  ranger_return 0.500            	# reflects sonar beams
+  blob_return 1               	# Seen by blobfinders  
+  fiducial_return 2           	# Seen as "2" fiducial finders
+
+  #localization "gps"         	  
+  #localization_origin [0 0 0 0] 	# Start odometry at (0, 0, 0).
+
+  # alternative odometric localization with simple error model
+  localization "odom"        # Change to "gps" to have impossibly perfect, global odometry
+  odom_error [ 0.05 0.05 0.0 0.01 ]   	# Odometry error or slip in X, Y, Z and Theta
+                                   	# (Uniform random distribution)   
+
+  # four DOF kinematics limits
+  # [ xmin xmax ymin ymax zmin zmax amin amax ]				
+  velocity_bounds [-0.5 0.5 0 0 0 0 -90.0 90.0 ]					
+  acceleration_bounds [-0.6 0.6 0 0 0 0 -90 90.0 ]
+)
+
+# ----------------- The TERESA standard configuration -----------------------------------
+define teresa giraff_base
+(
+  # Actual size
+  #size [0.640 0.500 1.600]
+  size [0.453 0.453 1.600]
+
+  # The pioneer's center of rotation is offset from its center of area
+  #origin [-0.045 0.000 0.000 0.000]
+
+  # Estimated mass in KG
+  mass 30.0 
+
+  # Body shape:
+  #block( 
+  #  points 8
+  #  point[0] [-0.18 0.313]
+  #  point[1] [0.18 0.313]
+  #  point[2] [0.2525 0.18]
+  #  point[3] [0.2525 -0.18]
+  #  point[4] [0.18 -0.313]
+  #  point[5] [-0.18 -0.313]
+  #  point[6] [-0.2525 -0.18]
+  #  point[7] [-0.2525 0.18]
+  #)
+
+  # sensors 
+  #hokuyolaser(pose [0.320 0.000 -1.400 0.000]) #pose[x y z yaw]
+  #hokuyolaser(pose [-0.320 0.000 -1.400 180.000])
+  #cam(pose [0.000 0.000 0.300 0.000])
+  hokuyolaser(pose [0.226 0.000 -1.400 0.000]) #pose[x y z yaw]
+  hokuyolaser(pose [-0.226 0.000 -1.400 180.000])
+  fidu()	
+)
+
+
+#----------- MAPA DE FONDO -----------------------------------------------------
+define floorplan model
+(
+  # sombre, sensible, artistic
+  color "gray30"
+
+  # most maps will need a bounding box
+  boundary 0
+
+  gui_nose 0
+  gui_grid 0
+  gui_move 0
+
+  gui_outline 0
+  gripper_return 0
+  fiducial_return 0
+  laser_return 1
+  ranger_return 1.000
+  obstacle_return 1		
+)
+
+# set the resolution of the underlying raytrace model in meters
+resolution 0.05  # meters/pix?
+
+interval_sim 100  # simulation timestep in milliseconds
+
+
+#------ VENTANA DE STAGE -----------------------------------------------------------
+window
+( 
+  size [ 665 410 ]           	# in pixels
+  # camera options
+  center [ 15.225 11.985 ]
+  rotate [ 0.000 -0.500 ]
+  #scale 20			# pixels per meter
+  scale 35.431
+
+  # perspective camera options
+  pcam_loc [ -32.981 27.945 33.200 ]
+  pcam_angle [ 0.000 -3093.972 ]
+
+  # GUI options
+  show_data 1
+  show_flags 1
+  show_blocks 1
+  show_clock 1
+  show_footprints 0
+  show_grid 0
+  show_trailarrows 0
+  show_trailrise 0
+  show_trailfast 0
+  show_occupancy 0
+  show_tree 0
+  pcam_on 0
+  screenshots 0 
+)
+
+
+#---- load an environment bitmap -------------------------------------------------
+floorplan
+( 
+  name "LesArcades-stage"
+  bitmap "maps/LesArcades-no_chairs.pgm"  #803x662
+  size [40.150 33.100 2.500]  # x pix*0,05 m/pix = metros
+  pose [ 20.075 16.550 0.000 0.000]
+)
+
+#---------throw in the pioneer --------------------------------
+
+teresa( pose [ 9.000 12.000 0.000 0.000 ] name "teresa")
+
+#person( pose [ 110 62 0.000 45.000 ] color "magenta" name "person1")
+#block( pose [ 113.365 59.865 0.000 1.570 ] color "purple" fiducial_return 1)
+#block( pose [ 105.326 61.582 0.000 156.727 ] color "purple" fiducial_return 2)
+#block( pose [ 104.598 62.400 0.000 -32.349 ] color "purple" fiducial_return 3)
+#block( pose [ 106.746 55.727 0.000 1.570 ] color "purple" fiducial_return 4)
+block( pose [ 8.643 16.268 0.000 -155.030 ] color "purple" fiducial_return 1)
+block( pose [ 14.814 12.672 0.000 156.727 ] color "purple" fiducial_return 2)
+block( pose [ 14.814 13.672 0.000 156.727 ] color "purple" fiducial_return 3)
+block( pose [ 13.814 12.672 0.000 156.727 ] color "purple" fiducial_return 4)
+block( pose [ 13.814 13.672 0.000 156.727 ] size [0.45 0.45 1.700] color "yellow" fiducial_return 0)
+
+
+#uses fiducial_return values > 10 for persons with ctrl behaviors
+#person( pose [ 102 61 0.000 0 ] name "person2" ctrl "wander_single_ranger" fiducial_return 10)
+#person( 
+#	pose [ 101 60 0.000 41.298 ]
+#	name "person3"
+#	fiducial_return 11
+#	ctrl "goal_directed 0.8 repeat 121 58 30 101 60 30" 
+	# goal_directed 'cruise_velocity' 'repeat or once' x_goal' 'y_goal' 'waitduration'
+#)
+#person( 
+#	pose [ 101 61 0.000 41.298 ]
+#	name "person4"
+#	fiducial_return 12
+#	ctrl "goal_directed 0.8 repeat 121 59 30 101 61 30" 
+#)
+#person( pose [ 119 61 0.000 90 ] name "person5" ctrl "wander_single_ranger" fiducial_return 13)
+#person( 
+#	pose [ 101 59 0.000 41.298 ]
+#	name "person6"
+#	fiducial_return 14
+#	ctrl "goal_directed 1.2 repeat 121 63 30 101 59 30" 
+#)
+#person( 
+#	pose [ 121 62 0.000 41.298 ]
+#	name "person7"
+#	fiducial_return 15
+#	ctrl "goal_directed 1.0 repeat 101 60 20 121 62 20" 
+#)
+#person( 
+#	pose [ 121 63 0.000 41.298 ]
+#	name "person8"
+#	fiducial_return 16
+#	ctrl "goal_directed 1.0 repeat 99 59 20 121 63 20" 
+#)
