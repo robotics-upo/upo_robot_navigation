@@ -15,6 +15,6 @@ This metapackage contains the following packages:
 
 * **upo_launchers**. Contains the maps, configuration files and launch files necessary to launch a simulation of the navigation system in two environments; a simple room of the UPO lab and a elderly center with different rooms.
 
-* **upo_navigation_macro_actions**. A set of navigation macro-actions have been also implemented. This, way the navigation system is employed to perform different actions as reaching a simple goal or approaching a moving person. A launch file to test the macro-actions is inside the launch directory.
+* **upo_navigation_macro_actions**. A set of navigation macro-actions have been also implemented. This way, the navigation system is employed to perform different actions as reaching a simple goal or approaching a moving person. A launch file to test the macro-actions is inside the launch directory.
 
 
