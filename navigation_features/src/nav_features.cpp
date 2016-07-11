@@ -66,9 +66,9 @@ features::NavFeatures::NavFeatures(tf::TransformListener* tf, const costmap_2d::
 	}
 	
 	
-	n.param("use_laser_projection", use_laser_projection_, false);
+	n.param<bool>("use_laser_projection", use_laser_projection_, false);
 	
-	n.param("use_uva_features", use_uva_features_, false);
+	n.param<bool>("use_uva_features", use_uva_features_, false);
 	
 	if(use_uva_features_)
 	{
@@ -88,18 +88,22 @@ features::NavFeatures::NavFeatures(tf::TransformListener* tf, const costmap_2d::
 		
 		}
 	
-		float front;
-		n.param("stddev_person_front", front, (float)1.2);
-		float aside;
-		n.param("stddev_person_aside", aside, (float)(1.2/1.5)); //=0.8
+		double front;
+		n.param<double>("stddev_person_front", front, 1.2);
+		double aside;
+		n.param<double>("stddev_person_aside", aside, (1.2/1.5)); //=0.8
 		
-		n.param("enable_grouping", grouping_, true); 
-		n.param("stddev_group", stddev_group_, (float)0.8);
-		n.param("grouping_distance", grouping_distance_, (float)1.5);
+		n.param<bool>("enable_grouping", grouping_, true); 
+		double aux;
+		n.param<double>("stddev_group", aux, 0.8);
+		stddev_group_ = (float)aux;
+		double aux2;
+		n.param<double>("grouping_distance", aux2, 1.5);
+		grouping_distance_ = (float)aux2;
 		
 		amp_ = 1.80;			//Amplitude, max value of the gaussian
-		sigmas_.push_back(front);  //front of person. front
-		sigmas_.push_back(aside); //aside of person. front
+		sigmas_.push_back((float)front);  //front of person. front
+		sigmas_.push_back((float)aside); //aside of person. front
 		sigmas_.push_back(sigmas_.at(1)); //front of person. back
 		sigmas_.push_back(sigmas_.at(1)); //aside of person. back
 	}

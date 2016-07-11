@@ -143,22 +143,26 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 
 
 
-	private_nh.param("rrt_planner_type", rrt_planner_type_, 1);
+	private_nh.param<int>("rrt_planner_type", rrt_planner_type_, 1);
 	printf("RRT_ros_wrapper. rrt_planner_type = %i\n",  rrt_planner_type_);
       	
   	//UvA parameters
 	//bool use_uva_lib;
-   	private_nh.param("use_feature_lib", use_uva_lib_, false);
+   	private_nh.param<bool>("use_feature_lib", use_uva_lib_, false);
 	
 	//RRT 
- 	private_nh.param("rrt_solve_time", solve_time_, (float)0.8);
-	//float goal_bias;
-	private_nh.param("rrt_goal_bias", goal_bias_, (float)0.1);
-	//float max_range;
-	private_nh.param("rrt_max_insertion_dist", max_range_, (float)0.2);
+	double aux;
+ 	private_nh.param<double>("rrt_solve_time", aux, 0.8);
+ 	solve_time_ = (float)aux;
+ 	
+	private_nh.param<double>("rrt_goal_bias", aux, 0.1);
+	goal_bias_ = (float)aux;
 	
-	float robot_radius;
-	private_nh.param("robot_radius", robot_radius, (float) 0.3);
+	private_nh.param<double>("rrt_max_insertion_dist", aux, 0.2);
+	max_range_ = (float) aux;
+	
+	double robot_radius;
+	private_nh.param<double>("robot_radius", robot_radius, 0.3);
 	
 	//RRT*
 	//bool rrtstar_use_k_nearest = true;
@@ -166,12 +170,15 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 	//float rrtstar_path_bias = 0.0;
 	//float rrtstar_stddev_bias = 0.0;
 	//float rrtstar_rewire_factor = 0.0;
-	if(rrt_planner_type_ == 2 || rrt_planner_type_ == 4) {
-		private_nh.param("rrtstar_use_k_nearest", rrtstar_use_k_nearest_, true);
-		private_nh.param("rrtstar_path_biasing", rrtstar_path_biasing_, false);
-		private_nh.param("rrtstar_path_bias", rrtstar_path_bias_, (float)0.5);
-		private_nh.param("rrtstar_stddev_bias", rrtstar_stddev_bias_, (float)0.8);
-		private_nh.param("rrtstar_rewire_factor", rrtstar_rewire_factor_, (float)1.1);
+	if(rrt_planner_type_ == 2 || rrt_planner_type_ >= 4) {
+		private_nh.param<bool>("rrtstar_use_k_nearest", rrtstar_use_k_nearest_, true);
+		private_nh.param<bool>("rrtstar_path_biasing", rrtstar_path_biasing_, false);
+		private_nh.param<double>("rrtstar_path_bias", aux, 0.5);
+		rrtstar_path_bias_ = (float)aux;
+		private_nh.param<double>("rrtstar_stddev_bias", aux, 0.8);
+		rrtstar_stddev_bias_ = (float)aux;
+		private_nh.param<double>("rrtstar_rewire_factor", aux, 1.1);
+		rrtstar_rewire_factor_ = (float)aux;
 	}
 	
 	
@@ -181,52 +188,57 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 	//int kino_steeringType;
 	if(rrt_planner_type_ > 2) {
 		
-		private_nh.param("kino_time_step", kino_timeStep_, (float)0.067);
-		private_nh.param("kino_min_control_steps", kino_minControlSteps_, 5);
-		private_nh.param("kino_max_control_steps", kino_maxControlSteps_, 30);
+		private_nh.param<double>("kino_time_step", aux, 0.067);
+		kino_timeStep_ = (float)aux;
+		private_nh.param<int>("kino_min_control_steps", kino_minControlSteps_, 5);
+		private_nh.param<int>("kino_max_control_steps", kino_maxControlSteps_, 30);
 		//Robot accelerations
-		private_nh.param("kino_linear_acc", kino_linAcc_, (float) 0.6);
-		private_nh.param("kino_angular_acc", kino_angAcc_, (float) 1.57);
-		
-		private_nh.param("kino_steering_type", kino_steeringType_, 1); 
+		private_nh.param<double>("kino_linear_acc", aux, 0.6);
+		kino_linAcc_ = (float)aux;
+		private_nh.param<double>("kino_angular_acc", aux, 1.57);
+		kino_angAcc_ = (float)aux;
+		private_nh.param<int>("kino_steering_type", kino_steeringType_, 1); 
 	}
 	
 
 	//RRT State Space
-	private_nh.param("rrt_dimensions", dimensions_, 2);
-  	private_nh.param("rrt_size_x", size_x_, (float)5.0);
-	private_nh.param("rrt_size_y", size_y_, (float)5.0);
-	//float xy_res;
-	private_nh.param("rrt_xy_resolution", xy_res_, (float)0.1);
-	//float yaw_res;
-	private_nh.param("rrt_yaw_resolution", yaw_res_, (float)0.02);
-	//float min_lin_vel;
-	private_nh.param("rrt_min_linear_vel", min_lin_vel_, (float)0.0);
-	//float max_lin_vel;
-	private_nh.param("rrt_max_linear_vel", max_lin_vel_, (float)0.5);
-	//float lin_vel_res;
-	private_nh.param("rrt_lin_vel_resolution", lin_vel_res_, (float)0.05);
-	//float max_ang_vel;
-	private_nh.param("rrt_max_angular_vel", max_ang_vel_, (float)0.5);
-	//float ang_vel_res;
-	private_nh.param("rrt_ang_vel_resolution", ang_vel_res_, (float)0.1);
-	//float goal_xy_tol;
-	private_nh.param("rrt_goal_xy_tol", goal_xy_tol_, (float)0.15);
-	//float goal_th_tol;
-	private_nh.param("rrt_goal_th_tol", goal_th_tol_, (float)0.15);
-	//int nn_params;
-	private_nh.param("rrt_nn_type", nn_params_, 1);
+	private_nh.param<int>("rrt_dimensions", dimensions_, 2);
+  	private_nh.param<double>("rrt_size_x", aux, 5.0);
+  	size_x_ = (float)aux;
+	private_nh.param<double>("rrt_size_y", aux, 5.0);
+	size_y_ = (float)aux;
+	private_nh.param<double>("rrt_xy_resolution", aux, 0.1);
+	xy_res_ = (float)aux;
+	private_nh.param<double>("rrt_yaw_resolution", aux, 0.02);
+	yaw_res_ = (float)aux;
+	private_nh.param<double>("rrt_min_linear_vel", aux, 0.0);
+	min_lin_vel_ = (float)aux;
+	private_nh.param<double>("rrt_max_linear_vel", aux, 0.5);
+	max_lin_vel_ = (float)aux;
+	private_nh.param<double>("rrt_lin_vel_resolution", aux, 0.05);
+	lin_vel_res_ = (float)aux;
+	private_nh.param<double>("rrt_max_angular_vel", aux, 0.5);
+	max_ang_vel_ = (float)aux;
+	private_nh.param<double>("rrt_ang_vel_resolution", aux, 0.1);
+	ang_vel_res_ = (float)aux;
+	private_nh.param<double>("rrt_goal_xy_tol", aux, 0.15);
+	goal_xy_tol_ = (float)aux;
+	private_nh.param<double>("rrt_goal_th_tol", aux, 0.15);
+	goal_th_tol_ = (float)aux;
+	private_nh.param<int>("rrt_nn_type", nn_params_, 1);
 	//int distanceType;
-	private_nh.param("distance_type", distanceType_, 1);
-	private_nh.param("motion_cost_type", motionCostType_, 1);
+	private_nh.param<int>("distance_type", distanceType_, 1);
+	private_nh.param<int>("motion_cost_type", motionCostType_, 1);
 	
 	//Visualization
-  	private_nh.param("visualize_rrt_tree", visualize_tree_, false);
-   	private_nh.param("visualize_nav_costmap", visualize_costmap_, false);
-	private_nh.param("show_rrt_statistics", show_statistics_, false);
-	private_nh.param("equal_path_percentage", equal_path_percentage_, (float)0.5);
-	private_nh.param("rrt_interpolate_path_dist", interpolate_path_distance_, (float)0.05);
-	private_nh.param("show_intermediate_states", show_intermediate_states_, false);
+  	private_nh.param<bool>("visualize_rrt_tree", visualize_tree_, false);
+   	private_nh.param<bool>("visualize_nav_costmap", visualize_costmap_, false);
+	private_nh.param<bool>("show_rrt_statistics", show_statistics_, false);
+	private_nh.param<double>("equal_path_percentage", aux, 0.5);
+	equal_path_percentage_ = (float)aux;
+	private_nh.param<double>("rrt_interpolate_path_dist", aux, 0.05);
+	interpolate_path_distance_ = (float)aux;
+	private_nh.param<bool>("show_intermediate_states", show_intermediate_states_, false);
 	
 	
 	//if the planner is an RRT, the nav costmap can not be visualized
@@ -255,8 +267,8 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 	//costmap_2d::calculateMinAndMaxDistances(footprint_, irad, crad);
 	//inscribed_radius_ = irad;
 	//circumscribed_radius_ = crad;
-	inscribed_radius_  = robot_radius;
-	circumscribed_radius_ = robot_radius;
+	inscribed_radius_  = (float)robot_radius;
+	circumscribed_radius_ = (float)robot_radius;
 
 	checker_ = new ValidityChecker(tf_, local_costmap_, global_costmap_, &footprint_, inscribed_radius_, size_x_, size_y_, dimensions_, distanceType_);
 	
