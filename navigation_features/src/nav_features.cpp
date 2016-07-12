@@ -507,10 +507,16 @@ float features::NavFeatures::getCost(geometry_msgs::PoseStamped* s)
 
 	//Goal distance cost
 	float dist_cost = goalDistFeature(s);
+	if(dist_cost > 1.0) {
+		//printf("GetCost. Dist_cost out of range > 1. returning 1!!!\n");
+		dist_cost = 1.0;
+	}
+	if(dist_cost < 0.0){
+		printf("GetCost. Dist_cost out of range < 0. Returning 0!!!\n");
+		dist_cost = 0.0;
+	}	
 	features.push_back(dist_cost);
-	if(dist_cost > 1.0 || dist_cost < 0.0)
-		printf("GetCost. Dist_cost out of range!!!\n");
-			
+	
 	//Obstacle distance cost
 	float obs_cost = obstacleDistFeature(s);
 	features.push_back(obs_cost);
@@ -519,15 +525,18 @@ float features::NavFeatures::getCost(geometry_msgs::PoseStamped* s)
 	}
 	//Proxemics cost
 	float prox_cost = proxemicsFeature(s);
-	features.push_back(prox_cost);
 	if(prox_cost > 1.0 || prox_cost < 0.0) {
 		printf("GetCost. Prox_cost out of range!!!\n");
 		prox_cost = 0.0;
 	}
+	features.push_back(prox_cost);
 
-	if(prox_cost == 0.0)
+	if(prox_cost == 0.0 && obs_cost != 0.0)
 		return (0.5*dist_cost + 0.5*obs_cost);	
-	
+	if(obs_cost == 0.0 && prox_cost != 0.0)
+		return (0.6*prox_cost + 0.4*dist_cost);
+	if(prox_cost == 0.0 && obs_cost == 0.0)
+		return dist_cost;
 	
 	float cost = 0.0;
 	for(unsigned int i=0; i<w_.size(); i++)

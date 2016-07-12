@@ -1,0 +1,187 @@
+#-----GENERAL PARAMS FOR UPO_NAVIGATION -------------------------
+base_global_planner: navfn/NavfnROS
+base_local_planner: upo_navigation/RRTPlannerROS
+recovery_behaviors: [{
+    name: conservative_reset, 
+    type: clear_costmap_recovery/ClearCostmapRecovery
+  }, {
+    name: aggressive_reset,
+    type: clear_costmap_recovery/ClearCostmapRecovery
+#  }, {
+#    name: rotate_recovery1,
+#    type: rotate_recovery/RotateRecovery
+#  }, {
+#    name: rotate_recovery2,
+#    type: rotate_recovery/RotateRecovery
+  }]
+planner_frequency:          0 #5 #def:0
+controller_frequency:       15.0
+planner_patience:           15.0
+controller_patience:        10.0
+conservative_reset_dist:    4.0
+recovery_behavior_enabled:  true
+clearing_rotation_allowed:  false
+shutdown_costmaps:          false
+oscillation_timeout:        0.0
+oscillation_distance:       0.5
+
+# freq of the of the rrt loop in the thread
+thread_sleep_msecs:         100
+
+
+
+#------ GLOBAL PLANNER PARAMS -------------------------------------
+# http://www.ros.org/wiki/navfn
+NavfnROS:
+
+  allow_unknown:                      false
+  planner_window_x:                   0.0
+  planner_window_y:                   0.0
+  default_tolerance:                  0.05
+  visualize_potential:                true  
+  planner_costmap_publish_frequency:  1.0
+  use_dijkstra:                       false 
+  old_navfn_behavior:                 false
+
+
+
+
+#---- LOCAL PLANNER PARAMS ----------------------------------------
+#---- params for RRT planner -------------------------------
+RRT_ros_wrapper:
+
+  # RRT planner to use
+  # 1 -> RRT (no dynamics)
+  # 2 -> RRTstar (no dynamics)
+  # 3 -> Kinodynamic RRT
+  # 4 -> Kinodynamic RRTstar 
+  # 5 -> Kinodynamic simplified RRTstar
+  rrt_planner_type:           2 
+  rrt_solve_time:             1.0 
+  rrt_goal_bias:              0.05 
+  rrt_max_insertion_dist:     0.25 #0.25<-2  0.50 o 1.0<-4
+  rrt_goal_xy_tol:            0.1
+  rrt_goal_th_tol:            0.12
+  # If we want to interpolate the resulting path
+  # if we don't. This value should be 0 or below 0.
+  rrt_interpolate_path_dist:  0.05
+
+  #if the planner is RRT* 
+  rrtstar_use_k_nearest:      false
+  rrtstar_path_biasing:       true
+  rrtstar_path_bias:          0.7
+  rrtstar_stddev_bias:        1.0 #0.7
+
+  #if the planner is kinodynamic (options 3 and 4)
+  kino_time_step:             0.2 
+  kino_min_control_steps:     5  #not used currently
+  kino_max_control_steps:     3    
+  kino_linear_acc:            1.0
+  kino_angular_acc:           1.0
+  # 1-> POSQ
+  # 2-> i-POSQ
+  kino_steering_type:         2
+
+  # State Space
+  # dim=2-> x, y
+  # dim=3-> x, y, yaw
+  rrt_dimensions:             2
+
+  # 1-> dist (no sqrt)
+  # 2-> euclidean dist
+  # 3-> dist+quaternions_diff
+  # 4-> custom (dist+alpha)
+  distance_type:              2  
+
+  # 1-> avg
+  # 2-> avg * dist
+  # 3-> avg * exp(dist)
+  # 4-> sum
+  motion_cost_type:           2
+
+  rrt_size_x:                 4.0 #5.0
+  rrt_size_y:                 4.0 #5.0
+  rrt_xy_resolution:          0.05
+  rrt_yaw_resolution:         0.02
+  rrt_min_linear_vel:         0.0
+  rrt_max_linear_vel:         0.4
+  rrt_max_angular_vel:        0.5
+  rrt_lin_vel_resolution:     0.05
+  rrt_ang_vel_resolution:     0.1
+  rrt_nn_type:                1
+
+  # Visualization
+  visualize_rrt_tree:         true
+  visualize_nav_costmap:      true
+  show_rrt_statistics:        false
+  show_intermediate_states:   false #use only in case of kino
+
+  robot_radius:               0.34  #meters
+
+  # between [0-1]
+  # if the equality of the path costs is below
+  # this percentage, calculate a new RRT path 
+  #equal_path_percentage:      1.0   #Not used currently
+
+
+
+#---- PARAMS FOR FEATURES CALCULATION-------------------------
+Navigation_features:
+
+  # param to use UvA social cost library
+  use_uva_features:           false
+  
+  #Use the laser projection or the ros costmap
+  # to calculate the obstacle distance cost
+  use_laser_projection:       false
+
+  # Gaussian functions
+  stddev_person_front:        1.2
+  stddev_person_aside:        0.8
+
+  enable_grouping:            true  
+  stddev_group:               0.8
+  grouping_distance:          1.5
+
+  # Weights for function costs
+  w1:                         0.1   #goal dist
+  w2:                         0.4  #obstacle dist
+  w3:                         0.5  #proxemics
+
+  
+
+
+#------------------------------------------------------------
+# Parameters for the PATH FOLLOWING CONTROLLER
+TrajectoryPlannerPP:
+
+# Robot Configuration Parameters
+  acc_lim_x:                  1.0
+  acc_lim_y:                  0.0
+  acc_lim_th:                 1.0
+  max_vel_x:                  0.4 
+  min_vel_x:                  0.1
+  max_vel_th:                 0.5
+  min_vel_th:                 0.1
+  min_in_place_vel_th:        0.4
+
+# Goal Tolerance Parameters
+  yaw_goal_tolerance:         0.1
+  xy_goal_tolerance:          0.10
+  wp_tolerance:               0.5
+  
+# Forward Simulation Parameters
+  sim_time:                   0.5 #PP:0.5, 1.0:TR
+  sim_granularity:            0.025
+  angular_sim_granularity:    0.025
+
+# Trajectory Scoring Parameters
+  pdist_scale:                0.8 #0.6   
+  gdist_scale:                0.6 #0.8    
+  occdist_scale:              0.01    #0.03 #0.01
+  heading_scoring:            false #true    
+  heading_scoring_timestep:   0.8
+  simple_attractor:           false
+  
+
+  

@@ -747,7 +747,7 @@ namespace upo_nav{
 	// Check if we need rotation in place before moving the robot to reach the way-point
 	if(fabs(dt) > 0.75) //0.7~41º  0.79~45º
 	{
-		vx = rvx-incr;
+		vx = rvx-incr;  
 		if(vx < 0.0)
 			vx = 0.0;
 		vy = 0.0;
@@ -779,13 +779,13 @@ namespace upo_nav{
 		else
 		{*/
 			
-			vx = max_vel_x_ * exp(-fabs(dt)) * tanh(4*dist_swp); //max_vel_x_;
+			vx = max_vel_x_* exp(-fabs(dt)) * tanh(4*dist_swp); //max_vel_x_;
 			vy = 0.0;
 			vt = max_vel_th_ * dt; //max_vel_th_;
 		//}
 
-		if(vx > rvx+incr)
-			vx = rvx+incr;
+		//if(vx > rvx+incr)
+		//	vx = rvx+incr;
 		
 		// Set the sign of the commanded angular velocity and reset in case of small variations
 		//if(dt < 0.0) //commented by Noé
@@ -803,6 +803,7 @@ namespace upo_nav{
 		cmd_vel.angular.x = 0.0;
 		cmd_vel.angular.y = 0.0;
 		cmd_vel.angular.z = vt;
+		//printf("max_vel_x: %.3f, vx: %.3f, vth: %.3f\n", max_vel_x_, vx, vt);
 		return true;
 	}
 	//---previous code-----

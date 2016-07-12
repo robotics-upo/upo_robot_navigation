@@ -70,11 +70,11 @@
    <!--GDB: launch-prefix="xterm -e gdb (double hyphen)args"  VALGRIND: launch-prefix="valgrind (double hyphen)leak-check=yes"-->
    <node pkg="upo_navigation" type="upo_navigation_node" respawn="false" name="upo_navigation_node" output="screen" >
 	<remap from="/upo_navigation_simple/goal" to="/move_base_simple/goal" />
-	<rosparam file="$(find upo_launchers)/params/navigation_params.yaml" command="load" />
-	<rosparam file="$(find upo_launchers)/params/costmap_common_params.yaml" command="load" ns="global_costmap" />
-	<rosparam file="$(find upo_launchers)/params/costmap_common_params.yaml" command="load" ns="local_costmap" />
-	<rosparam file="$(find upo_launchers)/params/local_costmap_params.yaml" command="load" />
-	<rosparam file="$(find upo_launchers)/params/global_costmap_params.yaml" command="load" />
+	<rosparam file="$(find upo_launchers)/params_sim/navigation_params.yaml" command="load" />
+	<rosparam file="$(find upo_launchers)/params_sim/costmap_common_params.yaml" command="load" ns="global_costmap" />
+	<rosparam file="$(find upo_launchers)/params_sim/costmap_common_params.yaml" command="load" ns="local_costmap" />
+	<rosparam file="$(find upo_launchers)/params_sim/local_costmap_params.yaml" command="load" />
+	<rosparam file="$(find upo_launchers)/params_sim/global_costmap_params.yaml" command="load" />
   </node>
 
 

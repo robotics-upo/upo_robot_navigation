@@ -1197,7 +1197,7 @@ namespace upo_nav {
 			unsigned int map_x, map_y;
 			double dist_x = fabs(gx - robot_pose.pose.position.x);
 			double dist_y = fabs(gy - robot_pose.pose.position.y);
-			if (dist_x <= rrt_radius && dist_y <= rrt_radius) {
+			if (dist_x <= (rrt_radius-1.0) && dist_y <= (rrt_radius-1.0)) {
 				intermediate_goal = planner_plan_->at(i);
 				intermediate_goal.header.stamp = ros::Time::now();
 				//intermediate_goal.header.frame_id = move_base_goal->target_pose.header.frame_id;
@@ -1279,7 +1279,7 @@ namespace upo_nav {
 						unsigned int map_x, map_y;
 						double dist_x = fabs(gx - robot_pose.pose.position.x);
 						double dist_y = fabs(gy - robot_pose.pose.position.y);
-						if (dist_x <= rrt_radius && dist_y <= rrt_radius) {
+						if (dist_x <= (rrt_radius-1.0) && dist_y <= (rrt_radius-1.0)) {
 							intermediate_goal = planner_plan_->at(i);
 							intermediate_goal.header.stamp = ros::Time::now();
 							//intermediate_goal.header.frame_id = move_base_goal->target_pose.header.frame_id;
@@ -1352,7 +1352,7 @@ namespace upo_nav {
 				unsigned int map_x, map_y;
 				double dist_x = fabs(gx - robot_pose.pose.position.x);
 				double dist_y = fabs(gy - robot_pose.pose.position.y);
-				if (dist_x <= rrt_radius && dist_y <= rrt_radius) {
+				if (dist_x <= (rrt_radius-1.0) && dist_y <= (rrt_radius-1.0)) {
 					intermediate_goal = planner_plan_->at(i);
 					intermediate_goal.header.stamp = ros::Time::now();
 					intermediate_goal.header.frame_id = move_base_goal->target_pose.header.frame_id;
