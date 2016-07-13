@@ -117,7 +117,7 @@ namespace features {
 			
 			
 			//For laser projection
-			void setupProjection(std::string topic, bool pc_type);
+			void setupProjection(std::string topic, int pc_type);
 			float distance_functions(const float distance, const dist_type type);
 			void updateDistTransform();
 			std::vector<int> worldToMap(geometry_msgs::Point32* world_point,nav_msgs::MapMetaData* map_metadata);
@@ -186,7 +186,7 @@ namespace features {
 			ros::Subscriber sub_people_;
 			boost::mutex peopleMutex_;
 			std::string people_frame_id_;
-			
+			//bool first_;
 			
 			bool grouping_;
 			float stddev_group_;

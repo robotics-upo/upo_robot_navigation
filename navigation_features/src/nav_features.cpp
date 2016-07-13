@@ -128,7 +128,7 @@ features::NavFeatures::~NavFeatures() {
 
 
 
-void features::NavFeatures::setupProjection(std::string topic, bool pc_type)
+void features::NavFeatures::setupProjection(std::string topic, int pc_type)
 {
 	
 	people_paint_area_ = 25;
@@ -161,9 +161,9 @@ void features::NavFeatures::setupProjection(std::string topic, bool pc_type)
 	cv::distanceTransform(map_image_,distance_transform_,CV_DIST_L1,3);
 	dtMutex_.unlock();
  
-	if(pc_type == 1)
+	if(pc_type == 1) 	//pointCloud
 		sub_pc_ = nh_.subscribe(topic, 1, &NavFeatures::pcCallback, this);
-	else
+	else   				//pointCloud2
 		sub_pc_ = nh_.subscribe(topic, 1, &NavFeatures::pc2Callback, this);
 }
 
@@ -180,8 +180,9 @@ void features::NavFeatures::peopleCallback(const upo_msgs::PersonPoseArrayUPO::C
 	
 		peopleMutex_.lock();
 		people_ = msg->personPoses;
-		if(people_frame_id_.empty())
+		//if(people_frame_id_.empty()) {
 			people_frame_id_ = msg->header.frame_id;
+		//}
 		peopleMutex_.unlock();
 	
 	//}
@@ -710,6 +711,9 @@ void features::NavFeatures::calculateGaussians()
 	frame = people_frame_id_;
 	peopleMutex_.unlock();
 	
+	//printf("Frame %s\n", frame.c_str());
+	//printf("\n\ncalculateGaussians. People detected: %u\n\n", (unsigned int)people_aux.size());
+	
 	std::vector<gaussian> gauss_aux;
 	
 	if(grouping_) 
@@ -934,16 +938,18 @@ float features::NavFeatures::proxemicsFeature(geometry_msgs::PoseStamped* s)  {
 	gauss = gaussians_;
 	gaussianMutex_.unlock();
 	
-	if(gauss.size() == 0)
+	if(gauss.size() == 0) {
+		//printf("gaussian size = 0. Returning 0.0\n");
 		return 0.0;
+	}
 	
-	//peopleMutex_.lock();
-	//std::string people_frame = people_frame_id_;
-	//peopleMutex_.unlock();
+	peopleMutex_.lock();
+	std::string people_frame = people_frame_id_;
+	peopleMutex_.unlock();
 	
 	//We need to transform the sample to the same frame of the people
 	geometry_msgs::PoseStamped robot = *s;
-	robot = transformPoseTo(robot, people_frame_id_, true);
+	robot = transformPoseTo(robot, people_frame, true);
 	
 	if(robot.header.frame_id.empty()){
 		printf("frame id empty. returning 0\n");
@@ -960,8 +966,6 @@ float features::NavFeatures::proxemicsFeature(geometry_msgs::PoseStamped* s)  {
 		float px = it->x;
 		float py = it->y;
 		
-		//printf("robot x:%.2f, y:%.2f, th:%.2f, sx:%.2f, sy:%.2f\n", it->x, it->y, it->th, it->sx, it->sy);
-		
 		/*
 		First, transform the robot location into person location frame: 
 									|cos(th)  sin(th)  0|
@@ -973,6 +977,8 @@ float features::NavFeatures::proxemicsFeature(geometry_msgs::PoseStamped* s)  {
 		*/
 		float x_r = (rx - px)*cos(ph) + (ry - py)*sin(ph);
 		float y_r = (rx - px)*(-sin(ph)) + (ry - py)*cos(ph);
+		
+		//printf("robot x:%.2f, y:%.2f, sx:%.2f, sy:%.2f\n", x_r, y_r, it->sx, it->sy);
 		
 		float cost = 0.0;
 		if(it->type == AROUND) {
@@ -999,6 +1005,7 @@ float features::NavFeatures::proxemicsFeature(geometry_msgs::PoseStamped* s)  {
 		//printf("prox_cost = %.3f\n", prox_cost);
 		prox_cost = 1.0;
 	}
+	//printf("prox_cost: %.3f\n", prox_cost);
 	return prox_cost;
 }
 
@@ -1026,7 +1033,7 @@ float features::NavFeatures::proxemicsFeature(geometry_msgs::PoseStamped* s)  {
 }*/
 
 
-float features::NavFeatures::getProxemicsCost(float rx, float ry)  {
+/*float features::NavFeatures::getProxemicsCost(float rx, float ry)  {
 
 	// read the person list (thread safe)
 	std::vector<upo_msgs::PersonPoseUPO> people_aux;
@@ -1049,7 +1056,7 @@ float features::NavFeatures::getProxemicsCost(float rx, float ry)  {
 		float ph = tf::getYaw(it->orientation);
 		float px = it->position.x;
 		float py = it->position.y;
-		bool front = true;
+		bool front = true;*/
 		/*
 		First, transform the robot location into person location frame: 
 									|cos(th)  sin(th)  0|
@@ -1059,7 +1066,7 @@ float features::NavFeatures::getProxemicsCost(float rx, float ry)  {
 			x' = (xr-xp)*cos(th_p)+(yr-yp)*sin(th_p)
 			y' = (xr-xp)*(-sin(th_p))+(yr-yp)*cos(th_p)
 		*/
-		float x_r = (rx - px)*cos(ph) + (ry - py)*sin(ph);
+		/*float x_r = (rx - px)*cos(ph) + (ry - py)*sin(ph);
 		float y_r = (rx - px)*(-sin(ph)) + (ry - py)*cos(ph);
 		if(x_r < 0.0)
 			front = false;
@@ -1074,7 +1081,7 @@ float features::NavFeatures::getProxemicsCost(float rx, float ry)  {
 	
 	return (prox_cost<=1.0)?prox_cost:1.0;
     
-}
+}*/
 
 
 float features::NavFeatures::gaussian_function(float x, float y, float sx, float sy) 
