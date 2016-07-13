@@ -80,7 +80,8 @@ namespace features {
 
 			void peopleCallback(const upo_msgs::PersonPoseArrayUPO::ConstPtr& msg);
 			
-			void pcCallback(const sensor_msgs::PointCloud2::ConstPtr& pc_in);
+			void pcCallback(const sensor_msgs::PointCloud::ConstPtr& pc_in);
+			void pc2Callback(const sensor_msgs::PointCloud2::ConstPtr& pc_in);
 			
 			void calculateGaussians();
 
@@ -116,7 +117,7 @@ namespace features {
 			
 			
 			//For laser projection
-			void setupProjection();
+			void setupProjection(std::string topic, bool pc_type);
 			float distance_functions(const float distance, const dist_type type);
 			void updateDistTransform();
 			std::vector<int> worldToMap(geometry_msgs::Point32* world_point,nav_msgs::MapMetaData* map_metadata);

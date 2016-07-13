@@ -1197,7 +1197,7 @@ namespace upo_nav {
 			unsigned int map_x, map_y;
 			double dist_x = fabs(gx - robot_pose.pose.position.x);
 			double dist_y = fabs(gy - robot_pose.pose.position.y);
-			if (dist_x <= (rrt_radius-1.0) && dist_y <= (rrt_radius-1.0)) {
+			if (dist_x <= (rrt_radius) && dist_y <= (rrt_radius)) {
 				intermediate_goal = planner_plan_->at(i);
 				intermediate_goal.header.stamp = ros::Time::now();
 				//intermediate_goal.header.frame_id = move_base_goal->target_pose.header.frame_id;
@@ -1279,7 +1279,7 @@ namespace upo_nav {
 						unsigned int map_x, map_y;
 						double dist_x = fabs(gx - robot_pose.pose.position.x);
 						double dist_y = fabs(gy - robot_pose.pose.position.y);
-						if (dist_x <= (rrt_radius-1.0) && dist_y <= (rrt_radius-1.0)) {
+						if (dist_x <= (rrt_radius) && dist_y <= (rrt_radius)) {
 							intermediate_goal = planner_plan_->at(i);
 							intermediate_goal.header.stamp = ros::Time::now();
 							//intermediate_goal.header.frame_id = move_base_goal->target_pose.header.frame_id;
@@ -1342,7 +1342,7 @@ namespace upo_nav {
 		double robot_dist = sqrt(pow((goal_pose.pose.position.x - robot_pose.pose.position.x),2)+pow((goal_pose.pose.position.y - robot_pose.pose.position.y),2));
 		//distance from the intermediate goal to the final goal
 		double final_dist = sqrt(pow((goal_pose.pose.position.x - global_goal_.pose.position.x),2)+pow((goal_pose.pose.position.y - global_goal_.pose.position.y),2));
-		if(final_dist > 0.2 /*&& robot_dist < 1.8*/) //we plan again with an updated goal
+		if(final_dist >= 0.2 /*&& robot_dist < 1.8*/) //we plan again with an updated goal
 		{
 			//Now take the last point of the global path inside
 			//the local area --> goal for the RRT*
@@ -1352,7 +1352,7 @@ namespace upo_nav {
 				unsigned int map_x, map_y;
 				double dist_x = fabs(gx - robot_pose.pose.position.x);
 				double dist_y = fabs(gy - robot_pose.pose.position.y);
-				if (dist_x <= (rrt_radius-1.0) && dist_y <= (rrt_radius-1.0)) {
+				if (dist_x <= (rrt_radius) && dist_y <= (rrt_radius)) {
 					intermediate_goal = planner_plan_->at(i);
 					intermediate_goal.header.stamp = ros::Time::now();
 					intermediate_goal.header.frame_id = move_base_goal->target_pose.header.frame_id;
@@ -1775,6 +1775,7 @@ namespace upo_nav {
 	//Take current robot velocity
     tf::Stamped<tf::Pose> robot_vel;
     odom_helper_->getRobotVel(robot_vel);
+    //printf("upo_navigation. Robot vel x: %.3f, th: %.3f\n", robot_vel.getOrigin().getX(), tf::getYaw(robot_vel.getRotation()));
     //Eigen::Vector3f vel(robot_vel.getOrigin().getX(), robot_vel.getOrigin().getY(), tf::getYaw(robot_vel.getRotation()));
     //lin_vel = vel[0];
     //ang_vel = vel[2];

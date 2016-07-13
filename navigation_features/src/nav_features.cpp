@@ -67,6 +67,10 @@ features::NavFeatures::NavFeatures(tf::TransformListener* tf, const costmap_2d::
 	
 	
 	n.param<bool>("use_laser_projection", use_laser_projection_, false);
+	std::string pc_topic;
+	n.param<std::string>("pc_topic", pc_topic, std::string("/scan360/point_cloud")); 
+	int pc_type;
+	n.param<int>("pc_type", pc_type, 2); //1->PointCloud, 2->PointCloud2
 	
 	n.param<bool>("use_uva_features", use_uva_features_, false);
 	
@@ -76,7 +80,7 @@ features::NavFeatures::NavFeatures(tf::TransformListener* tf, const costmap_2d::
 		//uva_features_ = new uva_cost_functions::UvaFeatures(tf);
 		if(use_laser_projection_) {
 			max_cost_obs_ = distance_functions(0.0, INVERSE_DEC); //EXP_DEC //INVERSE_DEC
-			setupProjection();
+			setupProjection(pc_topic, pc_type);
 		}
 		
 	} else {
@@ -84,7 +88,7 @@ features::NavFeatures::NavFeatures(tf::TransformListener* tf, const costmap_2d::
 		//If we use the laser projection onto the static map
 		if(use_laser_projection_) {
 			max_cost_obs_ = distance_functions(0.0, INVERSE_DEC); //EXP_DEC //INVERSE_DEC
-			setupProjection();
+			setupProjection(pc_topic, pc_type);
 		
 		}
 	
@@ -124,7 +128,7 @@ features::NavFeatures::~NavFeatures() {
 
 
 
-void features::NavFeatures::setupProjection()
+void features::NavFeatures::setupProjection(std::string topic, bool pc_type)
 {
 	
 	people_paint_area_ = 25;
@@ -157,7 +161,10 @@ void features::NavFeatures::setupProjection()
 	cv::distanceTransform(map_image_,distance_transform_,CV_DIST_L1,3);
 	dtMutex_.unlock();
  
-	sub_pc_ = nh_.subscribe("/scan360/point_cloud", 1, &NavFeatures::pcCallback, this);
+	if(pc_type == 1)
+		sub_pc_ = nh_.subscribe(topic, 1, &NavFeatures::pcCallback, this);
+	else
+		sub_pc_ = nh_.subscribe(topic, 1, &NavFeatures::pc2Callback, this);
 }
 
 
@@ -196,7 +203,7 @@ void features::NavFeatures::setPeople(upo_msgs::PersonPoseArrayUPO p)
 
 //Point cloud callback
 // Only used if laser projection is employed
-void features::NavFeatures::pcCallback(const sensor_msgs::PointCloud2::ConstPtr& pc_in){
+void features::NavFeatures::pc2Callback(const sensor_msgs::PointCloud2::ConstPtr& pc_in){
 	
 	sensor_msgs::PointCloud2 lcloud;
 	sensor_msgs::PointCloud2 in = *pc_in;
@@ -219,6 +226,39 @@ void features::NavFeatures::pcCallback(const sensor_msgs::PointCloud2::ConstPtr&
 	laser_cloud_ = lcloud;
 	laserMutex_.unlock();
 }
+
+
+//Point cloud callback
+// Only used if laser projection is employed
+void features::NavFeatures::pcCallback(const sensor_msgs::PointCloud::ConstPtr& pc_in){
+	
+	sensor_msgs::PointCloud2 pc2;
+	bool ok = sensor_msgs::convertPointCloudToPointCloud2(*pc_in, pc2);
+	if(!ok)
+		ROS_ERROR("NavFeatures. Error transforming pointCloud to pointCloud2");
+	
+	sensor_msgs::PointCloud2 lcloud;
+	pc2.header.stamp = ros::Time();
+	try{  
+		//if(tf_listener_->waitForTransform(pc_in->header.frame_id, "/map", pc_in->header.stamp, ros::Duration(0.5))){
+			//laserMutex_.lock();
+			if(!pcl_ros::transformPointCloud("/map", pc2, lcloud, *tf_listener_))
+				ROS_ERROR("TransformPointCloud failed!!!!!");
+			//laserMutex_.unlock();
+			//updateDT();
+		//} else {
+			//printf("waitForTransform  failed!\n");
+		//}
+	} catch (tf::TransformException ex){
+		ROS_ERROR("NAV FEATURES. pcCallback. TransformException: %s", ex.what());
+	}
+	
+	laserMutex_.lock();
+	laser_cloud_ = lcloud;
+	laserMutex_.unlock();
+}
+
+
 
 
 
@@ -534,7 +574,7 @@ float features::NavFeatures::getCost(geometry_msgs::PoseStamped* s)
 	if(prox_cost == 0.0 && obs_cost != 0.0)
 		return (0.5*dist_cost + 0.5*obs_cost);	
 	if(obs_cost == 0.0 && prox_cost != 0.0)
-		return (0.6*prox_cost + 0.4*dist_cost);
+		return (0.5*prox_cost + 0.5*dist_cost);
 	if(prox_cost == 0.0 && obs_cost == 0.0)
 		return dist_cost;
 	

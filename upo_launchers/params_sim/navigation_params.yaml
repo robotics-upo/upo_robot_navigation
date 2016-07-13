@@ -134,6 +134,8 @@ Navigation_features:
   #Use the laser projection or the ros costmap
   # to calculate the obstacle distance cost
   use_laser_projection:       true
+  pc_topic:                   /scan360/point_cloud
+  pc_type:                    2
 
   # Gaussian functions
   stddev_person_front:        1.2
