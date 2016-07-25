@@ -17,10 +17,13 @@ This metapackage contains the following packages:
 
 * **upo_launchers**. Contains the maps, configuration files and launch files necessary to launch a simulation of the navigation system in two environments; a simple room of the UPO lab and a elderly center with different rooms.
 
-* **upo_navigation_macro_actions**. A set of navigation macro-actions have been also implemented. This way, the navigation system is employed to perform different actions as reaching a simple goal, approaching a moving person, or walk side-by-side. A launch file to test the macro-actions is inside the launch directory.
+* **upo_navigation_macro_actions**. A set of navigation macro-actions have been implemented by using the *actionlib* of ROS. This way, the navigation system is employed to perform different actions as reaching a simple goal, approaching a moving person, or walk side-by-side. A launch file to test the macro-actions is inside the launch directory.
 
 * **upo_social_layer**. This package contains a layer that can be used in the costmap_2d of ROS as a plugin. The layer is built by using the social functions of the navigation features package related to people. This way, a social cost related to the distance and orientation to people can be included in a costmap for robot navigation.
 
+## Dependences
+
+* The instalation of the ROS packages **navigation** and **AMCL** are required.
 
 The package is a **work in progress** used in research prototyping. Pull requests and/or issues are highly encouraged.
 
