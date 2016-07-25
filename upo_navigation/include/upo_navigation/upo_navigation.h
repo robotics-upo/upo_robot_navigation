@@ -21,6 +21,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <costmap_2d/costmap_2d_ros.h>
 #include <costmap_2d/costmap_2d.h>
+#include <costmap_2d/costmap_2d_publisher.h>
 #include <nav_msgs/GetPlan.h>
 
 #include <pluginlib/class_loader.h>
@@ -32,21 +33,8 @@
 // threads for RRT planning
 #include <boost/thread/thread.hpp>
 #include <boost/thread/mutex.hpp>
-#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp> 
 
-//#include <teresa_navigation/upo_rrt/rrt_planner_ros.h>
-#include <upo_navigation/pp_controller/trajectory_planner_pp.h>
-#include <upo_navigation/odometry_helper_ros.h>
-
-#include <costmap_2d/costmap_2d.h>
-#include <costmap_2d/costmap_2d_publisher.h>
-#include <costmap_2d/costmap_2d_ros.h>
-#include <upo_navigation/world_model.h>
-#include <upo_navigation/point_grid.h>
-#include <upo_navigation/costmap_model.h>
-#include <upo_navigation/voxel_grid_model.h>
-#include <upo_navigation/map_grid_visualizer.h>
-#include <upo_navigation/planar_laser_scan.h>
 #include <tf/transform_datatypes.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/PoseStamped.h>
@@ -100,12 +88,12 @@ namespace upo_nav {
 	   *  -1 if a valid control can not be found.
        */
       int executeCycle();
+      //bool executeCycle(geometry_msgs::PoseStamped& goal, std::vector<geometry_msgs::PoseStamped>& global_plan);
+      
       
       //----Noé-----------
       void setFeaturesWeights(std::vector<float> w);
-      //bool isPositionValid(double x, double y, std::string frame);
-	  //double getPlanArea();
-	  //unsigned int getNumPeople();
+    
 	  
 	  bool clearCostmaps();
 	  void updateCostmaps();
@@ -164,10 +152,6 @@ namespace upo_nav {
       bool makePlan(const geometry_msgs::PoseStamped& goal, std::vector<geometry_msgs::PoseStamped>& plan);
 
 
-	  //------------------------------------------------------------------------------------------------------
-	  
-	  //------------------------------------------------------------------------------------------------------
-
       /**
        * @brief  Load the recovery behaviors for the navigation stack from the parameter server
        * @param node The ros::NodeHandle to be used for loading parameters 
@@ -221,7 +205,7 @@ namespace upo_nav {
 
       MoveBaseActionServer* as_;
 
-      //boost::shared_ptr<nav_core::BaseLocalPlanner> tc_;
+      boost::shared_ptr<nav_core::BaseLocalPlanner> tc_;
       costmap_2d::Costmap2DROS* planner_costmap_ros_, *controller_costmap_ros_;
 
       boost::shared_ptr<nav_core::BaseGlobalPlanner> planner_;
@@ -247,13 +231,14 @@ namespace upo_nav {
       ros::Time last_valid_plan_, last_valid_control_, last_oscillation_reset_;
       geometry_msgs::PoseStamped oscillation_pose_;
       pluginlib::ClassLoader<nav_core::BaseGlobalPlanner> bgp_loader_;
-      //pluginlib::ClassLoader<nav_core::BaseLocalPlanner> blp_loader_;
+      pluginlib::ClassLoader<nav_core::BaseLocalPlanner> blp_loader_;
       //pluginlib::ClassLoader<nav_core::RecoveryBehavior> recovery_loader_;
 
       //set up plan triple buffer
       std::vector<geometry_msgs::PoseStamped>* planner_plan_;
       //std::vector<geometry_msgs::PoseStamped>* latest_plan_;
       std::vector<geometry_msgs::PoseStamped>* local_plan_;
+      std::vector<geometry_msgs::PoseStamped>* controller_plan_;
 
       //set up the planner's thread
       bool runPlanner_;
@@ -275,16 +260,16 @@ namespace upo_nav {
 	  ros::ServiceServer make_rrt_plan_srv_;
 
 
-	  upo_nav::OdometryHelperRos* odom_helper_;
+	  //upo_nav::OdometryHelperRos* odom_helper_;
 	  std::vector<geometry_msgs::Point> footprint_spec_;
-	  MapGridVisualizer map_viz_;
+	  //MapGridVisualizer map_viz_;
 
 	  //RRT planner
 	  //RRTPlannerROS* rrt_planner_;
 	  upo_RRT_ros::RRT_ros_wrapper* rrt_planner_;
 
 	  //Controller to follow the RRT path
-	  TrajectoryPlannerPP* pure_pursuit_;
+	  //TrajectoryPlannerPP* pure_pursuit_;
 
       //boost::recursive_mutex configuration_mutex_;
       //dynamic_reconfigure::Server<move_base::MoveBaseConfig> *dsrv_;

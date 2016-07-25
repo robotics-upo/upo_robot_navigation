@@ -1,6 +1,6 @@
 #-----GENERAL PARAMS FOR UPO_NAVIGATION -------------------------
 base_global_planner: navfn/NavfnROS
-base_local_planner: simple_local_planner/PurePlannerROS
+base_local_planner: upo_navigation/RRTPlannerROS
 recovery_behaviors: [{
     name: conservative_reset, 
     type: clear_costmap_recovery/ClearCostmapRecovery
@@ -73,7 +73,7 @@ RRT_ros_wrapper:
   rrtstar_stddev_bias:        1.0 #0.7
 
   #get the RRT* costs from a costmap
-  use_fc_in_costmap:          false
+  use_fc_in_costmap:          true
 
   #if the planner is kinodynamic (options 3 and 4)
   kino_time_step:             0.2 
@@ -115,9 +115,9 @@ RRT_ros_wrapper:
 
   # Visualization
   visualize_rrt_tree:         true
-  visualize_nav_costmap:      true
+  visualize_nav_costmap:      false
   show_rrt_statistics:        true
-  show_intermediate_states:   false #true only in case of kino
+  show_intermediate_states:   false #use only in case of kino
 
   robot_radius:               0.34  #meters
 
@@ -136,7 +136,7 @@ Navigation_features:
   
   #Use the laser projection or the ros costmap
   # to calculate the obstacle distance cost
-  use_laser_projection:       false
+  use_laser_projection:       true    #has to be true if use_fc_in_costmap is true
   pc_topic:                   /scan360/point_cloud
   pc_type:                    2
 
@@ -150,8 +150,8 @@ Navigation_features:
 
   # Weights for function costs
   w1:                         0.1   #goal dist
-  w2:                         0.4  #obstacle dist
-  w3:                         0.5  #proxemics
+  w2:                         0.5  #obstacle dist
+  w3:                         0.4  #proxemics
 
   
 

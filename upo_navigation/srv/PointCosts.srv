@@ -1,6 +1,0 @@
-float64 x
-float64 y
----
-float64 goaldist_cost
-float64 inflation_cost
-float64 gaussian_cost

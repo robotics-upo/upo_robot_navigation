@@ -3,8 +3,7 @@
     <version>1.0.0</version>
     <description>
 
-        Complete navigation stack that uses RRT* as a global planner an a pure pursuit controller
-		as a local planner.
+        Complete navigation stack that uses A*+RRT* as a global planner an a pure pursuit controller as a local planner.
 
     </description>
   
@@ -47,6 +46,8 @@
     <build_depend>clear_costmap_recovery</build_depend>
     <build_depend>navfn</build_depend>
     <build_depend>rotate_recovery</build_depend>
+	<build_depend>upo_social_layer</build_depend>
+  
 
     <!--<run_depend>base_local_planner</run_depend>-->
     <run_depend>clear_costmap_recovery</run_depend>
@@ -76,5 +77,6 @@
 	<run_depend>voxel_grid</run_depend>
   	<run_depend>upo_msgs</run_depend>
 	<run_depend>upo_rrt_planners</run_depend>
+	<run_depend>upo_social_layer</run_depend>
 
 </package>

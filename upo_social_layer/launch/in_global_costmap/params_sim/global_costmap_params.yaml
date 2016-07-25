@@ -13,9 +13,9 @@ global_costmap:
 
   plugins: 
     - {name: static_layer,         type: "costmap_2d::StaticLayer"}
-    #- {name: obstacle_layer,       type: "costmap_2d::ObstacleLayer"}
+    - {name: obstacle_layer,       type: "costmap_2d::ObstacleLayer"}
     - {name: inflation_layer,      type: "costmap_2d::InflationLayer"}
-    #- {name: social_layer,         type: "social_layer::SocialLayer"}
+    - {name: social_layer,         type: "social_layer::SocialLayer"}
 
 
   static_layer: 
@@ -36,8 +36,8 @@ global_costmap:
     track_unknown_space: true
     transform_tolerance: 0.2 #default=0.2
     observation_sources: laserfront_scan_sensor laserback_scan_sensor
-    #laserfront_scan_sensor: {sensor_frame: base_laser_link_0, data_type: LaserScan, topic: base_scan_0, marking: true, clearing: true, expected_update_rate: 1.0, obstacle_range: 5.0, raytrace_range: 6.3 }
-    #laserback_scan_sensor: {sensor_frame: base_laser_link_1, data_type: LaserScan, topic: base_scan_1, marking: true, clearing: true, expected_update_rate: 1.0, obstacle_range: 5.0, raytrace_range: 6.3}
+    laserfront_scan_sensor: {sensor_frame: base_laser_link_0, data_type: LaserScan, topic: base_scan_0, marking: true, clearing: true, expected_update_rate: 1.0, obstacle_range: 5.0, raytrace_range: 6.3 }
+    laserback_scan_sensor: {sensor_frame: base_laser_link_1, data_type: LaserScan, topic: base_scan_1, marking: true, clearing: true, expected_update_rate: 1.0, obstacle_range: 5.0, raytrace_range: 6.3}
 
     #observation_sources: laser 
     #laser: {sensor_frame: base_link, data_type: LaserScan, topic: scan360, marking: true, clearing: true, inf_is_valid: false, expected_update_rate: 0.8, obstacle_range: 5.0, raytrace_range: 6.3}
@@ -48,10 +48,10 @@ global_costmap:
     cost_scaling_factor: 3.0
 
    
-  #social_layer:
-  #  size_x: 5.0
-  #  size_y: 5.0
-  #  all_features: false
+  social_layer:
+    size_x: 5.0
+    size_y: 5.0
+    all_features: false
 
 
 

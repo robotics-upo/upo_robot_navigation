@@ -22,8 +22,8 @@ find_package(catkin REQUIRED
   		visualization_msgs
   		voxel_grid
   		upo_msgs
-		#social_cost_library
 		upo_rrt_planners
+		upo_social_layer
 )
 
 ## System dependencies are found with CMake's conventions
@@ -54,24 +54,23 @@ add_definitions(${EIGEN_DEFINITIONS})
 
 
 ## Generate messages in the 'msg' folder
-add_message_files(
-    DIRECTORY msg
-    FILES
-    Position2DInt.msg
-	PointCost.msg
-	FeaturesWeights.msg
- )
+#add_message_files(
+#    DIRECTORY msg
+#    FILES
+#    Position2DInt.msg
+
+ #)
 
 
-add_service_files(
-   FILES
-   PointCosts.srv
-)
+#add_service_files(
+#   FILES
+#   PointCosts.srv
+#)
 
-generate_messages(
-   DEPENDENCIES
-   std_msgs
-)
+#generate_messages(
+#   DEPENDENCIES
+#   std_msgs
+#)
 
 catkin_package(
 	INCLUDE_DIRS include
@@ -97,36 +96,13 @@ catkin_package(
   		voxel_grid
   		upo_msgs
 		upo_rrt_planners
+		upo_social_layer
 	#DEPENDS system_lib
 )
 
 
 # upo_navigation
 add_library(upo_navigation
-	src/pp_controller/trajectory_planner_pp.cpp
-	#src/upo_rrt/gmm_sampling.cpp
-    #src/upo_rrt/FeatureFunctions.cpp
-	#src/upo_rrt/RRTstar.cpp
-	#src/upo_rrt/InformedRRTstar.cpp
-	#src/upo_rrt/rrt_planner_ros.cpp
-	src/footprint_helper.cpp
-	src/goal_functions.cpp
-	src/map_cell.cpp
-	src/map_grid.cpp
-	src/map_grid_visualizer.cpp
-	src/map_grid_cost_function.cpp
-	src/latched_stop_rotate_controller.cpp
-	src/local_planner_util.cpp
-	src/odometry_helper_ros.cpp
-	src/obstacle_cost_function.cpp
-	src/oscillation_cost_function.cpp
-	src/prefer_forward_cost_function.cpp
-	src/point_grid.cpp
-	src/costmap_model.cpp
-	src/simple_scored_sampling_planner.cpp
-	src/simple_trajectory_generator.cpp
-	src/trajectory.cpp
-	src/voxel_grid_model.cpp
   	src/upo_navigation.cpp
 )
 
@@ -142,6 +118,7 @@ target_link_libraries(upo_navigation
     ${Eigen_LIBRARIES}
 	${OpenCV_LIBRARIES}
 	upo_rrt_planners_ros
+	upo_social_layer
     )
 
 # Regular navigation

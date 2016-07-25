@@ -65,24 +65,29 @@ namespace features {
 
 			NavFeatures();
 			
-			//Used in case of uva_features
 			NavFeatures(tf::TransformListener* tf, float size_x, float size_y);
-
-			~NavFeatures();
 			
 			NavFeatures(tf::TransformListener* tf, const costmap_2d::Costmap2D* loc_costmap, const costmap_2d::Costmap2D* glob_costmap, std::vector<geometry_msgs::Point>* footprint, float insc_radius, float size_x, float size_y);
+
+			~NavFeatures();
+
+			void setParams();
 
 			bool poseValid(geometry_msgs::PoseStamped* pose);
 
 			float getCost(geometry_msgs::PoseStamped* s);
 		
 			std::vector<float> getFeatures(geometry_msgs::PoseStamped* s);
+			
+			void goalCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
 
 			void peopleCallback(const upo_msgs::PersonPoseArrayUPO::ConstPtr& msg);
 			
 			void pcCallback(const sensor_msgs::PointCloud::ConstPtr& pc_in);
 			void pc2Callback(const sensor_msgs::PointCloud2::ConstPtr& pc_in);
 			
+			
+			void update();
 			void calculateGaussians();
 
 			//Implemented for learning purposes
@@ -187,6 +192,8 @@ namespace features {
 			boost::mutex peopleMutex_;
 			std::string people_frame_id_;
 			//bool first_;
+			
+			ros::Subscriber goal_sub_;
 			
 			bool grouping_;
 			float stddev_group_;

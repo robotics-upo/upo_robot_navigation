@@ -1,0 +1,5 @@
+<library path="lib/libupo_social_layer">
+  <class type="social_layer::SocialLayer" base_class_type="costmap_2d::Layer">
+    <description>Layer that add a social cost based on the people around the robot</description>
+  </class>
+</library>

@@ -14,6 +14,10 @@ This is a catkin package of ROS that contains two libraries:
 * *upo_rrt_planners_ros*: C++ library that wraps the previous library in order to be used in ROS. 
 
 
+## Dependences
+
+* Package **navigation_features**.
+
 ## Parameters
 
 * **rrt_planner_type**. RRT planner to use (value 1,2,3,4 or 5)

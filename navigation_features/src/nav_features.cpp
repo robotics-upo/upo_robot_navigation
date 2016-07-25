@@ -3,7 +3,7 @@
 #include <nav_msgs/Odometry.h>
 #include <Eigen/Core>
 #include <ros/console.h>
-
+#include <sys/time.h>
 
 
 features::NavFeatures::NavFeatures() {}
@@ -14,8 +14,9 @@ features::NavFeatures::NavFeatures(tf::TransformListener* tf, float size_x, floa
 	size_x_ = size_x;
 	size_y_ = size_y;
 	max_planning_dist_ = sqrt((size_x_*2*size_x_*2)+(size_y_*2*size_y_*2));
+	insc_radius_robot_ = 0.34;
 	
-	use_uva_features_ = true;
+	setParams();
 
 }
 
@@ -37,11 +38,15 @@ features::NavFeatures::NavFeatures(tf::TransformListener* tf, const costmap_2d::
 	myfootprint_ = footprint;
 	
 	
+	setParams();
+ 	
+}
+
+
+void features::NavFeatures::setParams()
+{
 	//Read the ROS params from the server
-	//ros::NodeHandle n("~/upo_navigation/Navigation_features");
 	ros::NodeHandle n("~/Navigation_features");
-	//ros::NodeHandle n("~");
-	
 	
 	//Load weights "w1, w2, ..."
 	w_.clear();
@@ -114,11 +119,11 @@ features::NavFeatures::NavFeatures(tf::TransformListener* tf, const costmap_2d::
 	
 	sub_people_ = nh_.subscribe("/people/navigation", 1, &NavFeatures::peopleCallback, this); 
 	
+	goal_sub_ = nh_.subscribe("/rrt_goal", 1, &NavFeatures::goalCallback, this);
+	
 	pub_gaussian_markers_ = n.advertise<visualization_msgs::MarkerArray>("gaussian_markers", 1);
- 	
+	
 }
-
-
 
 
 features::NavFeatures::~NavFeatures() {
@@ -169,6 +174,11 @@ void features::NavFeatures::setupProjection(std::string topic, int pc_type)
 
 
 
+void features::NavFeatures::goalCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
+{
+	//printf("NavFeatures. RRT Goal received\n");
+	setGoal(*msg);
+}
 
 void features::NavFeatures::peopleCallback(const upo_msgs::PersonPoseArrayUPO::ConstPtr& msg) 
 {
@@ -180,9 +190,9 @@ void features::NavFeatures::peopleCallback(const upo_msgs::PersonPoseArrayUPO::C
 	
 		peopleMutex_.lock();
 		people_ = msg->personPoses;
-		//if(people_frame_id_.empty()) {
+		if(people_.size() > 0) {
 			people_frame_id_ = msg->header.frame_id;
-		//}
+		}
 		peopleMutex_.unlock();
 	
 	//}
@@ -213,14 +223,14 @@ void features::NavFeatures::pc2Callback(const sensor_msgs::PointCloud2::ConstPtr
 		//if(tf_listener_->waitForTransform(pc_in->header.frame_id, "/map", pc_in->header.stamp, ros::Duration(0.5))){
 			//laserMutex_.lock();
 			if(!pcl_ros::transformPointCloud("/map", in, lcloud, *tf_listener_))
-				ROS_ERROR("TransformPointCloud failed!!!!!");
+				ROS_WARN("TransformPointCloud failed!!!!!");
 			//laserMutex_.unlock();
 			//updateDT();
 		//} else {
 			//printf("waitForTransform  failed!\n");
 		//}
 	} catch (tf::TransformException ex){
-		ROS_ERROR("NAV FEATURES. pcCallback. TransformException: %s", ex.what());
+		ROS_WARN("NAV FEATURES. pcCallback. TransformException: %s", ex.what());
 	}
 	
 	laserMutex_.lock();
@@ -236,7 +246,7 @@ void features::NavFeatures::pcCallback(const sensor_msgs::PointCloud::ConstPtr& 
 	sensor_msgs::PointCloud2 pc2;
 	bool ok = sensor_msgs::convertPointCloudToPointCloud2(*pc_in, pc2);
 	if(!ok)
-		ROS_ERROR("NavFeatures. Error transforming pointCloud to pointCloud2");
+		ROS_WARN("NavFeatures. Error transforming pointCloud to pointCloud2");
 	
 	sensor_msgs::PointCloud2 lcloud;
 	pc2.header.stamp = ros::Time();
@@ -244,14 +254,14 @@ void features::NavFeatures::pcCallback(const sensor_msgs::PointCloud::ConstPtr& 
 		//if(tf_listener_->waitForTransform(pc_in->header.frame_id, "/map", pc_in->header.stamp, ros::Duration(0.5))){
 			//laserMutex_.lock();
 			if(!pcl_ros::transformPointCloud("/map", pc2, lcloud, *tf_listener_))
-				ROS_ERROR("TransformPointCloud failed!!!!!");
+				ROS_WARN("TransformPointCloud failed!!!!!");
 			//laserMutex_.unlock();
 			//updateDT();
 		//} else {
 			//printf("waitForTransform  failed!\n");
 		//}
 	} catch (tf::TransformException ex){
-		ROS_ERROR("NAV FEATURES. pcCallback. TransformException: %s", ex.what());
+		ROS_WARN("NAV FEATURES. pcCallback. TransformException: %s", ex.what());
 	}
 	
 	laserMutex_.lock();
@@ -271,7 +281,7 @@ void features::NavFeatures::updateDistTransform(){
 	laserMutex_.unlock();
 	
 	if(lcloud.data.size() <= 0) {
-		ROS_ERROR("No cloud updated");
+		ROS_WARN("No cloud updated");
 		return;
 	}
 	
@@ -499,30 +509,31 @@ float features::NavFeatures::costmapPointCost(float x, float y) const {
 	try {					
 		tf_listener_->transformPoint("map", p_in, p_out_map); 
 	}catch (tf::TransformException ex){
-		ROS_WARN("CostmapPointCost. x:%.2f, y:%.2f. TransformException: %s",x, y, ex.what());
+		ROS_WARN("CostmapPointCost1. x:%.2f, y:%.2f. TransformException: %s",x, y, ex.what());
 		return -100.0;
 	}
 	//get the cell coord of the center point of the robot
 	if(!costmap_global_->worldToMap((double)p_out_map.point.x, (double)p_out_map.point.y, cell_x, cell_y)) {
+		ROS_WARN("CostmapPointCost. Error in worldToMap conversion in costmap global!!! Returning highest cost");
 		return 254.0;
 	}
 	
 	global_cost = costmap_global_->getCost(cell_x, cell_y);
-	//printf("GC: %.1f \t", global_cost);
-		
 
 	//Local costmap---------------------------------------------
 	geometry_msgs::PointStamped p_out_odom;
 	try {					
 		tf_listener_->transformPoint("odom", p_in, p_out_odom); 
 	}catch (tf::TransformException ex){
-		ROS_WARN("CostmapPointCost. x:%.2f, y:%.2f. TransformException: %s",x, y, ex.what());
+		ROS_WARN("CostmapPointCost2. x:%.2f, y:%.2f. TransformException: %s",x, y, ex.what());
 		-100.0;
 	}
 
 	//get the cell coord of the center point of the robot
-	if(!costmap_local_->worldToMap((double)p_out_odom.point.x, (double)p_out_odom.point.y, cell_x, cell_y))
+	if(!costmap_local_->worldToMap((double)p_out_odom.point.x, (double)p_out_odom.point.y, cell_x, cell_y)) {
+		ROS_WARN("CostmapPointCost. Error in worldToMap conversion in local costmap!!! Returning highest cost");
 		return 254.0;
+	}
 
 	local_cost = costmap_local_->getCost(cell_x, cell_y);
 	//printf("LC: %.1f \t", local_cost);
@@ -564,6 +575,7 @@ float features::NavFeatures::getCost(geometry_msgs::PoseStamped* s)
 	if(obs_cost > 1.0 || obs_cost < 0.0) {
 		printf("GetCost. Obs_cost out of range!!! = %.2f\n", obs_cost);
 	}
+	
 	//Proxemics cost
 	float prox_cost = proxemicsFeature(s);
 	if(prox_cost > 1.0 || prox_cost < 0.0) {
@@ -571,13 +583,16 @@ float features::NavFeatures::getCost(geometry_msgs::PoseStamped* s)
 		prox_cost = 0.0;
 	}
 	features.push_back(prox_cost);
+	
+	if(obs_cost == 1.0)
+		return 1.0;
 
 	if(prox_cost == 0.0 && obs_cost != 0.0)
 		return (0.5*dist_cost + 0.5*obs_cost);	
-	if(obs_cost == 0.0 && prox_cost != 0.0)
-		return (0.5*prox_cost + 0.5*dist_cost);
-	if(prox_cost == 0.0 && obs_cost == 0.0)
-		return dist_cost;
+	//if(obs_cost == 0.0 && prox_cost != 0.0)
+	//	return (0.5*prox_cost + 0.5*dist_cost);
+	//if(prox_cost == 0.0 && obs_cost == 0.0)
+	//	return dist_cost;
 	
 	float cost = 0.0;
 	for(unsigned int i=0; i<w_.size(); i++)
@@ -624,7 +639,7 @@ float features::NavFeatures::obstacleDistFeature(geometry_msgs::PoseStamped* s) 
 	if(use_laser_projection_) {
 		
 		//Transform to map coordinates
-		geometry_msgs::PoseStamped sm = transformPoseTo(*s, std::string("/map"), true);
+		geometry_msgs::PoseStamped sm = transformPoseTo(*s, std::string("/map"), false);
 		
 		// This functions transforms position of people to pixels on map, gets distance and then converts to meters
 		float distance_x = sm.pose.position.x - (origin_)[0];
@@ -663,7 +678,7 @@ float features::NavFeatures::obstacleDistFeature(geometry_msgs::PoseStamped* s) 
 	} else {
 		
 		float obs_cost = costmapPointCost((float)s->pose.position.x, (float)s->pose.position.y);
-		return obs_cost/254.0;
+		return obs_cost/255.0;
 	}
 }
 
@@ -920,10 +935,18 @@ void features::NavFeatures::calculateGaussians()
 		marker.lifetime = ros::Duration(1.0);
 		m.markers.push_back(marker);
 	}
-	pub_gaussian_markers_.publish(m);
+	if(gauss_aux.size() > 0)
+		pub_gaussian_markers_.publish(m);
 	
 	//printf("\n\n %u Gaussians calculated!!!!\n", (unsigned int)gauss_aux.size());
-	
+}
+
+
+
+void features::NavFeatures::update()
+{
+	calculateGaussians();
+
 	if(use_laser_projection_)
 		updateDistTransform();
 	
@@ -949,7 +972,7 @@ float features::NavFeatures::proxemicsFeature(geometry_msgs::PoseStamped* s)  {
 	
 	//We need to transform the sample to the same frame of the people
 	geometry_msgs::PoseStamped robot = *s;
-	robot = transformPoseTo(robot, people_frame, true);
+	robot = transformPoseTo(robot, people_frame, false); //true
 	
 	if(robot.header.frame_id.empty()){
 		printf("frame id empty. returning 0\n");

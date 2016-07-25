@@ -1,6 +1,8 @@
 /*********************************************************************
 *
-*
+* Software License Agreement (BSD License)
+* 
+* 
 * Authors: Noé Pérez Higueras
 *          Fernando Caballero
 *
@@ -22,6 +24,7 @@ namespace upo_nav {
     as_(NULL),
     planner_costmap_ros_(NULL), controller_costmap_ros_(NULL),
 	bgp_loader_("nav_core", "nav_core::BaseGlobalPlanner"),
+	blp_loader_("nav_core", "nav_core::BaseLocalPlanner"),
     /*recovery_loader_("nav_core", "nav_core::RecoveryBehavior"),*/
     planner_plan_(NULL), local_plan_(NULL),
     runPlanner_(false), 
@@ -30,7 +33,7 @@ namespace upo_nav {
 	if(!macro)
 		as_ = new MoveBaseActionServer(ros::NodeHandle(), "upo_navigation", boost::bind(&UpoNavigation::executeCb, this, _1), false);
 
-    odom_helper_ = new upo_nav::OdometryHelperRos("odom");
+    //odom_helper_ = new upo_nav::OdometryHelperRos("odom");
 
     //ros::NodeHandle private_nh("~/upo_navigation");
     ros::NodeHandle private_nh("~");
@@ -41,7 +44,7 @@ namespace upo_nav {
     //get some parameters that will be global to the upo_navigation node
     std::string global_planner, local_planner;
     private_nh.param("base_global_planner", global_planner, std::string("navfn/NavfnROS"));
-    private_nh.param("base_local_planner", local_planner, std::string("base_local_planner/RRT_ros_wrapper"));
+    private_nh.param("base_local_planner", local_planner, std::string("base_local_planner/TrajectoryPlannerROS"));
     private_nh.param("global_costmap/robot_base_frame", robot_base_frame_, std::string("base_link"));
     private_nh.param("global_costmap/global_frame", global_frame_, std::string("/map"));
     private_nh.param("planner_frequency", planner_frequency_, 0.0);
@@ -62,6 +65,7 @@ namespace upo_nav {
     planner_plan_ = new std::vector<geometry_msgs::PoseStamped>();
     //latest_plan_ = new std::vector<geometry_msgs::PoseStamped>();
     local_plan_ = new std::vector<geometry_msgs::PoseStamped>();
+    controller_plan_ = new std::vector<geometry_msgs::PoseStamped>();
 
     //set up the planner's thread
     //planner_thread_ = new boost::thread(boost::bind(&UpoNavigation::planThread, this));
@@ -123,7 +127,7 @@ namespace upo_nav {
     controller_costmap_ros_->pause();
 	
 	//--------------------------------------------------------------------------
-    //create a local RRT planner
+    //create a semi-local RRT planner
 	//rrt_planner_ = new RRTPlannerROS(std::string("RRTPlannerROS"), &tf_, planner_costmap_ros_, controller_costmap_ros_);
 	//******new
 	rrt_planner_ = new upo_RRT_ros::RRT_ros_wrapper(&tf_, planner_costmap_ros_, controller_costmap_ros_);
@@ -135,14 +139,15 @@ namespace upo_nav {
 						
 
 	//create a controller to follow the RRT path
-	WorldModel* world_model_ = new CostmapModel(*(controller_costmap_ros_->getCostmap()));
-	footprint_spec_ = controller_costmap_ros_->getRobotFootprint(); 
-	pure_pursuit_ = new TrajectoryPlannerPP(*world_model_, *(controller_costmap_ros_->getCostmap()), footprint_spec_, controller_frequency_);
+	//WorldModel* world_model_ = new CostmapModel(*(controller_costmap_ros_->getCostmap()));
+	//footprint_spec_ = controller_costmap_ros_->getRobotFootprint(); 
+	//pure_pursuit_ = new TrajectoryPlannerPP(*world_model_, *(controller_costmap_ros_->getCostmap()), footprint_spec_, controller_frequency_);
 
-	map_viz_.initialize("TrajectoryPlannerPP", controller_costmap_ros_->getGlobalFrameID(), boost::bind(&TrajectoryPlannerPP::getCellCosts, pure_pursuit_, _1, _2, _3, _4, _5, _6));
+	//map_viz_.initialize("TrajectoryPlannerPP", controller_costmap_ros_->getGlobalFrameID(), boost::bind(&TrajectoryPlannerPP::getCellCosts, pure_pursuit_, _1, _2, _3, _4, _5, _6));
 	//--------------------------------------------------------------------------
 
-    /*try {
+	//create a local planner
+    try {
       //check if a non fully qualified name has potentially been passed in
       if(!blp_loader_.isClassAvailable(local_planner)){
         std::vector<std::string> classes = blp_loader_.getDeclaredClasses();
@@ -164,7 +169,7 @@ namespace upo_nav {
     {
       ROS_FATAL("Failed to create the %s planner, are you sure it is properly registered and that the containing library is built? Exception: %s", local_planner.c_str(), ex.what());
       exit(1);
-    }*/
+    }
 
     // Start actively updating costmaps based on sensor data
     planner_costmap_ros_->start();
@@ -196,6 +201,7 @@ namespace upo_nav {
     //we'll start executing recovery behaviors at the beginning of our list
     //recovery_index_ = 0;
 
+	//If we are not using the macro-actions servers we activate this
 	if(!macro) {
 		//we're all set up now so we can start the action server
 		as_->start();
@@ -654,11 +660,12 @@ namespace upo_nav {
     delete planner_plan_;
     //delete latest_plan_;
     delete local_plan_;
+    delete controller_plan_;
 
     planner_.reset();
-    //tc_.reset();
+    tc_.reset();
 	delete rrt_planner_;
-	delete pure_pursuit_;
+
   }
 
 
@@ -1293,6 +1300,7 @@ namespace upo_nav {
 				//until get a new plan
 				//local_plan_->clear();
 				//pure_pursuit_->updatePlan(*local_plan_, true);
+				//tc_->setPlan(*local_plan_);
         		
 				//as_->setAborted(move_base_msgs::MoveBaseResult(), "Current goal aborted.");
 				//return;
@@ -1363,7 +1371,7 @@ namespace upo_nav {
 			//We update the local plan to an empty plan in order to stop the robot
 			//until get a new plan
 			//local_plan_->clear();
-			//pure_pursuit_->updatePlan(*local_plan_, true);
+			//tc_->setPlan(*local_plan_);
 			
 			
 			current_goal_pub_.publish(intermediate_goal);
@@ -1388,8 +1396,8 @@ namespace upo_nav {
 		if(new_rrt_plan_) {
 		
 			//update the path
-			//printf("updating pure_pursuit plan!!!!!\n");
-			pure_pursuit_->updatePlan(*local_plan_, true);
+			//pure_pursuit_->updatePlan(*local_plan_, true);
+			tc_->setPlan(*local_plan_);
 		
 			//disable flag
 			rrt_mutex_.lock();
@@ -1429,7 +1437,8 @@ namespace upo_nav {
 			//until we get a new plan
 			printf("Stopping the robot!!!!!!!\n");
 			local_plan_->clear();
-			pure_pursuit_->updatePlan(*local_plan_, true);
+			//pure_pursuit_->updatePlan(*local_plan_, true);
+			tc_->setPlan(*local_plan_);
 
 			//Tell the rrt thread to plan
 			rrt_mutex_.lock();
@@ -1437,7 +1446,7 @@ namespace upo_nav {
 			rrt_mutex_.unlock();
 		}
 
-		map_viz_.publishCostCloud(controller_costmap_ros_->getCostmap());
+		//map_viz_.publishCostCloud(controller_costmap_ros_->getCostmap());
 		//ros::WallDuration dur = ros::WallTime::now() - startt;
 		//printf("Loop time: %.4f secs\n", dur.toSec());
 		r.sleep();
@@ -1610,7 +1619,8 @@ namespace upo_nav {
 		
 			//update the path
 			//printf("updating pure_pursuit plan!!!!!\n");
-			pure_pursuit_->updatePlan(*local_plan_, true);
+			//pure_pursuit_->updatePlan(*local_plan_, true);
+			tc_->setPlan(*local_plan_);
 		
 			//disable flag
 			rrt_mutex_.lock();
@@ -1649,7 +1659,8 @@ namespace upo_nav {
 			//until we get a new plan
 			printf("Stopping the robot!!!!!!!\n");
 			local_plan_->clear();
-			pure_pursuit_->updatePlan(*local_plan_, true);
+			//pure_pursuit_->updatePlan(*local_plan_, true);
+			tc_->setPlan(*local_plan_);
 
 			//Tell the rrt thread to plan
 			rrt_mutex_.lock();
@@ -1657,7 +1668,7 @@ namespace upo_nav {
 			rrt_mutex_.unlock();
 		}
 
-		map_viz_.publishCostCloud(controller_costmap_ros_->getCostmap());
+		//map_viz_.publishCostCloud(controller_costmap_ros_->getCostmap());
 		
 		//update feedback to correspond to our curent position
 		if(!planner_costmap_ros_->getRobotPose(global_pose)) {
@@ -1728,7 +1739,7 @@ namespace upo_nav {
 
 	
 	//check to see if we've reached our goal
- 	if(pure_pursuit_->isGoalReached()){
+ 	if(tc_->isGoalReached()){
 		
 		//--Noé. Check if the end of the local_plan if still far
 		//from the goal. In that case, return -1, to plan
@@ -1750,7 +1761,7 @@ namespace upo_nav {
 
 		//ROS_INFO("*******GOAL REACHED******");
 		as_->setSucceeded(move_base_msgs::MoveBaseResult(), "Goal reached.");
-		pure_pursuit_->resetGoal();
+		//pure_pursuit_->resetGoal();
 		return 1;
 	}
 
@@ -1765,22 +1776,19 @@ namespace upo_nav {
     //ros::WallDuration t5 = ros::WallTime::now() - t1;
 	//printf("Execute cycle. Time5: %.3f\n", t5.toSec());
 
-	tf::Stamped<tf::Pose> global_pose_odom;
+	/*tf::Stamped<tf::Pose> global_pose_odom;
     if (!controller_costmap_ros_->getRobotPose(global_pose_odom)) {
 	  ROS_WARN("Robot pose in odom coordinates can not be obtained!!!!");
       return 0;
-    }
-
+    }*/
 
 	//Take current robot velocity
-    tf::Stamped<tf::Pose> robot_vel;
-    odom_helper_->getRobotVel(robot_vel);
-    //printf("upo_navigation. Robot vel x: %.3f, th: %.3f\n", robot_vel.getOrigin().getX(), tf::getYaw(robot_vel.getRotation()));
-    //Eigen::Vector3f vel(robot_vel.getOrigin().getX(), robot_vel.getOrigin().getY(), tf::getYaw(robot_vel.getRotation()));
-    //lin_vel = vel[0];
-    //ang_vel = vel[2];
+    //tf::Stamped<tf::Pose> robot_vel;
+    //odom_helper_->getRobotVel(robot_vel);
+    
 
-	if(pure_pursuit_->findBestAction(global_pose_odom, robot_vel, cmd_vel))
+	//if(pure_pursuit_->findBestAction(global_pose_odom, robot_vel, cmd_vel))
+	if(tc_->computeVelocityCommands(cmd_vel))
 	{
           vel_pub_.publish(cmd_vel);
           //printf("publishing vel: %.2f\n", cmd_vel.linear.x);
@@ -1811,7 +1819,7 @@ namespace upo_nav {
 
 	
 	//check to see if we've reached our goal
- 	if(pure_pursuit_->isGoalReached()){
+ 	if(tc_->isGoalReached()){
 		
 		//--Noé. Check if the end of the local_plan if still far
 		//from the goal. In that case, return -1, to plan
@@ -1833,7 +1841,7 @@ namespace upo_nav {
 
 		//ROS_INFO("*******GOAL REACHED******");
 		//as_->setSucceeded(move_base_msgs::MoveBaseResult(), "Goal reached.");
-		pure_pursuit_->resetGoal();
+		//pure_pursuit_->resetGoal();
 		return 1;
 	}
 
@@ -1848,21 +1856,19 @@ namespace upo_nav {
     //ros::WallDuration t5 = ros::WallTime::now() - t1;
 	//printf("Execute cycle. Time5: %.3f\n", t5.toSec());
 
-	tf::Stamped<tf::Pose> global_pose_odom;
+	/*tf::Stamped<tf::Pose> global_pose_odom;
     if (!controller_costmap_ros_->getRobotPose(global_pose_odom)) {
 	  ROS_WARN("Robot pose in odom coordinates can not be obtained!!!!");
       return 0;
-    }
+    }*/
 
 
 	//Take current robot velocity
-    tf::Stamped<tf::Pose> robot_vel;
-    odom_helper_->getRobotVel(robot_vel);
-    //Eigen::Vector3f vel(robot_vel.getOrigin().getX(), robot_vel.getOrigin().getY(), tf::getYaw(robot_vel.getRotation()));
-    //lin_vel = vel[0];
-    //ang_vel = vel[2];
+    //tf::Stamped<tf::Pose> robot_vel;
+    //odom_helper_->getRobotVel(robot_vel);
+    
 
-	if(pure_pursuit_->findBestAction(global_pose_odom, robot_vel, cmd_vel))
+	if(tc_->computeVelocityCommands(cmd_vel))
 	{
           vel_pub_.publish(cmd_vel);
           //printf("publishing vel: %.2f\n", cmd_vel.linear.x);
@@ -2014,7 +2020,7 @@ namespace upo_nav {
 
     //if we shutdown our costmaps when we're deactivated... we'll do that now
     if(shutdown_costmaps_){
-      ROS_DEBUG_NAMED("move_base","Stopping costmaps");
+      ROS_DEBUG_NAMED("upo_navigation","Stopping costmaps");
       planner_costmap_ros_->stop();
       controller_costmap_ros_->stop();
     }

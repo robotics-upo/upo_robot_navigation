@@ -1,0 +1,7 @@
+<library path="lib/libpure_planner_ros">
+    <class name="simple_local_planner/PurePlannerROS" type="simple_local_planner::PurePlannerROS" base_class_type="nav_core::BaseLocalPlanner">
+    <description>
+      A implementation of a simple local controller to follow a pre-defined path.
+    </description>
+  </class>
+</library>
