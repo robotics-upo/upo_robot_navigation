@@ -8,7 +8,7 @@ upo_RRT::HalfRRTstar::HalfRRTstar() : Planner() {
 	r_rrt_ = 0.0;
 	rewire_factor_ = 1.1;
 			
-	usePathBiasing_ = false;
+	useFirstPathBiasing_ = false;
 	pathBias_ = 0.0;
 	pathBias_stddev_ = 0.0;
 
@@ -69,8 +69,8 @@ std::vector<upo_RRT::Node> upo_RRT::HalfRRTstar::solve(float secs)
 
 	//Clear datastructure and initilize it
 	nn_->clear();
-	Action* action = new Action(0.0, 0.0, 0.0, 5);
-	Node* ini = new Node(*start_, *action);
+	//Action* action = new Action(0.0, 0.0, 0.0, 5);
+	Node* ini = new Node(*start_, *init_action_state_);
 	float singleCost = space_->getCost(start_);
 	ini->setCost(singleCost);
 	ini->setIncCost(singleCost);
@@ -112,14 +112,12 @@ std::vector<upo_RRT::Node> upo_RRT::HalfRRTstar::solve(float secs)
 	t1=start.tv_sec+(start.tv_usec/1000000.0);
 	while(!end)
 	{
-		//Node* randNode;
 		State randState;
 		
 		//sample goal according to the bias parameter
 		if(space_->sampleUniform() < goalBias_)
 		{
 			randState = *goal_;
-			//randNode = goalNode;
 			goal_samples++;
 			valid_samples++;
 			total_samples++;
@@ -129,34 +127,28 @@ std::vector<upo_RRT::Node> upo_RRT::HalfRRTstar::solve(float secs)
 			unsigned int cont = 0;
 			do {
 				
-				//Path biasing
-				if(usePathBiasing_ && !first_sol && space_->sampleUniform() < pathBias_) {
+				if(fullBiasing_)
+				{
+					randState = *space_->samplePathBiasing(&first_path_, pathBias_stddev_);
+					
+				} else if(useFirstPathBiasing_ && !first_sol && space_->sampleUniform() < pathBias_) {
 					
 					randState = *space_->samplePathBiasing(&first_path_, pathBias_stddev_);
-					//State* randState = space_->samplePathBiasing(&first_path_, pathBias_stddev_);
-					//randNode = new Node(*randState);
-					cont++;
-					if(cont>1)
-						total_samples++;
-					else {
-						valid_samples++;
-						total_samples++;
-					}
-					//delete randState;
+					
 				// Regular state sampling
 				} else {
 					randState = *space_->sampleState();
-					//State* randState = space_->sampleState();
-					//randNode = new Node(*randState);
-					cont++;
-					if(cont>1)
-						total_samples++;
-					else {
-						valid_samples++;
-						total_samples++;
-					}
-					//delete randState;
+					
 				}
+				cont++;
+				if(cont>1)
+					total_samples++;
+				else {
+					valid_samples++;
+					total_samples++;
+				}
+				
+				
 			} while(!space_->isStateValid(&randState));
 		}
 		
@@ -166,15 +158,11 @@ std::vector<upo_RRT::Node> upo_RRT::HalfRRTstar::solve(float secs)
 		Node* nearNode = nn_->nearest(&randNode);
 		if(nearNode == NULL)
 			printf("\n\nNo nearest node!!!!!\n\n");
-		
-		//Steer from nearState to randState and reach the new state
-		//Node* newNode = steer(nearNode, &randNode);
-		//delete randNode;
+
 		
 		Node* newNode = new Node();
 	 
-		//if(newNode != NULL)
-		if(steering_->steer2(nearNode, &randNode, newNode))
+		if(steer(nearNode, &randNode, newNode))
 		{
 			
 			//Use the neighbors of the new node to find the best parent
@@ -289,7 +277,7 @@ std::vector<upo_RRT::Node> upo_RRT::HalfRRTstar::solve(float secs)
 					first_sol_time = (t3 - t1);
 					
 					//Store the first solution to draw samples from it.
-					if(usePathBiasing_) {
+					if(useFirstPathBiasing_) {
 						Node* current = solution;
 						while (current != NULL)
 						{
@@ -331,7 +319,7 @@ std::vector<upo_RRT::Node> upo_RRT::HalfRRTstar::solve(float secs)
 	}
 	
 	//printf("Number of null states: %u\n", cont_null);
-	printf("Possible rewirings: %u. Total rewirings peformed: %u\n", posible_rewirings, total_rewirings);
+	//printf("Possible rewirings: %u. Total rewirings peformed: %u\n", posible_rewirings, total_rewirings);
 	
 	if(storeTree_) {
 		std::vector<Node*> nodes;

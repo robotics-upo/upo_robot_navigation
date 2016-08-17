@@ -107,6 +107,8 @@ namespace upo_RRT
 			}
 
 
+			
+
 			void copyState(State *destination, const State *source) const
 	  		{
 		   		memcpy(destination, source, sizeof(*source));
@@ -129,6 +131,24 @@ namespace upo_RRT
 			
 			void storeTree(std::vector<Node*> list);
 			
+			void setBiasingPath(std::vector<upo_RRT::State>* path);
+			
+			void setFullBiasing(bool b) {
+				fullBiasing_ = b;
+			}
+			
+			void setPathBias(float f) {
+				pathBias_ = f;
+			}
+			
+			void setPathBias_stddev(float f) {
+				pathBias_stddev_ = f;
+			}
+			
+			void setInitialActionState(float vx, float vy, float vth, int steps) {
+				init_action_state_ = new Action(vx, vy, vth, steps);
+			}
+			
 			
 		protected:
 
@@ -143,12 +163,19 @@ namespace upo_RRT
 			State* 				start_;
 			State*				goal_;
 			
+			Action*				init_action_state_;
+			
 			float 				path_cost_;
 			
 			statistics          stats_;
 			
 			bool				storeTree_;
 			std::vector<upo_RRT::State> tree_;
+			
+			std::vector<upo_RRT::State> first_path_;
+			bool 				fullBiasing_;
+			float				pathBias_;
+			float 				pathBias_stddev_;
 
 	};
 	

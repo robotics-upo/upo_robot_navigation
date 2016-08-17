@@ -1,6 +1,6 @@
 <package>
     <name>simple_local_planner</name>
-    <version>1.13.1</version>
+    <version>1.0.0</version>
     <description>
 
         Given a plan to follow and a costmap, this controller produces velocity commands to send to a mobile base. This package supports non-holonomic robots, any robot footprint that can be represented as a convex polygon or circle, and exposes its configuration as ROS parameters that can be set in a launch file. This package's ROS wrapper adheres to the BaseLocalPlanner interface specified in the <a href="http://wiki.ros.org/nav_core">nav_core</a> package. 

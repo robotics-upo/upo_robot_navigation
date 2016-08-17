@@ -187,13 +187,22 @@ upo_RRT::State* upo_RRT::StateSpace::sampleStateNear(State* st)
 }
 
 
-upo_RRT::State* upo_RRT::StateSpace::samplePathBiasing(std::vector<State>* path, float stddev) {
+upo_RRT::State* upo_RRT::StateSpace::samplePathBiasing(std::vector<State>* path, float stddev, float yawdev) {
 
 	int ind = random_.uniformInt(1, int(path->size()-1));
 	float x = path->at(ind).getX();
 	float y = path->at(ind).getY();
 	float x_sample = random_.gaussian(x, stddev);
 	float y_sample = random_.gaussian(y, stddev);
+	
+	if(dimensions_ > 2) //we also have to sample the yaw according to the path
+	{
+		float yaw = path->at(ind).getYaw();
+		float yaw_sample = random_.uniformReal(yaw-yawdev, yaw+yawdev);
+		yaw_sample = normalizeAngle(yaw_sample, -M_PI, M_PI);
+		return new State(x_sample, y_sample, yaw_sample);
+	}
+	
 	return new State(x_sample, y_sample);
 }
 

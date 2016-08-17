@@ -48,7 +48,7 @@ namespace upo_RRT_ros
 	{
 		public:
 		
-		ValidityChecker(tf::TransformListener* tf, const costmap_2d::Costmap2D* loc_costmap, const costmap_2d::Costmap2D* glob_costmap, std::vector<geometry_msgs::Point>* footprint, float insc_radius, float size_x, float size_y, unsigned int dimensions, int distType); 
+		ValidityChecker(bool use_fc_costmap, tf::TransformListener* tf, const costmap_2d::Costmap2D* loc_costmap, const costmap_2d::Costmap2D* glob_costmap, std::vector<geometry_msgs::Point>* footprint, float insc_radius, float size_x, float size_y, unsigned int dimensions, int distType); 
 
 		virtual ~ValidityChecker();
 		
@@ -90,10 +90,17 @@ namespace upo_RRT_ros
 		
 		private:
 		
-		features::NavFeatures* 		navfeatures_;
+		features::NavFeatures* 				navfeatures_;
 		
-		unsigned int 				dimensions_;
-		int 						distanceType_;
+		const costmap_2d::Costmap2D* 		loc_costmap_;
+		const costmap_2d::Costmap2D* 		glo_costmap_;
+		bool 								use_global_costmap_;
+		tf::TransformListener*				tf_;
+		
+		unsigned int 						dimensions_;
+		int 								distanceType_;
+		bool								get_cost_from_costmap_;
+		
 
 	};
 

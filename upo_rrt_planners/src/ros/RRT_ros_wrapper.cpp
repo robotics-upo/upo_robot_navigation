@@ -121,11 +121,35 @@ upo_RRT_ros::RRT_ros_wrapper::RRT_ros_wrapper(tf::TransformListener* tf, costmap
 	global_costmap_ros_ = global_costmap_ros;
 	local_costmap_ros_ = local_costmap_ros;
 
-  	//initialize the copy of the costmaps the RRT will use
-   	global_costmap_ = global_costmap_ros_->getCostmap();
+  	//initialize the copy of the costmaps the RRT will be using
+  	if(global_costmap_ros_)
+		global_costmap_ = global_costmap_ros_->getCostmap();
+	else
+		global_costmap_ = NULL;
+		
 	local_costmap_ = local_costmap_ros_->getCostmap();
 
 	setup();
+
+}
+
+
+upo_RRT_ros::RRT_ros_wrapper::RRT_ros_wrapper(tf::TransformListener* tf, costmap_2d::Costmap2DROS* global_costmap_ros, costmap_2d::Costmap2DROS* local_costmap_ros, float controller_freq, float path_stddev, int planner_type)
+{
+	tf_ = tf;
+	global_costmap_ros_ = global_costmap_ros;
+	local_costmap_ros_ = local_costmap_ros;
+
+  	//initialize the copy of the costmaps the RRT will be using
+  	if(global_costmap_ros_)
+		global_costmap_ = global_costmap_ros_->getCostmap();
+	else
+		global_costmap_ = NULL;
+		
+	local_costmap_ = local_costmap_ros_->getCostmap();
+
+	//setup();
+	setup_controller(controller_freq, path_stddev, planner_type);
 
 }
 
@@ -137,18 +161,14 @@ upo_RRT_ros::RRT_ros_wrapper::~RRT_ros_wrapper() {
 
 void upo_RRT_ros::RRT_ros_wrapper::setup()
 {
-	//ros::NodeHandle private_nh("~/upo_navigation/RRT_ros_wrapper");
+	
 	ros::NodeHandle private_nh("~/RRT_ros_wrapper");
-	//ros::NodeHandle private_nh("~");
-
 
 
 	private_nh.param<int>("rrt_planner_type", rrt_planner_type_, 1);
 	printf("RRT_ros_wrapper. rrt_planner_type = %i\n",  rrt_planner_type_);
       	
-  	//UvA parameters
-	//bool use_uva_lib;
-   	private_nh.param<bool>("use_feature_lib", use_uva_lib_, false);
+   	private_nh.param<bool>("use_fc_in_costmap", use_fc_costmap_, false); 
 	
 	//RRT 
 	double aux;
@@ -164,22 +184,22 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 	double robot_radius;
 	private_nh.param<double>("robot_radius", robot_radius, 0.3);
 	
-	//RRT*
-	//bool rrtstar_use_k_nearest = true;
-	//bool rrtstar_path_biasing = false;
-	//float rrtstar_path_bias = 0.0;
-	//float rrtstar_stddev_bias = 0.0;
-	//float rrtstar_rewire_factor = 0.0;
+	//RRT* 
 	if(rrt_planner_type_ == 2 || rrt_planner_type_ >= 4) {
 		private_nh.param<bool>("rrtstar_use_k_nearest", rrtstar_use_k_nearest_, true);
-		private_nh.param<bool>("rrtstar_path_biasing", rrtstar_path_biasing_, false);
-		private_nh.param<double>("rrtstar_path_bias", aux, 0.5);
-		rrtstar_path_bias_ = (float)aux;
-		private_nh.param<double>("rrtstar_stddev_bias", aux, 0.8);
-		rrtstar_stddev_bias_ = (float)aux;
+		private_nh.param<bool>("rrtstar_first_path_biasing", rrtstar_first_path_biasing_, false);
+		private_nh.param<double>("rrtstar_first_path_bias", aux, 0.5);
+		rrtstar_first_path_bias_ = (float)aux;
+		private_nh.param<double>("rrtstar_first_path_stddev_bias", aux, 0.8);
+		rrtstar_first_path_stddev_bias_ = (float)aux;
 		private_nh.param<double>("rrtstar_rewire_factor", aux, 1.1);
 		rrtstar_rewire_factor_ = (float)aux;
 	}
+	
+	//All
+	private_nh.param<bool>("full_path_biasing", full_path_biasing_, false);
+	private_nh.param<double>("full_path_stddev_bias", aux, 0.8);
+	full_path_stddev_bias_ = (float)aux;
 	
 	
 	//if RRT or RRT* are kinodynamics
@@ -219,6 +239,8 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 	lin_vel_res_ = (float)aux;
 	private_nh.param<double>("rrt_max_angular_vel", aux, 0.5);
 	max_ang_vel_ = (float)aux;
+	private_nh.param<double>("rrt_min_angular_vel", aux, 0.3);
+	min_ang_vel_ = (float)aux;
 	private_nh.param<double>("rrt_ang_vel_resolution", aux, 0.1);
 	ang_vel_res_ = (float)aux;
 	private_nh.param<double>("rrt_goal_xy_tol", aux, 0.15);
@@ -252,7 +274,9 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 	if(visualize_tree_) {
 		tree_pub_ = n.advertise<visualization_msgs::Marker>("rrt_tree", 1);
 	}
-
+	
+	rrt_goal_pub_ = n.advertise<geometry_msgs::PoseStamped>("rrt_goal", 1);
+		
 	local_goal_pub_ = n.advertise<visualization_msgs::Marker>("rrt_goal_marker", 1);
 	path_points_pub_ = n.advertise<visualization_msgs::Marker>("rrt_path_points", 1);
 	path_interpol_points_pub_ = n.advertise<visualization_msgs::Marker>("rrt_path_interpol_points", 1);
@@ -262,15 +286,18 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 		return;
 	}
 
-	//This is not working properly
+	//This is not working properly-------------
 	//double irad, crad;
 	//costmap_2d::calculateMinAndMaxDistances(footprint_, irad, crad);
 	//inscribed_radius_ = irad;
 	//circumscribed_radius_ = crad;
+	//------------------------------------------
 	inscribed_radius_  = (float)robot_radius;
 	circumscribed_radius_ = (float)robot_radius;
 
-	checker_ = new ValidityChecker(tf_, local_costmap_, global_costmap_, &footprint_, inscribed_radius_, size_x_, size_y_, dimensions_, distanceType_);
+	checker_ = new ValidityChecker(use_fc_costmap_, tf_, local_costmap_, global_costmap_, &footprint_, inscribed_radius_, size_x_, size_y_, dimensions_, distanceType_);
+	
+
 	
 	
 	switch(rrt_planner_type_)
@@ -288,11 +315,11 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 			rrt_planner_ = new upo_RRT::SimpleRRTstar();
 			rrt_planner_->as<upo_RRT::SimpleRRTstar>()->setMaxRange(max_range_);
 			rrt_planner_->as<upo_RRT::SimpleRRTstar>()->set_useKnearest(rrtstar_use_k_nearest_);
-			rrt_planner_->as<upo_RRT::SimpleRRTstar>()->set_usePathBiasing(rrtstar_path_biasing_);
+			rrt_planner_->as<upo_RRT::SimpleRRTstar>()->set_useFirstPathBiasing(rrtstar_first_path_biasing_);
 			rrt_planner_->as<upo_RRT::SimpleRRTstar>()->setRewireFactor(rrtstar_rewire_factor_);
-			if(rrtstar_path_biasing_) {
-				rrt_planner_->as<upo_RRT::SimpleRRTstar>()->setPathBias(rrtstar_path_bias_);
-				rrt_planner_->as<upo_RRT::SimpleRRTstar>()->setPathBias_stddev(rrtstar_stddev_bias_);
+			if(rrtstar_first_path_biasing_ && !full_path_biasing_) {
+				rrt_planner_->as<upo_RRT::SimpleRRTstar>()->setPathBias(rrtstar_first_path_bias_);
+				rrt_planner_->as<upo_RRT::SimpleRRTstar>()->setPathBias_stddev(rrtstar_first_path_stddev_bias_);
 			}
 			break;
 		
@@ -314,13 +341,13 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 			rrt_planner_->as<upo_RRT::RRTstar>()->setControlSteps(kino_minControlSteps_, kino_maxControlSteps_);
 			rrt_planner_->as<upo_RRT::RRTstar>()->setRobotAcc(kino_linAcc_, kino_angAcc_);
 			rrt_planner_->as<upo_RRT::RRTstar>()->set_useKnearest(rrtstar_use_k_nearest_);
-			rrt_planner_->as<upo_RRT::RRTstar>()->set_usePathBiasing(rrtstar_path_biasing_);
+			rrt_planner_->as<upo_RRT::RRTstar>()->set_useFirstPathBiasing(rrtstar_first_path_biasing_);
 			rrt_planner_->as<upo_RRT::RRTstar>()->setRewireFactor(rrtstar_rewire_factor_);
 			rrt_planner_->as<upo_RRT::RRTstar>()->setSteeringType(kino_steeringType_);
 			rrt_planner_->as<upo_RRT::RRTstar>()->setMotionCostType(motionCostType_); 
-			if(rrtstar_path_biasing_) {
-				rrt_planner_->as<upo_RRT::RRTstar>()->setPathBias(rrtstar_path_bias_);
-				rrt_planner_->as<upo_RRT::RRTstar>()->setPathBias_stddev(rrtstar_stddev_bias_);
+			if(rrtstar_first_path_biasing_ && !full_path_biasing_) {
+				rrt_planner_->as<upo_RRT::RRTstar>()->setPathBias(rrtstar_first_path_bias_);
+				rrt_planner_->as<upo_RRT::RRTstar>()->setPathBias_stddev(rrtstar_first_path_stddev_bias_);
 			}
 			break;
 			
@@ -333,13 +360,13 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 			rrt_planner_->as<upo_RRT::HalfRRTstar>()->setControlSteps(kino_minControlSteps_, kino_maxControlSteps_);
 			rrt_planner_->as<upo_RRT::HalfRRTstar>()->setRobotAcc(kino_linAcc_, kino_angAcc_);
 			rrt_planner_->as<upo_RRT::HalfRRTstar>()->set_useKnearest(rrtstar_use_k_nearest_);
-			rrt_planner_->as<upo_RRT::HalfRRTstar>()->set_usePathBiasing(rrtstar_path_biasing_);
+			rrt_planner_->as<upo_RRT::HalfRRTstar>()->set_useFirstPathBiasing(rrtstar_first_path_biasing_);
 			rrt_planner_->as<upo_RRT::HalfRRTstar>()->setRewireFactor(rrtstar_rewire_factor_);
 			rrt_planner_->as<upo_RRT::HalfRRTstar>()->setSteeringType(kino_steeringType_);
 			rrt_planner_->as<upo_RRT::HalfRRTstar>()->setMotionCostType(motionCostType_); 
-			if(rrtstar_path_biasing_) {
-				rrt_planner_->as<upo_RRT::HalfRRTstar>()->setPathBias(rrtstar_path_bias_);
-				rrt_planner_->as<upo_RRT::HalfRRTstar>()->setPathBias_stddev(rrtstar_stddev_bias_);
+			if(rrtstar_first_path_biasing_ && !full_path_biasing_) {
+				rrt_planner_->as<upo_RRT::HalfRRTstar>()->setPathBias(rrtstar_first_path_bias_);
+				rrt_planner_->as<upo_RRT::HalfRRTstar>()->setPathBias_stddev(rrtstar_first_path_stddev_bias_);
 			}
 			break;
 			
@@ -349,13 +376,237 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 			rrt_planner_->as<upo_RRT::SimpleRRT>()->setMaxRange(max_range_);
 	}
 	
+	
 	rrt_planner_->setup(checker_, nn_params_, dimensions_, size_x_, size_y_, xy_res_, yaw_res_, min_lin_vel_, max_lin_vel_, lin_vel_res_, max_ang_vel_, ang_vel_res_);
 				
 	rrt_planner_->setGoalBias(goal_bias_);
 	rrt_planner_->setGoalTolerance(goal_xy_tol_, goal_th_tol_);
 	rrt_planner_->setStoreTree(visualize_tree_);
 	
+	if(full_path_biasing_) {
+		rrt_planner_->setFullBiasing(full_path_biasing_);
+		rrt_planner_->setPathBias(1.0);
+		rrt_planner_->setPathBias_stddev(full_path_stddev_bias_);
+		rrt_planner_->setGoalBias(0.0);
+	}
+	
 }
+
+
+
+/**
+ * Only in case of using the RRT planner as a local controller
+ * */
+void upo_RRT_ros::RRT_ros_wrapper::setup_controller(float controller_freq, float path_stddev, int planner_type)
+{
+	
+	ros::NodeHandle private_nh("~/RRT_ros_wrapper");
+
+
+	switch(planner_type)
+	{
+		case 1:  //Kino RRT	
+			rrt_planner_type_ = 3;
+			break;
+			
+		case 2: //kino RRT*
+			rrt_planner_type_ = 4;
+			break;
+			
+		case 3: //kino simplified RRT*
+			rrt_planner_type_ = 5;
+			break;
+			
+		default:
+			rrt_planner_type_ = 3;
+	}
+	
+      	
+   	private_nh.param<bool>("use_fc_in_costmap", use_fc_costmap_, false); 
+	
+	 
+	
+ 	solve_time_ = 1/controller_freq;
+ 	
+ 	double aux;
+	private_nh.param<double>("rrt_goal_bias", aux, 0.1);
+	goal_bias_ = (float)aux;
+	
+	private_nh.param<double>("rrt_max_insertion_dist", aux, 0.2);
+	max_range_ = (float) aux;
+	
+	double robot_radius;
+	private_nh.param<double>("robot_radius", robot_radius, 0.3);
+	
+	//RRT* 
+	if(rrt_planner_type_ == 2 || rrt_planner_type_ >= 4) {
+		private_nh.param<bool>("rrtstar_use_k_nearest", rrtstar_use_k_nearest_, true);
+		rrtstar_first_path_biasing_ = false;
+		rrtstar_first_path_bias_ = 0.0;
+		rrtstar_first_path_stddev_bias_ = 0.0;
+		private_nh.param<double>("rrtstar_rewire_factor", aux, 1.1);
+		rrtstar_rewire_factor_ = (float)aux;
+	}
+	
+	
+	//if RRT or RRT* are kinodynamics
+	//float kino_linAcc, kino_angAcc;
+	//int kino_minControlSteps, kino_maxControlSteps;
+	//int kino_steeringType;
+	if(rrt_planner_type_ > 2) {
+		
+		private_nh.param<double>("kino_time_step", aux, 0.067);
+		kino_timeStep_ = (float)aux;
+		private_nh.param<int>("kino_min_control_steps", kino_minControlSteps_, 5);
+		private_nh.param<int>("kino_max_control_steps", kino_maxControlSteps_, 30);
+		//Robot accelerations
+		private_nh.param<double>("kino_linear_acc", aux, 0.6);
+		kino_linAcc_ = (float)aux;
+		private_nh.param<double>("kino_angular_acc", aux, 1.57);
+		kino_angAcc_ = (float)aux;
+		private_nh.param<int>("kino_steering_type", kino_steeringType_, 1); 
+	}
+	
+
+	//RRT State Space
+	private_nh.param<int>("rrt_dimensions", dimensions_, 3);
+  	private_nh.param<double>("rrt_size_x", aux, 5.0);
+  	size_x_ = (float)aux;
+	private_nh.param<double>("rrt_size_y", aux, 5.0);
+	size_y_ = (float)aux;
+	private_nh.param<double>("rrt_xy_resolution", aux, 0.1);
+	xy_res_ = (float)aux;
+	private_nh.param<double>("rrt_yaw_resolution", aux, 0.02);
+	yaw_res_ = (float)aux;
+	private_nh.param<double>("rrt_min_linear_vel", aux, 0.0);
+	min_lin_vel_ = (float)aux;
+	private_nh.param<double>("rrt_max_linear_vel", aux, 0.5);
+	max_lin_vel_ = (float)aux;
+	private_nh.param<double>("rrt_lin_vel_resolution", aux, 0.05);
+	lin_vel_res_ = (float)aux;
+	private_nh.param<double>("rrt_max_angular_vel", aux, 0.5);
+	max_ang_vel_ = (float)aux;
+	private_nh.param<double>("rrt_min_angular_vel", aux, 0.3);
+	min_ang_vel_ = (float)aux;
+	private_nh.param<double>("rrt_ang_vel_resolution", aux, 0.1);
+	ang_vel_res_ = (float)aux;
+	private_nh.param<double>("rrt_goal_xy_tol", aux, 0.15);
+	goal_xy_tol_ = (float)aux;
+	private_nh.param<double>("rrt_goal_th_tol", aux, 0.15);
+	goal_th_tol_ = (float)aux;
+	private_nh.param<int>("rrt_nn_type", nn_params_, 1);
+	//int distanceType;
+	private_nh.param<int>("distance_type", distanceType_, 1);
+	private_nh.param<int>("motion_cost_type", motionCostType_, 1);
+	
+	//Visualization
+  	private_nh.param<bool>("visualize_rrt_tree", visualize_tree_, false);
+   	private_nh.param<bool>("visualize_nav_costmap", visualize_costmap_, false);
+	private_nh.param<bool>("show_rrt_statistics", show_statistics_, false);
+	private_nh.param<double>("equal_path_percentage", aux, 0.5);
+	equal_path_percentage_ = (float)aux;
+	private_nh.param<double>("rrt_interpolate_path_dist", aux, 0.05);
+	interpolate_path_distance_ = (float)aux;
+	private_nh.param<bool>("show_intermediate_states", show_intermediate_states_, false);
+	
+	
+	//if the planner is an RRT, the nav costmap can not be visualized
+	if(rrt_planner_type_ == 1 || rrt_planner_type_ == 3)
+		visualize_costmap_ = false;
+		
+	ros::NodeHandle n;
+	if(visualize_costmap_) {
+		costmap_pub_ = n.advertise<nav_msgs::OccupancyGrid>("rrt_costmap", 1);
+	}
+	if(visualize_tree_) {
+		tree_pub_ = n.advertise<visualization_msgs::Marker>("rrt_tree", 1);
+	}
+	
+	rrt_goal_pub_ = n.advertise<geometry_msgs::PoseStamped>("rrt_goal", 1);
+		
+	local_goal_pub_ = n.advertise<visualization_msgs::Marker>("rrt_goal_marker", 1);
+	path_points_pub_ = n.advertise<visualization_msgs::Marker>("rrt_path_points", 1);
+	path_interpol_points_pub_ = n.advertise<visualization_msgs::Marker>("rrt_path_interpol_points", 1);
+
+	if(size_x_ != size_y_) {
+		ROS_ERROR("X size and Y size of the State Space has to be equal!!!");
+		return;
+	}
+
+	//This is not working properly-------------
+	//double irad, crad;
+	//costmap_2d::calculateMinAndMaxDistances(footprint_, irad, crad);
+	//inscribed_radius_ = irad;
+	//circumscribed_radius_ = crad;
+	//------------------------------------------
+	inscribed_radius_  = (float)robot_radius;
+	circumscribed_radius_ = (float)robot_radius;
+
+	checker_ = new ValidityChecker(use_fc_costmap_, tf_, local_costmap_, global_costmap_, &footprint_, inscribed_radius_, size_x_, size_y_, dimensions_, distanceType_);
+	
+	switch(rrt_planner_type_)
+	{
+	
+		// ----- kinodynamic RRT --------------------
+		case 3:
+			printf("\n-------- Using Kinodynamic RRT planner ----------\n");
+			rrt_planner_ = new upo_RRT::RRT();
+			rrt_planner_->as<upo_RRT::RRT>()->setTimeStep(kino_timeStep_);
+			rrt_planner_->as<upo_RRT::RRT>()->setControlSteps(kino_minControlSteps_, kino_maxControlSteps_);
+			rrt_planner_->as<upo_RRT::RRT>()->setRobotAcc(kino_linAcc_, kino_angAcc_);
+			break;
+			
+		// ----- kinodynamic RRT* --------------------
+		case 4:
+			printf("\n-------- Using Kinodynamic RRT* planner ----------\n");
+			rrt_planner_ = new upo_RRT::RRTstar();
+			rrt_planner_->as<upo_RRT::RRTstar>()->setMaxRange(max_range_);
+			rrt_planner_->as<upo_RRT::RRTstar>()->setTimeStep(kino_timeStep_);
+			rrt_planner_->as<upo_RRT::RRTstar>()->setControlSteps(kino_minControlSteps_, kino_maxControlSteps_);
+			rrt_planner_->as<upo_RRT::RRTstar>()->setRobotAcc(kino_linAcc_, kino_angAcc_);
+			rrt_planner_->as<upo_RRT::RRTstar>()->set_useKnearest(rrtstar_use_k_nearest_);
+			rrt_planner_->as<upo_RRT::RRTstar>()->set_useFirstPathBiasing(rrtstar_first_path_biasing_);
+			rrt_planner_->as<upo_RRT::RRTstar>()->setRewireFactor(rrtstar_rewire_factor_);
+			rrt_planner_->as<upo_RRT::RRTstar>()->setSteeringType(kino_steeringType_);
+			rrt_planner_->as<upo_RRT::RRTstar>()->setMotionCostType(motionCostType_); 
+			break;
+			
+		// ----- kinodynamic simplified RRT* --------------------
+		case 5:
+			printf("\n-------- Using Kinodynamic simplified RRT* planner ----------\n");
+			rrt_planner_ = new upo_RRT::HalfRRTstar();
+			rrt_planner_->as<upo_RRT::HalfRRTstar>()->setMaxRange(max_range_);
+			rrt_planner_->as<upo_RRT::HalfRRTstar>()->setTimeStep(kino_timeStep_);
+			rrt_planner_->as<upo_RRT::HalfRRTstar>()->setControlSteps(kino_minControlSteps_, kino_maxControlSteps_);
+			rrt_planner_->as<upo_RRT::HalfRRTstar>()->setRobotAcc(kino_linAcc_, kino_angAcc_);
+			rrt_planner_->as<upo_RRT::HalfRRTstar>()->set_useKnearest(rrtstar_use_k_nearest_);
+			rrt_planner_->as<upo_RRT::HalfRRTstar>()->set_useFirstPathBiasing(rrtstar_first_path_biasing_);
+			rrt_planner_->as<upo_RRT::HalfRRTstar>()->setRewireFactor(rrtstar_rewire_factor_);
+			rrt_planner_->as<upo_RRT::HalfRRTstar>()->setSteeringType(kino_steeringType_);
+			rrt_planner_->as<upo_RRT::HalfRRTstar>()->setMotionCostType(motionCostType_); 
+			break;
+	}
+	
+	
+	rrt_planner_->setup(checker_, nn_params_, dimensions_, size_x_, size_y_, xy_res_, yaw_res_, min_lin_vel_, max_lin_vel_, lin_vel_res_, max_ang_vel_, ang_vel_res_);
+				
+	rrt_planner_->setGoalBias(goal_bias_);
+	rrt_planner_->setGoalTolerance(goal_xy_tol_, goal_th_tol_);
+	rrt_planner_->setStoreTree(visualize_tree_);
+	
+	//Full path biasing
+	full_path_biasing_ = true;
+	full_path_stddev_bias_ = path_stddev;
+	rrt_planner_->setFullBiasing(full_path_biasing_);
+	rrt_planner_->setPathBias(1.0);
+	rrt_planner_->setPathBias_stddev(full_path_stddev_bias_);
+	rrt_planner_->setGoalBias(0.0);
+	
+	
+}
+
+
+
 
 
 
@@ -377,10 +628,21 @@ std::vector<geometry_msgs::PoseStamped> upo_RRT_ros::RRT_ros_wrapper::RRT_plan(g
 	
 	//if we use costs
 	if(rrt_planner_type_ == 2 || rrt_planner_type_ >= 4) {
-		//Set the goal in the state checker
-		g = new upo_RRT::State(goal.x, goal.y, goal.theta);
-		checker_->setGoal(g);
+		if(!use_fc_costmap_) {
+			//Set the goal in the state checker
+			g = new upo_RRT::State(goal.x, goal.y, goal.theta);
+			checker_->setGoal(g);
+		}
+		
 	}
+	geometry_msgs::PoseStamped rg;
+	rg.header.frame_id = "base_link";
+	rg.header.stamp = ros::Time();
+	rg.pose.position.x = goal.x;
+	rg.pose.position.y = goal.y;
+	rg.pose.position.z = 0.0;
+	rg.pose.orientation = tf::createQuaternionMsgFromYaw(goal.theta);
+	rrt_goal_pub_.publish(rg);
 	
 	//visualize rrt goal
 	visualization_msgs::Marker marker;
@@ -408,6 +670,10 @@ std::vector<geometry_msgs::PoseStamped> upo_RRT_ros::RRT_ros_wrapper::RRT_plan(g
 	local_goal_pub_.publish(marker);
 	
 	ros::Time time = ros::Time::now();
+	
+	
+	rrt_planner_->setInitialActionState(start_lin_vel, 0.0, start_ang_vel, 1);
+	
 
 	//-------- GET THE RRT PATH ------------------------------
 	
@@ -442,9 +708,7 @@ std::vector<geometry_msgs::PoseStamped> upo_RRT_ros::RRT_ros_wrapper::RRT_plan(g
 			path = rrt_planner_->as<upo_RRT::SimpleRRT>()->solve(solve_time_);
 	}
 
-	//--------------------------------------------------------
-	//TODO optional: Program some tools for path smoothing (splines?)
-	//--------------------------------------------------------
+	
 
 	if(show_statistics_) {
 		upo_RRT::Planner::statistics stats = rrt_planner_->getStatistics();
@@ -456,6 +720,8 @@ std::vector<geometry_msgs::PoseStamped> upo_RRT_ros::RRT_ros_wrapper::RRT_plan(g
 		printf("Tree nodes:      %u \n",  stats.tree_nodes);
 		printf("Path nodes:      %u \n\n",  stats.path_nodes);
 	}
+	
+	
 	
 	// Build the path in ROS format
 	rrt_plan_.clear();
@@ -603,6 +869,346 @@ std::vector<geometry_msgs::PoseStamped> upo_RRT_ros::RRT_ros_wrapper::RRT_plan(g
 	return rrt_plan_;
 }
 
+
+/**
+ * This method is used only in the case of using a kinodynamic RRT (or RRT*) planner as local controller
+ * */
+int upo_RRT_ros::RRT_ros_wrapper::RRT_local_plan(std::vector<geometry_msgs::PoseStamped> path_to_follow, float start_lin_vel, float start_ang_vel, geometry_msgs::Twist& cmd_vel)
+{
+	
+	if(path_to_follow.empty()) {
+		ROS_ERROR("RRT_wrapper. Global plan to follow is empty!");
+		return -1;
+	}
+	
+	geometry_msgs::PoseStamped goal = path_to_follow.at(path_to_follow.size()-1);
+	float goal_x = goal.pose.position.x;
+	float goal_y = goal.pose.position.y;
+	float goal_th = tf::getYaw(goal.pose.orientation);
+	
+	if(!rrt_planner_->setStartAndGoal(0.0, 0.0, 0.0, goal_x, goal_y, goal_th)){
+		ROS_ERROR("RRT_plan. Goal state is not valid!!!");
+		return -2;
+	}
+	
+	
+	upo_RRT::State* g = NULL;
+	
+	//if we use costs
+	if(rrt_planner_type_ == 2 || rrt_planner_type_ >= 4) {
+		if(!use_fc_costmap_) {
+			//Set the goal in the state checker
+			g = new upo_RRT::State(goal_x, goal_y, goal_th);
+			checker_->setGoal(g);
+		}
+		
+	}
+	geometry_msgs::PoseStamped rg;
+	rg.header.frame_id = "base_link";
+	rg.header.stamp = ros::Time();
+	rg.pose.position = goal.pose.position;
+	rg.pose.orientation = goal.pose.orientation;
+	rrt_goal_pub_.publish(rg);
+	
+	//visualize rrt goal
+	visualization_msgs::Marker marker;
+	marker.header.frame_id = "base_link"; //robot_base_frame_ = "/base_link"
+	marker.header.stamp = ros::Time::now();
+	marker.ns = "basic_shapes";
+	marker.id = 0;
+	marker.type = visualization_msgs::Marker::ARROW;
+	marker.action = visualization_msgs::Marker::ADD;
+	marker.pose.position.x = goal_x;
+	marker.pose.position.y = goal_y;
+	marker.pose.position.z = 0.5;
+	marker.pose.orientation = goal.pose.orientation;
+	// Set the scale of the marker 
+	marker.scale.x = 0.7;
+	marker.scale.y = 0.15;
+	marker.scale.z = 0.15;
+	// Set the color -- be sure to set alpha to something non-zero!
+	marker.color.r = 1.0f;
+	marker.color.g = 0.5f;
+	marker.color.b = 0.0f;
+	marker.color.a = 1.0;
+	marker.lifetime = ros::Duration();
+	// Publish the marker
+	local_goal_pub_.publish(marker);
+	
+	
+	
+	//Check the distance between the robot and the goal
+	//if it is satisfied only turns
+	//if angle is also satisfied return 1     (copy from simple_local_planner)
+	/*float distance_to_goal = sqrt(goal_x*goal_x + goal_y*goal_y);
+	
+	//printf("wrapper. RRT_local_plan. Distance to the goal: %.2f\n", distance_to_goal);
+	
+	if(distance_to_goal <= goal_xy_tol_)
+	{
+		// Stop the robot
+		float vx = 0.0;
+		float vy = 0.0;
+		float vt = 0.0;
+		
+		// Rotate at minumin velocity until reaching the goal angle
+		if(fabs(goal_th) < goal_th_tol_)
+		{
+			vt = 0.0;
+			cmd_vel.linear.x = vx;
+			cmd_vel.linear.y = vy;
+			cmd_vel.linear.z = 0.0;
+			cmd_vel.angular.x = 0.0;
+			cmd_vel.angular.y = 0.0;
+			cmd_vel.angular.z = vt;
+			return 1;  //Goal reached
+			
+		}
+		else if(goal_th < 0.0)
+			vt = min_ang_vel_;
+		else
+			vt = -min_ang_vel_;
+			
+		cmd_vel.linear.x = vx;
+		cmd_vel.linear.y = vy;
+		cmd_vel.linear.z = 0.0;
+		cmd_vel.angular.x = 0.0;
+		cmd_vel.angular.y = 0.0;
+		cmd_vel.angular.z = vt;
+		return 0;
+	}*/
+	
+	
+	//Transform path_to_be_followed into a vector of RRT states
+	std::vector<upo_RRT::State> state_path;
+	for(unsigned int i=0; i<path_to_follow.size(); i++)
+	{
+		geometry_msgs::PoseStamped p = path_to_follow.at(i);
+		float x = p.pose.position.x;
+		float y = p.pose.position.y;
+		float yaw = tf::getYaw(p.pose.orientation);
+		upo_RRT::State state(x, y, yaw);
+		state_path.push_back(state);
+	}
+	rrt_planner_->setBiasingPath(&state_path);
+	
+	
+	rrt_planner_->setInitialActionState(start_lin_vel, 0.0, start_ang_vel, 1);
+	
+	ros::Time time = ros::Time::now();
+
+	//-------- GET THE RRT PATH ------------------------------
+	
+	//computations needed before starting planning
+	//In this case, we calculate the gaussian functions over the current people
+	checker_->preplanning_computations();
+	
+	std::vector<upo_RRT::Node> path;
+	switch(rrt_planner_type_)
+	{
+		case 1:
+			path = rrt_planner_->as<upo_RRT::SimpleRRT>()->solve(solve_time_);
+			break;
+			
+		case 2:
+			path = rrt_planner_->as<upo_RRT::SimpleRRTstar>()->solve(solve_time_);
+			break;
+			
+		case 3:
+			path = rrt_planner_->as<upo_RRT::RRT>()->solve(solve_time_);
+			break;
+			
+		case 4:
+			path = rrt_planner_->as<upo_RRT::RRTstar>()->solve(solve_time_);
+			break;
+			
+		case 5:
+			path = rrt_planner_->as<upo_RRT::HalfRRTstar>()->solve(solve_time_);
+			break;
+			
+		default:
+			path = rrt_planner_->as<upo_RRT::SimpleRRT>()->solve(solve_time_);
+	}
+
+	
+	
+
+	if(show_statistics_) {
+		upo_RRT::Planner::statistics stats = rrt_planner_->getStatistics();
+		printf("Planning time:   %.4f secs\n", stats.planning_time);
+		printf("First sol time:  %.4f secs\n", stats.first_sol_time);
+		printf("Total samples:   %u \n", stats.total_samples);
+		printf("Valid samples:   %u \n", stats.valid_samples);
+		printf("Goal samples:    %u \n",  stats.goal_samples);
+		printf("Tree nodes:      %u \n",  stats.tree_nodes);
+		printf("Path nodes:      %u \n\n",  stats.path_nodes);
+	}
+	
+	
+	// Build the path in ROS format
+	rrt_plan_.clear();
+	geometry_msgs::PoseStamped pose;
+	pose.header.frame_id = "base_link";
+	pose.header.stamp = time;
+	int cont = 0;
+	for(int i=path.size()-1; i>=0; --i)
+	{
+		pose.pose.position.z = 0.1;
+		pose.pose.position.x = (double)path[i].getState()->getX();
+		pose.pose.position.y = (double)path[i].getState()->getY();
+		try {
+			pose.pose.orientation = tf::createQuaternionMsgFromYaw((double)path[i].getState()->getYaw());
+		} catch (tf::TransformException ex) {
+			printf("TransformException in getting sol path: %s",ex.what());
+		}
+		
+		rrt_plan_.push_back(pose);
+		//printf("Getting coordinates of node %i\n", cont);
+		
+		if(show_intermediate_states_ && path[i].hasIntermediateStates()) {	
+			std::vector<upo_RRT::State>* inter = path[i].getIntermediateStates();
+			for(unsigned int j=0; j<inter->size(); j++) 
+			{
+				//if(i != 0 || j != (inter.size()-1)) {
+					pose.pose.position.x = (double)inter->at(j).getX();
+					pose.pose.position.y = (double)inter->at(j).getY();
+					try {
+						pose.pose.orientation = tf::createQuaternionMsgFromYaw((double)inter->at(j).getYaw());
+					} catch (tf::TransformException ex) {
+						printf("TransformException in getting sol path: %s",ex.what());
+					}
+					pose.pose.position.z = 0.0;
+					rrt_plan_.push_back(pose);
+				//}
+			}
+				
+		}
+		cont++;
+	}
+	
+	
+	//Take the actions to command the robot
+	/*std::vector<upo_RRT::Action>* actsIni = path[path.size()-1].getAction();
+	float vx2, vy2, vth2; 
+	unsigned int steps2;
+	actsIni->at(0).getAction(vx2, vy2, vth2, steps2);
+	printf("Action InitialState. lv: %.2f, av: %.2f st:%u\n", vx2, vth2, steps2);
+	*/
+	std::vector<upo_RRT::Action>* acts = path[path.size()-2].getAction();
+	float vx, vy, vth; 
+	unsigned int steps;
+	acts->at(0).getAction(vx, vy, vth, steps);
+	cmd_vel.linear.x = vx;
+	cmd_vel.linear.y = vy;
+	cmd_vel.angular.z = vth;
+	printf("init_lv: %.2f, init_av:%.2f. Action 0. lv: %.2f, av: %.2f st:%u\n", start_lin_vel, start_ang_vel, vx, vth, steps);
+	
+
+	
+	
+	// Build the command list in ROS format
+	std::vector<geometry_msgs::Twist> vels;
+	if(rrt_planner_type_ > 2) {
+		unsigned int cont = 0;
+		unsigned int c = 0;
+		for(unsigned int i=path.size()-1; i>0; i--)
+		{
+			std::vector<upo_RRT::Action>* acts = path[i].getAction();
+			for(unsigned int j=0; j<acts->size(); j++) {
+				acts->at(j).getAction(vx, vy, vth, steps);
+				geometry_msgs::Twist v;
+				v.linear.x = vx;
+				v.linear.y = vy;
+				v.angular.z = vth;
+				vels.push_back(v);
+				cont+=steps;
+				//printf("Action %u.  lv: %.2f, av: %.2f, Steps: %u\n", c, vx, vth, steps);
+			}
+			c++;
+		}
+		//printf("Approximated Total Path Time: %.3f secs\n", kino_timeStep_*cont);
+	}
+	
+	
+	
+	
+
+	//Visualize the tree nodes of the resulting path
+	visualization_msgs::Marker points;
+	  
+	points.header.frame_id = "base_link"; //robot_base_frame_; 
+	points.header.stamp = time;
+	points.ns = "basic_shapes";
+	points.id = 0;
+	points.type = visualization_msgs::Marker::SPHERE_LIST;
+	points.action = visualization_msgs::Marker::ADD;
+	points.pose.position.x = 0.0;
+	points.pose.position.y = 0.0;
+	points.pose.position.z = 0.1; 
+	points.scale.x = 0.12;
+	points.scale.y = 0.12;
+	points.color.r = 0.0f;
+	points.color.g = 1.0f;
+	points.color.b = 0.0f;
+	points.color.a = 1.0;
+	points.lifetime = ros::Duration();
+		
+	for(unsigned int i=0; i<rrt_plan_.size(); i++)
+	{
+		geometry_msgs::Point p = rrt_plan_[i].pose.position;
+		points.points.push_back(p);
+	}
+	path_points_pub_.publish(points);
+	
+
+	if(visualize_tree_) 
+		visualizeTree(time);
+	
+	
+	if(visualize_costmap_) 
+		publish_feature_costmap(time);
+		
+		
+	if(interpolate_path_distance_ > 0.0)
+	{
+		rrt_plan_ = path_interpolation(rrt_plan_, interpolate_path_distance_);
+		
+		//Visualize the interpolated path nodes
+		visualization_msgs::Marker mar;
+		  
+		mar.header.frame_id = "base_link"; //robot_base_frame_; 
+		mar.header.stamp = time;
+		mar.ns = "basic_shapes";
+		mar.id = 2;
+		mar.type = visualization_msgs::Marker::SPHERE_LIST;
+		mar.action = visualization_msgs::Marker::ADD;
+		mar.pose.position.x = 0.0;
+		mar.pose.position.y = 0.0;
+		mar.pose.position.z = 0.05; 
+		mar.scale.x = 0.08;
+		mar.scale.y = 0.08;
+		mar.color.r = 0.0f;
+		mar.color.g = 1.0f;
+		mar.color.b = 1.0f;
+		mar.color.a = 1.0;
+		mar.lifetime = ros::Duration();
+			
+		for(unsigned int i=0; i<rrt_plan_.size(); i++)
+		{
+			geometry_msgs::Point p = rrt_plan_[i].pose.position;
+			mar.points.push_back(p);
+		}
+		path_interpol_points_pub_.publish(mar);
+	}
+
+	if(g)
+		delete g;
+	//rrt_planner_->freeTreeMemory();
+	
+	//delete rrt_planner_;
+
+	return 0;
+}
 
 
 
@@ -759,8 +1365,8 @@ void upo_RRT_ros::RRT_ros_wrapper::publish_feature_costmap(ros::Time t)
 					cost = checker_->getCost(s);
 					//printf("publish_feature_map. x:%.2f, y:%.2f, cost:%.2f\n", robotp.pose.position.x, robotp.pose.position.y, cost);
 						
-					//Transform cost into the scale[0,100]
-					data.push_back((int)round(cost*100.0));
+					//Transform cost into the scale[0,100]  
+					data.push_back((int)round(cost*100.0)); 
 			}
 		}
 		cmap.data = data;
@@ -803,6 +1409,8 @@ std::vector<float> upo_RRT_ros::RRT_ros_wrapper::get_feature_counts(geometry_msg
 				robot_pose.pose.orientation = tf::createQuaternionMsgFromYaw(0.0);
 				printf("¡¡¡¡¡¡QUATERNION NO VALID!!!!!. Changing yaw to zero.\n");
 			}
+			
+			checker_->preplanning_computations();
 			
 			upo_RRT::State* robot1;
 			robot1 = new upo_RRT::State(robot_pose.pose.position.x, robot_pose.pose.position.y, tf::getYaw(robot_pose.pose.orientation));
@@ -886,6 +1494,7 @@ std::vector<float> upo_RRT_ros::RRT_ros_wrapper::get_feature_counts(geometry_msg
 			
 			upo_msgs::PersonPoseArrayUPO p = people->at(i);
 			checker_->setPeople(p);
+			checker_->preplanning_computations();
 			
 			upo_RRT::State* robot1;
 			robot1 = new upo_RRT::State(robot_pose.pose.position.x, robot_pose.pose.position.y, tf::getYaw(robot_pose.pose.orientation));

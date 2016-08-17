@@ -41,8 +41,8 @@ std::vector<upo_RRT::Node> upo_RRT::RRT::solve(float secs)
 
 	//Clear datastructure and initilize it
 	nn_->clear();
-	Action* act = new Action(0.0, 0.0, 0.0, 5);
-	Node* ini = new Node(*start_, *act);
+	//Action* act = new Action(0.0, 0.0, 0.0, 5);
+	Node* ini = new Node(*start_, *init_action_state_);
 	nn_->add(ini);
 	
 	tree_.clear();
@@ -69,8 +69,8 @@ std::vector<upo_RRT::Node> upo_RRT::RRT::solve(float secs)
 		//Node* randNode;
 		State randState;
 		
-		//sample goal according to the bias parameter
-		if(space_->sampleUniform() < goalBias_)
+		
+		if(space_->sampleUniform() < goalBias_) //sample goal according to the bias parameter
 		{
 			randState = *goal_;
 			//State* randState = goal_;
@@ -83,9 +83,15 @@ std::vector<upo_RRT::Node> upo_RRT::RRT::solve(float secs)
 			//Sample a random valid state
 			unsigned int cont = 0;
 			do {
-				randState = *space_->sampleState();
-				//State* randState = space_->sampleState();
-				//randNode = new Node(*randState);
+				if(fullBiasing_) {
+					randState = *space_->samplePathBiasing(&first_path_, pathBias_stddev_);
+					cont++;
+					
+				} else { 
+					randState = *space_->sampleState();
+					//State* randState = space_->sampleState();
+					//randNode = new Node(*randState);
+				}
 				cont++;
 				if(cont>1)
 					total_samples++;
@@ -133,7 +139,7 @@ std::vector<upo_RRT::Node> upo_RRT::RRT::solve(float secs)
 		gettimeofday(&stop, NULL);
 		t2=stop.tv_sec+(stop.tv_usec/1000000.0);
 		time = t2 - t1;
-		if(time >= secs || solved) {
+		if(time >= secs /*|| solved*/) {
 			end = true;
 		}
 	}

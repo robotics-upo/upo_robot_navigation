@@ -1,6 +1,6 @@
 #-----GENERAL PARAMS FOR UPO_NAVIGATION -------------------------
 base_global_planner: navfn/NavfnROS
-base_local_planner: upo_navigation/RRTPlannerROS
+base_local_planner: simple_local_planner/PurePlannerROS
 recovery_behaviors: [{
     name: conservative_reset, 
     type: clear_costmap_recovery/ClearCostmapRecovery
@@ -163,7 +163,7 @@ PurePlanner:
 # Robot Configuration Parameters
   max_trans_acc:              1.0
   max_rot_acc:                1.0
-  max_trans_vel:              0.5 
+  max_trans_vel:              0.4 
   min_trans_vel:              0.1
   max_rot_vel:                0.5
   min_rot_vel:                0.1

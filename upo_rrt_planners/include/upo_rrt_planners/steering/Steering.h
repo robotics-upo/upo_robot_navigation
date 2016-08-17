@@ -51,6 +51,9 @@ namespace upo_RRT
 			float motionCost(Node* n1, Node* n2); 
 			
 			
+			float distance(State* s1, State* s2, int type);
+			
+			
 			void setStateSpace(StateSpace* ss) {
 				space_ = ss;
 			}
@@ -80,6 +83,8 @@ namespace upo_RRT
 			void setMotionCostType(int type) {
 					motionCostType_ = type;
 			}
+			
+			float normalizeAngle(float val, float min, float max);
 			
 			
 			

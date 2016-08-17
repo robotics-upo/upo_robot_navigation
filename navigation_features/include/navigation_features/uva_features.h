@@ -1,3 +1,6 @@
+#ifndef UVA_FEATURES_
+#define UVA_FEATURES_
+
 
 #include <iostream>
 #include <string>
@@ -43,15 +46,6 @@ namespace uva_cost_functions {
 		
 			UvaFeatures(tf::TransformListener* tf);
 
-			void timerCallback(const ros::TimerEvent& event);
-			void pcCallback(const sensor_msgs::PointCloud2::ConstPtr& pc_in);
-
-			boost::shared_ptr<cv::Mat> getDistanceTransform();
-			cv::Mat getDistanceTransform2();
-			cv::Mat getDistanceTransform3();
-			nav_msgs::MapMetaData getMapMetadata();
-			boost::shared_ptr<cv::Mat> getMapImage();
-
 
 			enum dist_type{LINEAR_INC,LOG_INC,EXP_INC,INVERSE_DEC,LOG_DEC,EXP_DEC};
 
@@ -60,39 +54,32 @@ namespace uva_cost_functions {
 				goal_ = g;
 			}
 
-			float getCost(geometry_msgs::PoseStamped* s);
-			std::vector<float> getFeatures(geometry_msgs::PoseStamped* s);
+			void setDistanceTransform(cv::Mat dt);
 
 			void setPeople(upo_msgs::PersonPoseArrayUPO p);
 
-			boost::mutex people_mutex_;
+			float getCost(geometry_msgs::PoseStamped* s);
+			std::vector<float> getFeatures(geometry_msgs::PoseStamped* s);
+
+
 
 
 		private:
 
-			vector<int> worldToMap(geometry_msgs::Point32* world_point,nav_msgs::MapMetaData* map_metadata);
-			void updateDT();
-			ros::NodeHandle nh_;
-			//ros::Subscriber sub_laser_;
-			ros::Subscriber sub_pc_;
-			cv::Mat map_image_;
-			cv::Mat distance_transform_;
-			nav_msgs::MapMetaData map_metadata_;
-			tf::TransformListener* listener_;
-			//tf::TransformListener listener2_;
-			laser_geometry::LaserProjection projector_;
-			sensor_msgs::PointCloud2 laser_cloud_;
-			//boost::mutex timer_callbackMutex_;
-			boost::mutex laser_callbackMutex_;
-			boost::mutex distancetrans_Mutex_;
+			ros::NodeHandle 			nh_;			
 
-			geometry_msgs::PoseStamped goal_;			
-			//ros::Timer timer_;
-			upo_msgs::PersonPoseArrayUPO people_latest_;
-			int people_paint_area_; // the amount of pixels to be painted over at the presence of people
+			tf::TransformListener* 		listener_;
+			
+			geometry_msgs::PoseStamped 	goal_;			
+			
+			upo_msgs::PersonPoseArrayUPO people_;
+			boost::mutex 				people_mutex_;
 
+			cv::Mat						dt_;
+			boost::mutex 				dt_mutex_;
 
 
 	};
 
 }
+#endif

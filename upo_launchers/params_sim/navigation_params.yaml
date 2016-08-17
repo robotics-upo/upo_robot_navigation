@@ -56,21 +56,26 @@ RRT_ros_wrapper:
   # 3 -> Kinodynamic RRT
   # 4 -> Kinodynamic RRTstar 
   # 5 -> Kinodynamic simplified RRTstar
-  rrt_planner_type:           2 
-  rrt_solve_time:             1.0 
+  rrt_planner_type:           5 
+  rrt_solve_time:             1.5 
   rrt_goal_bias:              0.05 
   rrt_max_insertion_dist:     0.5 #0.25<-2  0.50 o 1.0<-4
   rrt_goal_xy_tol:            0.1
   rrt_goal_th_tol:            0.12
   # If we want to interpolate the resulting path
   # if we don't. This value should be 0 or below 0.
-  rrt_interpolate_path_dist:  0.05
+  rrt_interpolate_path_dist:  0.0 #0.05
 
-  #if the planner is RRT* 
+  #if the planner is RRT* or kinoRRT* 
   rrtstar_use_k_nearest:      false
-  rrtstar_path_biasing:       true
+  rrtstar_first_path_biasing: false
   rrtstar_path_bias:          0.7
   rrtstar_stddev_bias:        1.0 #0.7
+
+  #Do a full biasing of the RRT over a global plan
+  # This will cancel the first path biasing option
+  full_path_biasing:          true
+  full_path_stddev_bias:      0.7
 
   #get the RRT* costs from a costmap
   use_fc_in_costmap:          false
@@ -88,19 +93,25 @@ RRT_ros_wrapper:
   # State Space
   # dim=2-> x, y
   # dim=3-> x, y, yaw
-  rrt_dimensions:             2
+  rrt_dimensions:             3
 
   # 1-> dist (no sqrt)
   # 2-> euclidean dist
   # 3-> dist+quaternions_diff
   # 4-> custom (dist+alpha)
-  distance_type:              2  
+  # 5-> custom (w1*dist+w2*(alpha+beta))
+  # 6-> distanceFunction Park's paper IROS'15
+  distance_type:              5  
 
-  # 1-> avg
-  # 2-> avg * dist
-  # 3-> avg * exp(dist)
-  # 4-> sum
-  motion_cost_type:           2
+  # 1-> avg_cost
+  # 2-> avg_cost * euclidean_dist
+  # 3-> avg_cost * exp(euc_dist)
+  # 4-> cost sum
+  # 5-> avg_cost * (dist+alpha)
+  # For 3 dimensions:
+  # 6-> avg_cost * (dist+sum of angles regarding the intersection line)
+  # 7-> avg_cost * distanceFunction of Park's paper IROS'15
+  motion_cost_type:           6
 
   rrt_size_x:                 4.0 #5.0
   rrt_size_y:                 4.0 #5.0
@@ -117,7 +128,7 @@ RRT_ros_wrapper:
   visualize_rrt_tree:         true
   visualize_nav_costmap:      true
   show_rrt_statistics:        true
-  show_intermediate_states:   false #true only in case of kino
+  show_intermediate_states:   true #true only in case of kino
 
   robot_radius:               0.34  #meters
 
@@ -136,7 +147,7 @@ Navigation_features:
   
   #Use the laser projection or the ros costmap
   # to calculate the obstacle distance cost
-  use_laser_projection:       false
+  use_laser_projection:       true
   pc_topic:                   /scan360/point_cloud
   pc_type:                    2
 
@@ -163,7 +174,7 @@ PurePlanner:
 # Robot Configuration Parameters
   max_trans_acc:              1.0
   max_rot_acc:                1.0
-  max_trans_vel:              0.5 
+  max_trans_vel:              0.4 
   min_trans_vel:              0.1
   max_rot_vel:                0.5
   min_rot_vel:                0.1

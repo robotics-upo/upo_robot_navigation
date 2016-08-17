@@ -124,7 +124,7 @@ void SocialLayer::updateCosts(costmap_2d::Costmap2D& master_grid, int min_i, int
 			else
 				cost = navfeatures_->proxemicsFeature(&rpose);
 
-			int c = (int)round(cost*255.0);
+			int c = (int)round(cost*254.0);
 			//printf("C:%i  \t", c);
 	  		int index = getIndex(i, j);
 	  		costmap_[index] = c;		  

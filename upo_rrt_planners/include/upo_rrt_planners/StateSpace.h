@@ -32,7 +32,7 @@ namespace upo_RRT
 			State* sampleStateNear(State* st);
 			//State* sampleStateNearFree(State* st);
 			
-			State* samplePathBiasing(std::vector<State>* path, float stddev);
+			State* samplePathBiasing(std::vector<State>* path, float stddev, float yawdev = 0.2);
 			
 			float sampleUniform(); //value between [0, 1]
 

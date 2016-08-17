@@ -8,7 +8,7 @@ upo_RRT::SimpleRRTstar::SimpleRRTstar() : Planner() {
 	r_rrt_ = 0.0;
 	rewire_factor_ = 1.1;
 			
-	usePathBiasing_ = false;
+	useFirstPathBiasing_ = false;
 	pathBias_ = 0.0;
 	pathBias_stddev_ = 0.0;
 	
@@ -108,6 +108,7 @@ std::vector<upo_RRT::Node> upo_RRT::SimpleRRTstar::solve(float secs)
 		//State* randState = NULL;
 		State randState;
 		
+		
 		//sample goal according to the bias parameter
 		if(space_->sampleUniform() < goalBias_)
 		{
@@ -124,28 +125,25 @@ std::vector<upo_RRT::Node> upo_RRT::SimpleRRTstar::solve(float secs)
 				//if(randState)
 				//	delete randState;
 				
-				//Path biasing
-				if(usePathBiasing_ && !first_sol && space_->sampleUniform() < pathBias_) {
+				if(fullBiasing_)
+				{
+					randState = *space_->samplePathBiasing(&first_path_, pathBias_stddev_);
+					
+				} else if(useFirstPathBiasing_ && !first_sol && space_->sampleUniform() < pathBias_) { //First RRT Path biasing
 					
 					randState = *space_->samplePathBiasing(&first_path_, pathBias_stddev_);
-					cont++;
-					if(cont>1)
-						total_samples++;
-					else {
-						valid_samples++;
-						total_samples++;
-					}
 					
-				// Regular state sampling
-				} else {
+				
+				} else { // Regular state sampling
 					randState = *space_->sampleState();
-					cont++;
-					if(cont>1)
-						total_samples++;
-					else {
-						valid_samples++;
-						total_samples++;
-					}
+					
+				}
+				cont++;
+				if(cont>1)
+					total_samples++;
+				else {
+					valid_samples++;
+					total_samples++;
 				}
 				
 			} while(!space_->isStateValid(&randState));
@@ -242,7 +240,7 @@ std::vector<upo_RRT::Node> upo_RRT::SimpleRRTstar::solve(float secs)
 					first_sol_time = (t3 - t1);
 					
 					//Store the first solution to draw samples from it.
-					if(usePathBiasing_) {
+					if(useFirstPathBiasing_) {
 						Node* current = solution;
 						while (current != NULL)
 						{

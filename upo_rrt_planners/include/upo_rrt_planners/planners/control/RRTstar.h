@@ -45,8 +45,8 @@ namespace upo_RRT
 				rewire_factor_ = f;
 			}
 			
-			void set_usePathBiasing(bool b) {
-				usePathBiasing_ = b;
+			void set_useFirstPathBiasing(bool b) {
+				useFirstPathBiasing_ = b;
 			}
 			
 			void setPathBias(float f) {
@@ -100,11 +100,8 @@ namespace upo_RRT
 			double 				r_rrt_;
 			float  				rewire_factor_;
 			
-			bool 				usePathBiasing_;
-			float				pathBias_;
-			float 				pathBias_stddev_;
+			bool 				useFirstPathBiasing_;
 			
-			std::vector<upo_RRT::State> first_path_;
 	};
 }
 #endif

@@ -64,7 +64,6 @@ std::vector<upo_RRT::Node> upo_RRT::SimpleRRT::solve(float secs)
 	t1=start.tv_sec+(start.tv_usec/1000000.0);
 	while(!end)
 	{
-		//Node* randNode;
 		State randState;
 		
 		//sample goal according to the bias parameter
@@ -81,9 +80,14 @@ std::vector<upo_RRT::Node> upo_RRT::SimpleRRT::solve(float secs)
 			//Sample a random valid state
 			unsigned int cont = 0;
 			do {
-				randState = *space_->sampleState();
-				//State* randState = space_->sampleState();
-				//randNode = new Node(*randState);
+				
+				if(fullBiasing_)
+				{
+					randState = *space_->samplePathBiasing(&first_path_, pathBias_stddev_); 
+				} else {
+					randState = *space_->sampleState();
+				}
+				
 				cont++;
 				if(cont>1)
 					total_samples++;
@@ -91,7 +95,7 @@ std::vector<upo_RRT::Node> upo_RRT::SimpleRRT::solve(float secs)
 					valid_samples++;
 					total_samples++;
 				}
-				//delete randState;
+				
 			} while(!space_->isStateValid(&randState));
 		}
 		

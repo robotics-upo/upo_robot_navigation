@@ -34,7 +34,13 @@ features::NavFeatures::NavFeatures(tf::TransformListener* tf, const costmap_2d::
 	//max_dist_2_ = (size_x_*2*size_x_*2)+(size_y_*2*size_y_*2);
 	
 	costmap_local_ = loc_costmap;
-	costmap_global_ = glob_costmap;
+	if(glob_costmap) {
+		costmap_global_ = glob_costmap;
+		use_global_costmap_ = true;
+	} else {
+		costmap_global_ = NULL;
+		use_global_costmap_ = false;
+	}
 	myfootprint_ = footprint;
 	
 	
@@ -82,7 +88,7 @@ void features::NavFeatures::setParams()
 	if(use_uva_features_)
 	{
 		use_laser_projection_ = true;
-		//uva_features_ = new uva_cost_functions::UvaFeatures(tf);
+		uva_features_ = new uva_cost_functions::UvaFeatures(tf_listener_);
 		if(use_laser_projection_) {
 			max_cost_obs_ = distance_functions(0.0, INVERSE_DEC); //EXP_DEC //INVERSE_DEC
 			setupProjection(pc_topic, pc_type);
@@ -127,8 +133,8 @@ void features::NavFeatures::setParams()
 
 
 features::NavFeatures::~NavFeatures() {
-	//if(use_uva_features_)
-		//delete uva_features_;
+	if(use_uva_features_)
+		delete uva_features_;
 }
 
 
@@ -182,11 +188,10 @@ void features::NavFeatures::goalCallback(const geometry_msgs::PoseStamped::Const
 
 void features::NavFeatures::peopleCallback(const upo_msgs::PersonPoseArrayUPO::ConstPtr& msg) 
 {
-	/*if(use_uva_features_) {
-		uva_features_->people_mutex_.lock();
+	if(use_uva_features_) {
 		uva_features_->setPeople(*msg);
-		uva_features_->people_mutex_.unlock();
-	} else {*/
+
+	} else {
 	
 		peopleMutex_.lock();
 		people_ = msg->personPoses;
@@ -195,7 +200,7 @@ void features::NavFeatures::peopleCallback(const upo_msgs::PersonPoseArrayUPO::C
 		}
 		peopleMutex_.unlock();
 	
-	//}
+	}
 	
 }
 
@@ -327,9 +332,14 @@ void features::NavFeatures::updateDistTransform(){
 		ROS_ERROR("\n\nNAV FEATURES. UPDATEDT. cv::distanceTransform!!!!!\n");
 	} 
 	
-	dtMutex_.lock();
-	distance_transform_ = dt.clone();
-	dtMutex_.unlock(); 
+
+	if(use_uva_features_) {
+		uva_features_->setDistanceTransform(dt);
+	} else {
+		dtMutex_.lock();
+		distance_transform_ = dt.clone();
+		dtMutex_.unlock(); 
+	}
 
 	//gettimeofday(&stop, NULL);
 	//printf("took %lu\n", stop.tv_usec - start.tv_usec);
@@ -352,9 +362,9 @@ std::vector<int> features::NavFeatures::worldToMap(geometry_msgs::Point32* world
 
 void features::NavFeatures::setGoal(geometry_msgs::PoseStamped g) {
 
-	/*if(use_uva_features_)
+	if(use_uva_features_)
 		uva_features_->setGoal(g);
-	else*/
+	else
 		goal_ = g;
 }
 
@@ -375,25 +385,26 @@ bool features::NavFeatures::poseValid(geometry_msgs::PoseStamped* pose)
 	unsigned int cell_x, cell_y;
 	unsigned char cost;
 
-	//Global costmap ------------------------------------------
-	geometry_msgs::PoseStamped p_out_map;
-	try {					
-		tf_listener_->transformPose("map", p_in, p_out_map); 
-	}catch (tf::TransformException ex){
-		ROS_WARN("isValid. x:%.2f, y:%.2f. TransformException: %s",x_i, y_i, ex.what());
-		return false;
+	if(use_global_costmap_) {
+		//Global costmap ------------------------------------------
+		geometry_msgs::PoseStamped p_out_map;
+		try {					
+			tf_listener_->transformPose("map", p_in, p_out_map); 
+		}catch (tf::TransformException ex){
+			ROS_WARN("isValid. x:%.2f, y:%.2f. TransformException: %s",x_i, y_i, ex.what());
+			return false;
+		}
+		//get the cell coord of the center point of the robot
+		if(!costmap_global_->worldToMap((double)p_out_map.pose.position.x, (double)p_out_map.pose.position.y, cell_x, cell_y))
+			return false;
+
+		//if number of points in the footprint is less than 3, we'll just assume a circular robot
+		//if(myfootprint->size() < 3){
+		cost = costmap_global_->getCost(cell_x, cell_y);
+		if(cost == costmap_2d::LETHAL_OBSTACLE || cost == costmap_2d::INSCRIBED_INFLATED_OBSTACLE || cost == costmap_2d::NO_INFORMATION)
+			return false;
+		//}
 	}
-	//get the cell coord of the center point of the robot
-	if(!costmap_global_->worldToMap((double)p_out_map.pose.position.x, (double)p_out_map.pose.position.y, cell_x, cell_y))
-		return false;
-
-	//if number of points in the footprint is less than 3, we'll just assume a circular robot
-	//if(myfootprint->size() < 3){
-	cost = costmap_global_->getCost(cell_x, cell_y);
-	if(cost == costmap_2d::LETHAL_OBSTACLE || cost == costmap_2d::INSCRIBED_INFLATED_OBSTACLE || cost == costmap_2d::NO_INFORMATION)
-		return false;
-	//}
-
 
 	//Local costmap---------------------------------------------
 	geometry_msgs::PoseStamped p_out_odom;
@@ -504,22 +515,24 @@ float features::NavFeatures::costmapPointCost(float x, float y) const {
 	unsigned int cell_x, cell_y;
 	unsigned char cost;
 
-	//Global costmap ------------------------------------------
-	geometry_msgs::PointStamped p_out_map;
-	try {					
-		tf_listener_->transformPoint("map", p_in, p_out_map); 
-	}catch (tf::TransformException ex){
-		ROS_WARN("CostmapPointCost1. x:%.2f, y:%.2f. TransformException: %s",x, y, ex.what());
-		return -100.0;
-	}
-	//get the cell coord of the center point of the robot
-	if(!costmap_global_->worldToMap((double)p_out_map.point.x, (double)p_out_map.point.y, cell_x, cell_y)) {
-		ROS_WARN("CostmapPointCost. Error in worldToMap conversion in costmap global!!! Returning highest cost");
-		return 254.0;
+	if(use_global_costmap_) {
+		//Global costmap ------------------------------------------
+		geometry_msgs::PointStamped p_out_map;
+		try {					
+			tf_listener_->transformPoint("map", p_in, p_out_map); 
+		}catch (tf::TransformException ex){
+			ROS_WARN("CostmapPointCost1. x:%.2f, y:%.2f. TransformException: %s",x, y, ex.what());
+			return -100.0;
+		}
+		//get the cell coord of the center point of the robot
+		if(!costmap_global_->worldToMap((double)p_out_map.point.x, (double)p_out_map.point.y, cell_x, cell_y)) {
+			ROS_WARN("CostmapPointCost. Error in worldToMap conversion in costmap global!!! Returning highest cost");
+			return 255.0;
+		}
+		
+		global_cost = costmap_global_->getCost(cell_x, cell_y);
 	}
 	
-	global_cost = costmap_global_->getCost(cell_x, cell_y);
-
 	//Local costmap---------------------------------------------
 	geometry_msgs::PointStamped p_out_odom;
 	try {					
@@ -532,7 +545,7 @@ float features::NavFeatures::costmapPointCost(float x, float y) const {
 	//get the cell coord of the center point of the robot
 	if(!costmap_local_->worldToMap((double)p_out_odom.point.x, (double)p_out_odom.point.y, cell_x, cell_y)) {
 		ROS_WARN("CostmapPointCost. Error in worldToMap conversion in local costmap!!! Returning highest cost");
-		return 254.0;
+		return 255.0;
 	}
 
 	local_cost = costmap_local_->getCost(cell_x, cell_y);
@@ -551,8 +564,8 @@ float features::NavFeatures::costmapPointCost(float x, float y) const {
 float features::NavFeatures::getCost(geometry_msgs::PoseStamped* s)
 {
 	
-	//if(use_uva_features_)
-		//uva_features_->getCost(s);	
+	if(use_uva_features_)
+		return uva_features_->getCost(s);	
 	
 	
 	std::vector<float> features;
@@ -607,6 +620,10 @@ float features::NavFeatures::getCost(geometry_msgs::PoseStamped* s)
 
 std::vector<float> features::NavFeatures::getFeatures(geometry_msgs::PoseStamped* s) 
 {
+
+	if(use_uva_features_)
+		return uva_features_->getFeatures(s);
+
 	std::vector<float> features;
 	//Goal distance cost
 	float dist_cost = goalDistFeature(s);
@@ -678,9 +695,10 @@ float features::NavFeatures::obstacleDistFeature(geometry_msgs::PoseStamped* s) 
 	} else {
 		
 		float obs_cost = costmapPointCost((float)s->pose.position.x, (float)s->pose.position.y);
-		return obs_cost/255.0;
+		return obs_cost/255.0; //Normalize
 	}
 }
+
 
 
 float features::NavFeatures::distance_functions(const float distance, const dist_type type){
@@ -737,7 +755,7 @@ void features::NavFeatures::calculateGaussians()
 		std::vector<group_candidate> group_candidates;
 		for(unsigned int i=0; i<people_aux.size(); i++)
 		{
-			//If the person is moving, do not group
+			//If the person is moving, we  do not group for the moment
 			if(people_aux.at(i).vel > 0.18) {
 				
 				gaussian f;
@@ -867,8 +885,8 @@ void features::NavFeatures::calculateGaussians()
 						g.x = x;
 						g.y = y;
 						g.th = th;
-						g.sx = sigmas_[2] + max_dist; // 0.8
-						g.sy = sigmas_[2] + max_dist;  // 0.8
+						g.sx = sigmas_[2] + max_dist/2.0; // 0.8
+						g.sy = sigmas_[2] + max_dist/2.0;  // 0.8
 						gauss_aux.push_back(g);
 					}
 				}
@@ -990,7 +1008,7 @@ float features::NavFeatures::proxemicsFeature(geometry_msgs::PoseStamped* s)  {
 		float py = it->y;
 		
 		/*
-		First, transform the robot location into person location frame: 
+		First, transform the robot location into gaussian location frame: 
 									|cos(th)  sin(th)  0|
 			Rotation matrix R(th)= 	|-sin(th) cos(th)  0|
 									|  0        0      1|
@@ -1004,6 +1022,7 @@ float features::NavFeatures::proxemicsFeature(geometry_msgs::PoseStamped* s)  {
 		//printf("robot x:%.2f, y:%.2f, sx:%.2f, sy:%.2f\n", x_r, y_r, it->sx, it->sy);
 		
 		float cost = 0.0;
+
 		if(it->type == AROUND) {
 			cost = gaussian_function(x_r, y_r, it->sx, it->sy);
 		} else if (it->type == FRONT) {
@@ -1016,7 +1035,9 @@ float features::NavFeatures::proxemicsFeature(geometry_msgs::PoseStamped* s)  {
 			}
 		}
 	
-		prox_cost = prox_cost * (cost + 1.0);
+		//prox_cost = prox_cost * (1.0 + cost);
+		if((1.0+cost) > prox_cost)
+			prox_cost = 1.0+cost;
 		
 	}
 	

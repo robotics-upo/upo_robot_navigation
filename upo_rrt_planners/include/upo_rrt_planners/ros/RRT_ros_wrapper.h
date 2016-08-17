@@ -44,9 +44,21 @@ namespace upo_RRT_ros {
 			RRT_ros_wrapper(tf::TransformListener* tf,
                            costmap_2d::Costmap2DROS* global_costmap_ros,
 							costmap_2d::Costmap2DROS* local_costmap_ros);
+			
+			//Only for RRT as a local controller 
+			RRT_ros_wrapper(tf::TransformListener* tf,
+                           costmap_2d::Costmap2DROS* global_costmap_ros,
+							costmap_2d::Costmap2DROS* local_costmap_ros,
+							float controller_freq,
+							float path_stddev,
+							int planner_type);				
+			
 			~RRT_ros_wrapper();
 
 			void setup();
+			
+			////Only for RRT as a local controller
+			void setup_controller(float controller_freq, float path_stddev, int planner_type);
 	
 			std::vector<geometry_msgs::PoseStamped> RRT_plan(geometry_msgs::Pose2D start, geometry_msgs::Pose2D goal, float start_lin_vel, float start_ang_vel);
 
@@ -60,6 +72,10 @@ namespace upo_RRT_ros {
 				checker_->setWeights(w);
 			}
 			
+			//For full path biasing
+			int RRT_local_plan(std::vector<geometry_msgs::PoseStamped> path_to_follow, float start_lin_vel, float start_ang_vel, geometry_msgs::Twist& cmd_vel);
+			
+			
 			//std::vector<float> get_features_count(geometry_msgs::PoseStamped* goal, std::vector<geometry_msgs::PoseStamped>* path, upo_msgs::PersonPoseArrayUPO* people);
 			
 			std::vector<float> get_feature_counts(geometry_msgs::PoseStamped* goal, std::vector<geometry_msgs::PoseStamped>* path); 
@@ -69,6 +85,15 @@ namespace upo_RRT_ros {
 			float get_path_cost();
 			
 			std::vector<geometry_msgs::PoseStamped> path_interpolation(std::vector<geometry_msgs::PoseStamped> path, float step_distance);
+			
+			float get_xy_tol() { return goal_xy_tol_;};
+			float get_th_tol() { return goal_th_tol_;};
+			void get_vel_ranges(float& max_lin_vel, float& min_lin_vel, float& max_ang_vel, float& min_ang_vel) {
+				max_lin_vel = max_lin_vel_;
+				min_lin_vel = min_lin_vel_;
+				max_ang_vel = max_ang_vel_;
+				min_ang_vel = min_ang_vel_;
+			};
 
 
 		private:
@@ -115,6 +140,7 @@ namespace upo_RRT_ros {
 			bool							show_intermediate_states_;
 			float 							interpolate_path_distance_;
 			ros::Publisher 					local_goal_pub_;
+			ros::Publisher					rrt_goal_pub_;
 			ros::Publisher					costmap_pub_;
 			ros::Publisher 					tree_pub_;
 			ros::Publisher					path_points_pub_;
@@ -123,13 +149,16 @@ namespace upo_RRT_ros {
 			
 			//-------------------------------------------
 			bool							use_uva_lib_;
+			bool 							use_fc_costmap_;
 			float 							goal_bias_;
 			float 							max_range_;
 			bool 							rrtstar_use_k_nearest_;
-			bool 							rrtstar_path_biasing_;
-			float 							rrtstar_path_bias_;
-			float 							rrtstar_stddev_bias_;
+			bool 							rrtstar_first_path_biasing_;
+			float 							rrtstar_first_path_bias_;
+			float 							rrtstar_first_path_stddev_bias_;
 			float 							rrtstar_rewire_factor_;
+			bool							full_path_biasing_;
+			float 							full_path_stddev_bias_;
 			int 							kino_minControlSteps_;
 			int 							kino_maxControlSteps_;
 			float 							kino_linAcc_;
@@ -141,6 +170,7 @@ namespace upo_RRT_ros {
 			float 							max_lin_vel_;
 			float 							lin_vel_res_;
 			float 							max_ang_vel_;
+			float 							min_ang_vel_;
 			float 							ang_vel_res_;
 			float 							goal_xy_tol_;
 			float 							goal_th_tol_;

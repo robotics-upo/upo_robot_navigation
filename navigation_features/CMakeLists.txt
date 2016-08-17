@@ -156,7 +156,7 @@ add_definitions(${EIGEN_DEFINITIONS})
 ## Declare a C++ library
  add_library(nav_features
    src/nav_features.cpp
-   #src/uva_features.cpp
+   src/uva_features.cpp
  )
 
 ## Add cmake target dependencies of the library

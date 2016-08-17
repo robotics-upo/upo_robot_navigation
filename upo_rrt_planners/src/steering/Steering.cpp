@@ -769,45 +769,130 @@ float upo_RRT::Steering::motionCost(Node* n1, Node* n2)
 	switch(motionCostType_)
 	{
 		case 1:
-			// avg
+			// avg_cost
 			return ((n1->getCost() + n2->getCost()) / 2.0);
 			
 		case 2:
-			// avg * dist
-			//State* s12 = n1->getState();
-			//State* s22 = n2->getState();
-			//float d = sqrt(((n1->getState()->getX() - n2->getState()->getX())*(n1->getState()->getX() - n2->getState()->getX())) 
-			//	+ ((n1->getState()->getY() - n2->getState()->getY())*(n1->getState()->getY() - n2->getState()->getY()))); 
-			//return (((n1->getCost() + n2->getCost()) / 2.0) * d);
-			return (((n1->getCost() + n2->getCost()) / 2.0) * (sqrt(((n1->getState()->getX() - n2->getState()->getX())*(n1->getState()->getX() - n2->getState()->getX())) 
-				+ ((n1->getState()->getY() - n2->getState()->getY())*(n1->getState()->getY() - n2->getState()->getY())))));
+			// avg_cost * ecuclidean_dist
+			return (((n1->getCost() + n2->getCost()) / 2.0) * distance(n1->getState(), n2->getState(), 2)); 
 		
 		case 3:
-			// avg * exp(dist)
-			//State* s13 = n1->getState();
-			//State* s23 = n2->getState();
-			//float dist3 = sqrt(((s13->getX() - s23->getX())*(s13->getX() - s23->getX())) + ((s13->getY() - s23->getY())*(s13->getY() - s23->getY()))); 
-			//return ((n1->getCost() + n2->getCost()) / 2.0) * exp(dist3);
-			return (((n1->getCost() + n2->getCost()) / 2.0) * (exp(sqrt(((n1->getState()->getX() - n2->getState()->getX())*(n1->getState()->getX() - n2->getState()->getX())) 
-				+ ((n1->getState()->getY() - n2->getState()->getY())*(n1->getState()->getY() - n2->getState()->getY()))))));
+			// avg_cost * exp(dist)
+			return (((n1->getCost() + n2->getCost()) / 2.0) * exp(distance(n1->getState(), n2->getState(), 2))); 
 				
-		
 		case 4:
-			// sum 
+			// cost sum 
 			return (n1->getCost() + n2->getCost());
+			
+		case 5:
+			//avg_cost * (dist + orientation)
+			return ((n1->getCost() + n2->getCost()) / 2.0) * distance(n1->getState(), n2->getState(), 4); 
 		
+		case 6:
+			// avg_cost * (dist + angles_accu_diff)  (angles of the point orientation regarding the intersection line)
+			return ((n1->getCost() + n2->getCost()) / 2.0) * distance(n1->getState(), n2->getState(), 5); 
+			
+		case 7:
+			// avg_cost * distance function of paper IROS2015 "Feedback motion planning via non-holonomic RRT* for mobile robots"
+			return ((n1->getCost() + n2->getCost()) / 2.0) * distance(n1->getState(), n2->getState(), 6); 
 		
 		default:
-			//State* s1d = n1->getState();
-			//State* s2d = n2->getState();
-			//float distd = sqrt(((s1d->getX() - s2d->getX())*(s1d->getX() - s2d->getX())) + ((s1d->getY() - s2d->getY())*(s1d->getY() - s2d->getY()))); 
-			//return ((n1->getCost() + n2->getCost()) / 2.0) * distd;
-			return ((n1->getCost() + n2->getCost()) / 2.0) * (sqrt(((n1->getState()->getX() - n2->getState()->getX())*(n1->getState()->getX() - n2->getState()->getX())) 
-				+ ((n1->getState()->getY() - n2->getState()->getY())*(n1->getState()->getY() - n2->getState()->getY()))));
+			// avg * ecuclidean_dist
+			return (((n1->getCost() + n2->getCost()) / 2.0) * distance(n1->getState(), n2->getState(), 2)); 
 	}
 }
 
 
+
+
+float upo_RRT::Steering::distance(State* s1, State* s2, int type)
+{
+	float dx = s1->getX() - s2->getX();
+	float dy = s1->getY() - s2->getY();
+	//float dist = sqrt(dx*dx + dy*dy);
+	float dist = dx*dx + dy*dy;
+	
+	switch(type) {
+		
+		case 1:
+			return dist;
+
+		case 2:
+			return sqrt(dist);
+
+		/*case 3:
+			if(space_->getDimensions() == 2)
+				return sqrt(dist);
+			else {
+				// w1*|| Pi+1 - Pi|| + w2*(1-|Qi+1 * Qi|)²
+				float euc_dist = sqrt(dist);
+		
+				tf::Quaternion q1 = tf::createQuaternionFromYaw(s1->getYaw());
+				tf::Quaternion q2 = tf::createQuaternionFromYaw(s2->getYaw());
+				float dot_prod = q1.dot(q2);
+				float angle_dist =  (1 - fabs(dot_prod))*(1 - fabs(dot_prod));
+				//printf("eu_dist: %.2f, angle_dist: %.3f, dist: %.3f\n", euc_dist, angle_dist, 0.8*euc_dist + 0.2*angle_dist);
+				return 0.7*euc_dist + 0.3*angle_dist;
+			}*/
+			
+		case 4:
+			if(space_->getDimensions() == 2)
+				return dist;
+			else {
+				// Another option
+				/*
+				First, transform the robot location into person location frame: 
+											|cos(th)  sin(th)  0|
+					Rotation matrix R(th)= 	|-sin(th) cos(th)  0|
+											|  0        0      1|
+												 
+					x' = (xr-xp)*cos(th_p)+(yr-yp)*sin(th_p)
+					y' = (xr-xp)*(-sin(th_p))+(yr-yp)*cos(th_p)
+				*/
+				float x = (s2->getX()-s1->getX())*cos(s1->getYaw()) + (s2->getY()-s1->getY())*sin(s1->getYaw());
+				float y =-(s2->getX()-s1->getX())*sin(s1->getYaw()) + (s2->getY()-s1->getY())*cos(s1->getYaw()); 
+				float alpha = atan2(y, x);
+				return (0.8*sqrt(dist)+0.2*fabs(alpha));
+			}
+			
+		case 5:  
+			if(space_->getDimensions() == 2)
+				return dist;
+			else {
+				//UPO. Dist + sum of the angles of both points regarding the intersection line
+				float x = (s2->getX()-s1->getX())*cos(s1->getYaw()) + (s2->getY()-s1->getY())*sin(s1->getYaw());
+				float y =-(s2->getX()-s1->getX())*sin(s1->getYaw()) + (s2->getY()-s1->getY())*cos(s1->getYaw()); 
+				float alpha = atan2(y, x);
+				float beta = s2->getYaw() - alpha;
+				beta = normalizeAngle(beta, -M_PI, M_PI);
+				return (0.6*sqrt(dist)+0.4*(fabs(alpha)+fabs(beta)));
+			}
+			
+		case 6:  
+			if(space_->getDimensions() == 2)
+				return dist;
+			else {
+				//Paper IROS2015 "Feedback motion planning via non-holonomic RRT* for mobile robots"
+				float x = (s2->getX()-s1->getX())*cos(s1->getYaw()) + (s2->getY()-s1->getY())*sin(s1->getYaw());
+				float y =-(s2->getX()-s1->getX())*sin(s1->getYaw()) + (s2->getY()-s1->getY())*cos(s1->getYaw()); 
+				float alpha = atan2(y, x);
+				float phi = s2->getYaw() - alpha;
+				phi = normalizeAngle(phi, -M_PI, M_PI);
+				float ka = 0.5;
+				float ko = ka/8.0;
+				dist = sqrt(dist);
+				// two options
+				float alpha_prime = atan(-ko*phi);
+				//float alpha_prime = atan(-ko*ko * phi/(dist*dist));
+				float r = normalizeAngle((alpha-alpha_prime), -M_PI, M_PI);
+				return (sqrt(dist*dist + ko*ko + phi*phi) + ka*fabs(r));
+			}
+			
+		default:
+			return dist;
+	}
+
+}
 
 
 
@@ -820,11 +905,11 @@ bool upo_RRT::Steering::steer3(Node* fromNode, Node* toNode, Node* newNode)
 	std::vector<State> istates;
 	
 	if(fromNode == NULL) {
-		printf("Steering. Nodo inicial igual a NULL\n"); 
+		printf("Steering. ERROR. Initial node is NULL\n"); 
 		return false;
 	}
 	if(toNode == NULL) {
-		printf("Steering. Nodo final igual a NULL\n"); 
+		printf("Steering. ERROR. Final node is NULL\n"); 
 		return false;
 	}	
 	
@@ -865,6 +950,7 @@ bool upo_RRT::Steering::steer3(Node* fromNode, Node* toNode, Node* newNode)
 	//Node currentNode(currentState);
 	currentNode.setCost(space_->getCost(currentNode.getState()));
 	
+	bool first = true;
 	
 	while(numSteps <= maxControlSteps_ && (dist > space_->getGoalXYTolerance() || fabs(phi) > space_->getGoalTHTolerance()))
 	{
@@ -891,9 +977,13 @@ bool upo_RRT::Steering::steer3(Node* fromNode, Node* toNode, Node* newNode)
 			av = ka * alpha + ko * phi;
 		} else {
 			//Improved-POSQ
-			lv = kp * tanh(kv*dist) * exp(-fabs(alpha));
+			lv = (kp+0.5) * tanh(kv*dist) * exp(-fabs(alpha));
 			av = ka * alpha + ko * phi;
 		}
+		
+		/*if(first) {
+			printf("1. p_lv:%.2f, n_lv:%.2f\n", prev_lv, lv); 
+		}*/
 		
 		//Check velocities reacheability
 		// linear vel
@@ -911,6 +1001,8 @@ bool upo_RRT::Steering::steer3(Node* fromNode, Node* toNode, Node* newNode)
 					av = prev_av + max_av_var_;
 		} 
 		
+		
+		
 		//Check max and min velocities
 		if(lv > space_->getMaxLinVel())
 			lv = space_->getMaxLinVel();
@@ -921,7 +1013,13 @@ bool upo_RRT::Steering::steer3(Node* fromNode, Node* toNode, Node* newNode)
 			av = space_->getMaxAngVel();
 		else if(av < (-space_->getMaxAngVel()))
 			av = space_->getMaxAngVel()*(-1);
-			
+				
+		
+		/*if(first) {
+			first = false;
+			printf("2. p_lv:%.2f, n_lv:%.2f\n", prev_lv, lv); 
+		}*/
+		
 		//Dead velocity ranges
 		/*if(fabs(lv) < 0.08)
 			lv = 0.0;
@@ -1074,7 +1172,7 @@ bool upo_RRT::Steering::collisionFree3(Node* fromNode, Node* toNode, std::vector
 			av = ka * alpha + ko * phi;
 		} else {
 			//Improved-POSQ
-			lv = kp * tanh(kv*dist) * exp(-fabs(alpha));
+			lv = (kp+0.5) * tanh(kv*dist) * exp(-fabs(alpha));
 			av = ka * alpha + ko * phi;
 		}
 		
@@ -1174,6 +1272,17 @@ upo_RRT::State* upo_RRT::Steering::propagateStep(State* st, float lv, float av)
 }
 
 
+
+float upo_RRT::Steering::normalizeAngle(float val, float min, float max) {
+	
+	float norm = 0.0;
+	if (val >= min)
+		norm = min + fmod((val - min), (max-min));
+	else
+		norm = max - fmod((min - val), (max-min));
+            
+    return norm;
+}
 
 
 

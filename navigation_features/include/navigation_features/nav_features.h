@@ -42,7 +42,7 @@
 #include "opencv2/imgproc/imgproc.hpp"
 
 //UVA features
-//#include <navigation_features/uva_features.h>
+#include <navigation_features/uva_features.h>
 
 
 
@@ -147,65 +147,65 @@ namespace features {
 				int group;
 			};
 			
-			ros::Publisher pub_gaussian_markers_;
+			ros::Publisher 						pub_gaussian_markers_;
 			
-			std::vector<gaussian> gaussians_;
-			boost::mutex gaussianMutex_;
+			std::vector<gaussian> 				gaussians_;
+			boost::mutex 						gaussianMutex_;
 
 			//For laser projection
-			bool use_laser_projection_;
-			ros::Subscriber sub_pc_;
-			cv::Mat map_image_;
-			cv::Mat distance_transform_;
-			nav_msgs::MapMetaData map_metadata_;
-			double resolution_;
-			std::vector<float> origin_;
-			tf::TransformListener* listener_;
-			laser_geometry::LaserProjection projector_;
-			sensor_msgs::PointCloud2 laser_cloud_;
-			boost::mutex laserMutex_;
-			boost::mutex dtMutex_;
-			int people_paint_area_; // the amount of pixels to be painted over at the presence of people
-			float max_cost_obs_;
+			bool 								use_laser_projection_;
+			ros::Subscriber 					sub_pc_;
+			cv::Mat 							map_image_;
+			cv::Mat 							distance_transform_;
+			nav_msgs::MapMetaData 				map_metadata_;
+			double 								resolution_;
+			std::vector<float> 					origin_;
+			laser_geometry::LaserProjection 	projector_;
+			sensor_msgs::PointCloud2 			laser_cloud_;
+			boost::mutex 						laserMutex_;
+			boost::mutex 						dtMutex_;
+			int 								people_paint_area_; // the amount of pixels to be painted over at the presence of people
+			float 								max_cost_obs_;
 			
 			
-			bool use_uva_features_;
-			//uva_cost_functions::UvaFeatures* uva_features_;
+			bool 								use_uva_features_;
+			uva_cost_functions::UvaFeatures*	uva_features_;
+		
 			
-			
-			const costmap_2d::Costmap2D* costmap_local_;
-			const costmap_2d::Costmap2D* costmap_global_;
-			tf::TransformListener* tf_listener_;
-			std::vector<geometry_msgs::Point>* myfootprint_;
-			float insc_radius_robot_;
-			geometry_msgs::PoseStamped goal_;
-			float max_planning_dist_;
+			bool 								use_global_costmap_;
+			const costmap_2d::Costmap2D* 		costmap_local_;
+			const costmap_2d::Costmap2D* 		costmap_global_;
+			tf::TransformListener* 				tf_listener_;
+			std::vector<geometry_msgs::Point>* 	myfootprint_;
+			float 								insc_radius_robot_;
+			geometry_msgs::PoseStamped 			goal_;
+			float 								max_planning_dist_;
 			//float max_dist_2_;
-			float size_x_;
-			float size_y_;
+			float 								size_x_;
+			float 								size_y_;
 
-			ros::NodeHandle nh_;
+			ros::NodeHandle 					nh_;
 		
 			// list of person objects	
 			std::vector<upo_msgs::PersonPoseUPO> people_;
-			ros::Subscriber sub_people_;
-			boost::mutex peopleMutex_;
-			std::string people_frame_id_;
+			ros::Subscriber 					sub_people_;
+			boost::mutex 						peopleMutex_;
+			std::string 						people_frame_id_;
 			//bool first_;
 			
-			ros::Subscriber goal_sub_;
+			ros::Subscriber 					goal_sub_;
 			
-			bool grouping_;
-			float stddev_group_;
-			float grouping_distance_;
+			bool 								grouping_;
+			float 								stddev_group_;
+			float 								grouping_distance_;
 			
 		
 			//parameters of the Gaussian functions
-			float amp_;
-			std::vector<float> sigmas_;
+			float 								amp_;
+			std::vector<float> 					sigmas_;
 		
 			//Weights to balance the costs
-			std::vector<float> w_;
+			std::vector<float> 					w_;
 
 	};
 
