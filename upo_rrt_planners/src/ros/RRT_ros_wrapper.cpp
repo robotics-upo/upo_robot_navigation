@@ -1,114 +1,6 @@
 #include <upo_rrt_planners/ros/RRT_ros_wrapper.h>
 
 
-/*class ValidityChecker2 : public upo_RRT::StateChecker
-{
-	public:
-    
-	ValidityChecker2(tf::TransformListener* tf, WorldModel* loc_world_model, WorldModel* glob_world_model, double ins_rad, double cir_rad) : StateChecker()
-    {
-		inscribed_rad = ins_rad;
-		circumscribed_rad = cir_rad;
-		wm_local = loc_world_model;
-		wm_global = glob_world_model;
-		mytf = tf;
-    }
-	
-	bool isValid(const State* s) const
-	{
-		//Take the values of the state
-		float x_i = state->getX();
-		float y_i = state->getY();
-		//float h_i = state->getYaw();
-
-		//Coordinates X and Y are in the robot local frame (base_link), we transform them to odom
-		geometry_msgs::PointStamped p_in;
-		p_in.header.frame_id = "base_link"; 
-		p_in.header.stamp = ros::Time(0);
-		p_in.point.x = x_i;
-		p_in.point.y = y_i;
-
-
-		std::vector<geometry_msgs::Point> my_footprint;
-		double local_cost = 0.0;
-		double global_cost = 0.0;
-
-
-		//Global costmap ------------------------------------------
-		geometry_msgs::PointStamped p_out_map;
-		try {					
-			mytf->transformPoint("map", p_in, p_out_map); 
-		}catch (tf::TransformException ex){
-			ROS_WARN("isValid. x:%.2f, y:%.2f. TransformException: %s",x_i, y_i, ex.what());
-			return false;
-		}
-		geometry_msgs::Point robot_map;
-		robot_map.x = (double)p_out_map.point.x;
-		robot_map.y = (double)p_out_map.point.y;
-		//we add just one point to the footprint since the footprintCost
-		//method assumes a circular robot if the footprint size is less
-		//than 3 
-		my_footprint.push_back(robot_map);
-		try{ 
-			global_cost = global_wm->footprintCost(robot_map, my_footprint, ins_rad, cir_rad);
-		} catch(...){
-				ROS_ERROR("ERROR obtaining footprint cost!!!");
-				return false;
-		}
-		if(global_cost < 0 || global_cost >= 253){
-			//printf("No valid in Global Costmap. x:%.2f, y:%.2f. cost: %.2f\n", x_i, y_i, global_cost);
-			return false;
-		}
-
-
-		//Local costmap---------------------------------------------
-		geometry_msgs::PointStamped p_out_odom;
-		try {					
-			mytf->transformPoint("odom", p_in, p_out_odom); 
-		}catch (tf::TransformException ex){
-			ROS_WARN("isValid. x:%.2f, y:%.2f. TransformException: %s",x_i, y_i, ex.what());
-			return false;
-		}
-		geometry_msgs::Point robot_odom;
-		robot_odom.x = (double)p_out_odom.point.x;
-		robot_odom.y = (double)p_out_odom.point.y;
-		//we add just one point to the footprint since the footprintCost
-		//method assumes a circular robot if the footprint size is less
-		//than 3 
-		my_footprint.clear();
-		my_footprint.push_back(robot_odom);
-		try{ 
-			local_cost = local_wm->footprintCost(robot_odom, my_footprint, ins_rad, cir_rad);
-		} catch(...){
-				ROS_ERROR("IsValid. ERROR obtaining footprint cost!!!");
-				return false;
-		}
-		if(local_cost < 0 || local_cost >= 253){ //>= 253
-		  //printf("No Valid in Local Costmap. x:%.2f, y:%.2f. local_cost: %2f\n", x_i, y_i, local_cost);
-		  return false;
-		}
-
-		
-
-		return true;
-	}
-
-
-	private:
-	double inscribed_rad;
-	double circumscribed_rad;
-	WorldModel* wm_local;
-	WorldModel* wm_global;
-	tf::TransformListener* mytf;
-
-};*/
-
-
-
-
-
-
-
 
 upo_RRT_ros::RRT_ros_wrapper::RRT_ros_wrapper() :
 global_costmap_ros_(NULL), local_costmap_ros_(NULL), tf_(NULL) {}
@@ -197,9 +89,9 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 	}
 	
 	//All
-	private_nh.param<bool>("full_path_biasing", full_path_biasing_, false);
-	private_nh.param<double>("full_path_stddev_bias", aux, 0.8);
-	full_path_stddev_bias_ = (float)aux;
+	//private_nh.param<bool>("full_path_biasing", full_path_biasing_, false);
+	//private_nh.param<double>("full_path_stddev_bias", aux, 0.8);
+	//full_path_stddev_bias_ = (float)aux;
 	
 	
 	//if RRT or RRT* are kinodynamics
@@ -218,7 +110,18 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 		private_nh.param<double>("kino_angular_acc", aux, 1.57);
 		kino_angAcc_ = (float)aux;
 		private_nh.param<int>("kino_steering_type", kino_steeringType_, 1); 
+		
 	}
+	
+	//Steering parameters for kinodynamic planning
+	private_nh.param<double>("kino_steer_kp", aux, 0.5);
+	float kino_steer_kp = (float)aux;
+	private_nh.param<double>("kino_steer_kv", aux, 3.0);
+	float kino_steer_kv = (float)aux;
+	private_nh.param<double>("kino_steer_ka", aux, 2.0);
+	float kino_steer_ka = (float)aux;
+	private_nh.param<double>("kino_steer_ko", aux, 0.25);
+	float kino_steer_ko = (float)aux;
 	
 
 	//RRT State Space
@@ -317,7 +220,7 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 			rrt_planner_->as<upo_RRT::SimpleRRTstar>()->set_useKnearest(rrtstar_use_k_nearest_);
 			rrt_planner_->as<upo_RRT::SimpleRRTstar>()->set_useFirstPathBiasing(rrtstar_first_path_biasing_);
 			rrt_planner_->as<upo_RRT::SimpleRRTstar>()->setRewireFactor(rrtstar_rewire_factor_);
-			if(rrtstar_first_path_biasing_ && !full_path_biasing_) {
+			if(rrtstar_first_path_biasing_ /*&& !full_path_biasing_*/) {
 				rrt_planner_->as<upo_RRT::SimpleRRTstar>()->setPathBias(rrtstar_first_path_bias_);
 				rrt_planner_->as<upo_RRT::SimpleRRTstar>()->setPathBias_stddev(rrtstar_first_path_stddev_bias_);
 			}
@@ -345,7 +248,7 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 			rrt_planner_->as<upo_RRT::RRTstar>()->setRewireFactor(rrtstar_rewire_factor_);
 			rrt_planner_->as<upo_RRT::RRTstar>()->setSteeringType(kino_steeringType_);
 			rrt_planner_->as<upo_RRT::RRTstar>()->setMotionCostType(motionCostType_); 
-			if(rrtstar_first_path_biasing_ && !full_path_biasing_) {
+			if(rrtstar_first_path_biasing_ /*&& !full_path_biasing_*/) {
 				rrt_planner_->as<upo_RRT::RRTstar>()->setPathBias(rrtstar_first_path_bias_);
 				rrt_planner_->as<upo_RRT::RRTstar>()->setPathBias_stddev(rrtstar_first_path_stddev_bias_);
 			}
@@ -364,7 +267,7 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 			rrt_planner_->as<upo_RRT::HalfRRTstar>()->setRewireFactor(rrtstar_rewire_factor_);
 			rrt_planner_->as<upo_RRT::HalfRRTstar>()->setSteeringType(kino_steeringType_);
 			rrt_planner_->as<upo_RRT::HalfRRTstar>()->setMotionCostType(motionCostType_); 
-			if(rrtstar_first_path_biasing_ && !full_path_biasing_) {
+			if(rrtstar_first_path_biasing_ /*&& !full_path_biasing_*/) {
 				rrt_planner_->as<upo_RRT::HalfRRTstar>()->setPathBias(rrtstar_first_path_bias_);
 				rrt_planner_->as<upo_RRT::HalfRRTstar>()->setPathBias_stddev(rrtstar_first_path_stddev_bias_);
 			}
@@ -377,18 +280,19 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 	}
 	
 	
-	rrt_planner_->setup(checker_, nn_params_, dimensions_, size_x_, size_y_, xy_res_, yaw_res_, min_lin_vel_, max_lin_vel_, lin_vel_res_, max_ang_vel_, ang_vel_res_);
+	rrt_planner_->setup(checker_, nn_params_, dimensions_, size_x_, size_y_, xy_res_, yaw_res_, min_lin_vel_, max_lin_vel_, lin_vel_res_, max_ang_vel_, ang_vel_res_,
+					kino_steer_kp, kino_steer_kv, kino_steer_ka, kino_steer_ko);
 				
 	rrt_planner_->setGoalBias(goal_bias_);
 	rrt_planner_->setGoalTolerance(goal_xy_tol_, goal_th_tol_);
 	rrt_planner_->setStoreTree(visualize_tree_);
 	
-	if(full_path_biasing_) {
+	/*if(full_path_biasing_) {
 		rrt_planner_->setFullBiasing(full_path_biasing_);
 		rrt_planner_->setPathBias(1.0);
 		rrt_planner_->setPathBias_stddev(full_path_stddev_bias_);
 		rrt_planner_->setGoalBias(0.0);
-	}
+	}*/
 	
 }
 
@@ -465,7 +369,19 @@ void upo_RRT_ros::RRT_ros_wrapper::setup_controller(float controller_freq, float
 		private_nh.param<double>("kino_angular_acc", aux, 1.57);
 		kino_angAcc_ = (float)aux;
 		private_nh.param<int>("kino_steering_type", kino_steeringType_, 1); 
+		
+		
 	}
+	
+	//Steering parameters for kinodynamic planning
+	private_nh.param<double>("kino_steer_kp", aux, 0.5);
+	float kino_steer_kp = (float)aux;
+	private_nh.param<double>("kino_steer_kv", aux, 3.0);
+	float kino_steer_kv = (float)aux;
+	private_nh.param<double>("kino_steer_ka", aux, 2.0);
+	float kino_steer_ka = (float)aux;
+	private_nh.param<double>("kino_steer_ko", aux, 0.25);
+	float kino_steer_ko = (float)aux;
 	
 
 	//RRT State Space
@@ -588,7 +504,8 @@ void upo_RRT_ros::RRT_ros_wrapper::setup_controller(float controller_freq, float
 	}
 	
 	
-	rrt_planner_->setup(checker_, nn_params_, dimensions_, size_x_, size_y_, xy_res_, yaw_res_, min_lin_vel_, max_lin_vel_, lin_vel_res_, max_ang_vel_, ang_vel_res_);
+	rrt_planner_->setup(checker_, nn_params_, dimensions_, size_x_, size_y_, xy_res_, yaw_res_, min_lin_vel_, max_lin_vel_, lin_vel_res_, max_ang_vel_, ang_vel_res_, 
+		kino_steer_kp, kino_steer_kv, kino_steer_ka, kino_steer_ko);
 				
 	rrt_planner_->setGoalBias(goal_bias_);
 	rrt_planner_->setGoalTolerance(goal_xy_tol_, goal_th_tol_);
@@ -600,7 +517,7 @@ void upo_RRT_ros::RRT_ros_wrapper::setup_controller(float controller_freq, float
 	rrt_planner_->setFullBiasing(full_path_biasing_);
 	rrt_planner_->setPathBias(1.0);
 	rrt_planner_->setPathBias_stddev(full_path_stddev_bias_);
-	rrt_planner_->setGoalBias(0.0);
+	//rrt_planner_->setGoalBias(0.0);
 	
 	
 }
@@ -1101,7 +1018,7 @@ int upo_RRT_ros::RRT_ros_wrapper::RRT_local_plan(std::vector<geometry_msgs::Pose
 	cmd_vel.linear.x = vx;
 	cmd_vel.linear.y = vy;
 	cmd_vel.angular.z = vth;
-	printf("init_lv: %.2f, init_av:%.2f. Action 0. lv: %.2f, av: %.2f st:%u\n", start_lin_vel, start_ang_vel, vx, vth, steps);
+	printf("wrapper. init_lv: %.2f. Action 1. lv: %.2f, st:%u\n", start_lin_vel, vx, steps);
 	
 
 	

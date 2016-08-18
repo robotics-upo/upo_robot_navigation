@@ -40,8 +40,8 @@ namespace upo_RRT
 			
 			
 			void setup(StateChecker* sch, unsigned int nn_params, unsigned int dim, float sx, float sy, float xyres = 0.1, float yawres = 0.02, 
-				float min_lv = 0.0, float max_lv = 0.5, float lvres = 0.05, float max_av = 0.5, 
-				float avres = 0.1);
+				float min_lv = 0.0, float max_lv = 0.5, float lvres = 0.05, float max_av = 0.5, float avres = 0.1,
+				float steer_kp=0.5, float steer_kv = 3.0, float steer_ka = 2.0, float steer_ko = 0.25);
 			
 			
 			

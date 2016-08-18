@@ -88,6 +88,10 @@ namespace upo_RRT
 			
 			
 			
+			void setSteeringParams(float kp, float kv, float ka, float ko);
+			
+			
+			
 		private:
 		
 			StateSpace* 	space_;
@@ -109,6 +113,12 @@ namespace upo_RRT
 			
 			int 			steeringType_;
 			int				motionCostType_;
+			
+			//Steering parameters
+			float 			kp_;
+			float			kv_;
+			float 			ka_;
+			float 			ko_;
 			
 	};
 	

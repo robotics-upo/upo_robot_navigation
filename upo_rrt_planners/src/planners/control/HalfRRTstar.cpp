@@ -69,8 +69,12 @@ std::vector<upo_RRT::Node> upo_RRT::HalfRRTstar::solve(float secs)
 
 	//Clear datastructure and initilize it
 	nn_->clear();
-	//Action* action = new Action(0.0, 0.0, 0.0, 5);
 	Node* ini = new Node(*start_, *init_action_state_);
+	std::vector<Action>* actss = ini->getAction();
+	float vxx=100.0, vyy=100.0, vtt=100.0;
+	unsigned int vs;
+	actss->at(actss->size()-1).getAction(vxx, vyy, vtt, vs);
+	printf("halfRRTstar solve. Ini x:%.2f, y:%.2f, vx:%.2f, vth:%.2f\n", ini->getState()->getX(), ini->getState()->getY(), vxx, vtt);
 	float singleCost = space_->getCost(start_);
 	ini->setCost(singleCost);
 	ini->setIncCost(singleCost);

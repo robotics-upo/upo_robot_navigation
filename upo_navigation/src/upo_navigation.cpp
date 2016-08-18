@@ -1230,7 +1230,7 @@ namespace upo_nav {
 
 	ros::Rate r(controller_frequency_);
 	ros::NodeHandle n;
-	int pursue_status = 0;
+	int pursue_status = -2;
 	bool exit = false;
 	ros::WallTime startt; // = ros::WallTime::now();
     while(n.ok()) //&& !exit)
@@ -1398,6 +1398,7 @@ namespace upo_nav {
 			//update the path
 			//pure_pursuit_->updatePlan(*local_plan_, true);
 			tc_->setPlan(*local_plan_);
+			pursue_status = 0;
 		
 			//disable flag
 			rrt_mutex_.lock();
@@ -1410,8 +1411,7 @@ namespace upo_nav {
 		//printf("Test 9: %.4f secs\n", t9.toSec());
 		
 		//the real work on pursuing a goal is done here
-		if(pursue_status != 1) {
-			
+		if(pursue_status != 1 && pursue_status!=-2) {
       		pursue_status = executeCycle();
       		//ros::WallDuration t10 = ros::WallTime::now() - startt;
 			//printf("Test 10: %.4f secs\n", t10.toSec());

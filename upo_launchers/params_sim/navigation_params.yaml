@@ -56,32 +56,27 @@ RRT_ros_wrapper:
   # 3 -> Kinodynamic RRT
   # 4 -> Kinodynamic RRTstar 
   # 5 -> Kinodynamic simplified RRTstar
-  rrt_planner_type:           5 
-  rrt_solve_time:             1.5 
+  rrt_planner_type:           2 
+  rrt_solve_time:             1.0 
   rrt_goal_bias:              0.05 
-  rrt_max_insertion_dist:     0.5 #0.25<-2  0.50 o 1.0<-4
+  rrt_max_insertion_dist:     0.25 #0.25<-2  0.50 o 1.0<-4
   rrt_goal_xy_tol:            0.1
   rrt_goal_th_tol:            0.12
   # If we want to interpolate the resulting path
   # if we don't. This value should be 0 or below 0.
-  rrt_interpolate_path_dist:  0.0 #0.05
+  rrt_interpolate_path_dist:  0.05
 
   #if the planner is RRT* or kinoRRT* 
   rrtstar_use_k_nearest:      false
-  rrtstar_first_path_biasing: false
-  rrtstar_path_bias:          0.7
-  rrtstar_stddev_bias:        1.0 #0.7
-
-  #Do a full biasing of the RRT over a global plan
-  # This will cancel the first path biasing option
-  full_path_biasing:          true
-  full_path_stddev_bias:      0.7
+  rrtstar_first_path_biasing: true
+  rrtstar_path_bias:          0.8
+  rrtstar_stddev_bias:        0.4
 
   #get the RRT* costs from a costmap
   use_fc_in_costmap:          false
 
   #if the planner is kinodynamic (options 3 and 4)
-  kino_time_step:             0.2 
+  kino_time_step:             0.15 
   kino_min_control_steps:     5  #not used currently
   kino_max_control_steps:     3    
   kino_linear_acc:            1.0
@@ -89,11 +84,16 @@ RRT_ros_wrapper:
   # 1-> POSQ
   # 2-> i-POSQ
   kino_steering_type:         2
+  # Steering parameters
+  kino_steer_kp:              0.4  #max_lin_vel
+  kino_steer_kv:              3.0
+  kino_steer_ka:              2.0  #max_ang_vel*4
+  kino_steer_ko:              0.25 #ka/8.0
 
   # State Space
   # dim=2-> x, y
   # dim=3-> x, y, yaw
-  rrt_dimensions:             3
+  rrt_dimensions:             2
 
   # 1-> dist (no sqrt)
   # 2-> euclidean dist
@@ -101,7 +101,7 @@ RRT_ros_wrapper:
   # 4-> custom (dist+alpha)
   # 5-> custom (w1*dist+w2*(alpha+beta))
   # 6-> distanceFunction Park's paper IROS'15
-  distance_type:              5  
+  distance_type:              1  
 
   # 1-> avg_cost
   # 2-> avg_cost * euclidean_dist
@@ -111,7 +111,7 @@ RRT_ros_wrapper:
   # For 3 dimensions:
   # 6-> avg_cost * (dist+sum of angles regarding the intersection line)
   # 7-> avg_cost * distanceFunction of Park's paper IROS'15
-  motion_cost_type:           6
+  motion_cost_type:           2
 
   rrt_size_x:                 4.0 #5.0
   rrt_size_y:                 4.0 #5.0
@@ -128,7 +128,7 @@ RRT_ros_wrapper:
   visualize_rrt_tree:         true
   visualize_nav_costmap:      true
   show_rrt_statistics:        true
-  show_intermediate_states:   true #true only in case of kino
+  show_intermediate_states:   false #use true only in case of kino
 
   robot_radius:               0.34  #meters
 

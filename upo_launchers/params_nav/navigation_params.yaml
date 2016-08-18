@@ -69,14 +69,14 @@ RRT_ros_wrapper:
   #if the planner is RRT* 
   rrtstar_use_k_nearest:      false
   rrtstar_path_biasing:       true
-  rrtstar_path_bias:          0.7
-  rrtstar_stddev_bias:        1.0 #0.7
+  rrtstar_path_bias:          0.8
+  rrtstar_stddev_bias:        0.4
 
   #get the RRT* costs from a costmap
-  use_fc_in_costmap:          true
+  use_fc_in_costmap:          false
 
   #if the planner is kinodynamic (options 3 and 4)
-  kino_time_step:             0.2 
+  kino_time_step:             0.15 
   kino_min_control_steps:     5  #not used currently
   kino_max_control_steps:     3    
   kino_linear_acc:            1.0
@@ -84,6 +84,11 @@ RRT_ros_wrapper:
   # 1-> POSQ
   # 2-> i-POSQ
   kino_steering_type:         2
+  # Steering parameters
+  kino_steer_kp:              0.4  #max_lin_vel
+  kino_steer_kv:              3.0
+  kino_steer_ka:              2.0  #max_ang_vel*4
+  kino_steer_ko:              0.25 #ka/8.0
 
   # State Space
   # dim=2-> x, y
@@ -94,12 +99,18 @@ RRT_ros_wrapper:
   # 2-> euclidean dist
   # 3-> dist+quaternions_diff
   # 4-> custom (dist+alpha)
-  distance_type:              2  
+  # 5-> custom (w1*dist+w2*(alpha+beta))
+  # 6-> distanceFunction Park's paper IROS'15
+  distance_type:              1  
 
-  # 1-> avg
-  # 2-> avg * dist
-  # 3-> avg * exp(dist)
-  # 4-> sum
+  # 1-> avg_cost
+  # 2-> avg_cost * euclidean_dist
+  # 3-> avg_cost * exp(euc_dist)
+  # 4-> cost sum
+  # 5-> avg_cost * (dist+alpha)
+  # For 3 dimensions:
+  # 6-> avg_cost * (dist+sum of angles regarding the intersection line)
+  # 7-> avg_cost * distanceFunction of Park's paper IROS'15
   motion_cost_type:           2
 
   rrt_size_x:                 4.0 #5.0
@@ -136,7 +147,7 @@ Navigation_features:
   
   #Use the laser projection or the ros costmap
   # to calculate the obstacle distance cost
-  use_laser_projection:       false
+  use_laser_projection:       true
   pc_topic:                   /scan360/point_cloud
   pc_type:                    2
 
@@ -163,7 +174,7 @@ PurePlanner:
 # Robot Configuration Parameters
   max_trans_acc:              1.0
   max_rot_acc:                1.0
-  max_trans_vel:              0.5 
+  max_trans_vel:              0.4 
   min_trans_vel:              0.1
   max_rot_vel:                0.5
   min_rot_vel:                0.1

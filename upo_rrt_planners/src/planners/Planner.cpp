@@ -9,6 +9,9 @@ upo_RRT::Planner::Planner() {
 	start_ = NULL;
 	goal_ = NULL;
 	path_cost_ = 0.0;
+	fullBiasing_ = false;
+	pathBias_ = 0.0;
+	pathBias_stddev_ = 0.0;
 }
 
 upo_RRT::Planner::~Planner() {
@@ -44,8 +47,8 @@ void upo_RRT::Planner::freeTreeMemory() {
 
 
 void upo_RRT::Planner::setup(StateChecker* sch, unsigned int nn_params, unsigned int dim, float sx, float sy, float xyres, float yawres, 
-				float min_lv, float max_lv, float lvres, float max_av, 
-				float avres) 
+				float min_lv, float max_lv, float lvres, float max_av, float avres,
+				float steer_kp, float steer_kv, float steer_ka, float steer_ko) 
 {
 	
 	if(!nn_) {
@@ -61,7 +64,8 @@ void upo_RRT::Planner::setup(StateChecker* sch, unsigned int nn_params, unsigned
 		steering_ = new Steering(space_);
 	else
 		steering_->setStateSpace(space_);
-					
+		
+	steering_->setSteeringParams(steer_kp, steer_kv, steer_ka, steer_ko);			
 }
 
 

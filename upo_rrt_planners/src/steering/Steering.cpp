@@ -39,6 +39,11 @@ upo_RRT::Steering::Steering(StateSpace* sp) {
 	
 	steeringType_ = 2;
 	motionCostType_ = 2;
+	
+	kp_ = space_->getMaxLinVel();
+	kv_ = 3.0;
+	ka_ = space_->getMaxAngVel()*4.0;
+	ko_ = ka_/8.0;
 }
 
 
@@ -87,12 +92,27 @@ upo_RRT::Steering::Steering(StateSpace* sp, float max_range, float tstep, int mi
 	
 	steeringType_ = 2;
 	motionCostType_ = 2;
+	
+	kp_ = space_->getMaxLinVel();
+	kv_ = 3.0;
+	ka_ = space_->getMaxAngVel()*4.0;
+	ko_ = ka_/8.0;
+	
 }
 
 
 
 upo_RRT::Steering::~Steering() {
 	//delete space_;
+}
+
+
+void upo_RRT::Steering::setSteeringParams(float kp, float kv, float ka, float ko)
+{
+	kp_ = kp;
+	kv_ = kv;
+	ka_ = ka;
+	ko_ = ko;
 }
 
 
@@ -220,7 +240,7 @@ bool upo_RRT::Steering::rrt_steer(Node* fromNode, Node* toNode, Node* newNode)
 	
 	
 	//Velocities to command
-	float lv = space_->getMaxLinVel() * exp(-fabs(dt))* tanh(3*dist);
+	float lv = kp_ * exp(-fabs(dt))* tanh(3*dist);
 	float av = space_->getMaxAngVel() * dt;
 	
 	float prev_lv = fromNode->getState()->getLinVel();
@@ -332,7 +352,7 @@ bool upo_RRT::Steering::rrt_collisionFree(Node* fromNode, Node* toNode, Node& ou
 	
 	
 	//Velocities to command
-	float lv = space_->getMaxLinVel() * exp(-fabs(dt))* tanh(3*dist);
+	float lv = kp_ * exp(-fabs(dt))* tanh(3*dist);
 	float av = space_->getMaxAngVel() * dt;
 	
 	float prev_lv = fromNode->getState()->getLinVel();
@@ -460,11 +480,6 @@ bool upo_RRT::Steering::steer2(Node* fromNode, Node* toNode, Node* newNode)
 	float wy = toNode->getState()->getY();
 	float wth = toNode->getState()->getYaw();
 	
-	//Parameters for the steering function
-	float kp = space_->getMaxLinVel();  	// friburg: 1
-    float kv = 3.0;     					// friburg: 3.8
-    float ka = space_->getMaxAngVel();     	// friburg: 6
-    //float ko = ka/8.0;    				// friburg: -1
 	
 	float lv = 0.0, av=0.0;
 	
@@ -494,12 +509,12 @@ bool upo_RRT::Steering::steer2(Node* fromNode, Node* toNode, Node* newNode)
 		
 		if(steeringType_ == 1) {
 			//POSQ
-			lv = kp * tanh(kv*dist);
-			av = ka * alpha; 
+			lv = kp_ * tanh(kv_*dist);
+			av = ka_ * alpha; 
 		} else {
 			//Improved-POSQ
-			lv = kp * tanh(kv*dist) * exp(-fabs(alpha));
-			av = ka * alpha;
+			lv = kp_ * tanh(kv_*dist) * exp(-fabs(alpha));
+			av = ka_ * alpha;
 		}
 		
 		//Check velocities reacheability
@@ -624,11 +639,6 @@ bool upo_RRT::Steering::collisionFree2(Node* fromNode, Node* toNode, std::vector
 	float wth = toNode->getState()->getYaw();
 	
 	
-	float kp = space_->getMaxLinVel();  // 1
-    float kv = 3.0;     // 3.8
-    float ka = space_->getMaxAngVel();     // 6
-    //float ko = ka/8.0;    // -1
-	
 	float lv = 0.0, av=0.0;
 	
 	float phi = 0.0;
@@ -671,12 +681,12 @@ bool upo_RRT::Steering::collisionFree2(Node* fromNode, Node* toNode, std::vector
 		//Velocities to command
 		if(steeringType_ == 1) {
 			//POSQ
-			lv = kp * tanh(kv*dist);
-			av = ka * alpha; // + ko * phi;
+			lv = kp_ * tanh(kv_*dist);
+			av = ka_ * alpha; // + ko * phi;
 		} else {
 			//Improved-POSQ
-			lv = kp * tanh(kv*dist) * exp(-fabs(alpha));
-			av = ka * alpha; // + ko * phi;
+			lv = kp_ * tanh(kv_*dist) * exp(-fabs(alpha));
+			av = ka_ * alpha; // + ko * phi;
 		}
 		
 		
@@ -922,22 +932,24 @@ bool upo_RRT::Steering::steer3(Node* fromNode, Node* toNode, Node* newNode)
 	float incCost = 0.0;
 	float AccCost = fromNode->getAccCost();
 	
-	//float prev_lv = act.at(act.size()-1)->getVx();
-	//float prev_av = act.at(act.size()-1)->getVth();
-	float prev_lv = fromNode->getState()->getLinVel();
-	float prev_av = fromNode->getState()->getAngVel();
+	std::vector<Action>* ac = fromNode->getAction();
+	float prev_lv = ac->at(ac->size()-1).getVx(); 
+	float prev_av = ac->at(ac->size()-1).getVth();
+	//float prev_lv = fromNode->getState()->getLinVel();
+	//float prev_av = fromNode->getState()->getAngVel();
 	
+	float prev_x = fromNode->getState()->getX();
+	float prev_y = fromNode->getState()->getY();
+	
+	/*if(prev_x == 0.0 && prev_y ==0.0){
+		printf("a_lv: %.2f, st_lv:%.2f\n", prev_lvA, prev_lv);
+	}*/
 	
 	//waypoint to reach
 	float wx = toNode->getState()->getX();
 	float wy = toNode->getState()->getY();
 	float wth = toNode->getState()->getYaw();
 	
-	//Parameters for the steering function
-	float kp = space_->getMaxLinVel();  	// friburg: 1
-    float kv = 3.0;     					// friburg: 3.8
-    float ka = space_->getMaxAngVel();     	// friburg: 6
-    float ko = ka/8.0;    					// friburg: -1
 	
 	float lv = 0.0, av=0.0;
 	
@@ -967,65 +979,73 @@ bool upo_RRT::Steering::steer3(Node* fromNode, Node* toNode, Node* newNode)
 
 		float alpha = atan2(dy, dx);
 		
-		//Astolfi
-		//float lv = kp * dist;
-		//float av = ka * alpha; // + ko * phi;
-		
-		if(steeringType_ == 1) {
-			//POSQ
-			lv = kp * tanh(kv*dist);
-			av = ka * alpha + ko * phi;
-		} else {
-			//Improved-POSQ
-			lv = (kp+0.5) * tanh(kv*dist) * exp(-fabs(alpha));
-			av = ka * alpha + ko * phi;
-		}
-		
-		/*if(first) {
-			printf("1. p_lv:%.2f, n_lv:%.2f\n", prev_lv, lv); 
-		}*/
-		
-		//Check velocities reacheability
-		// linear vel
-		if(fabs(prev_lv - lv) > max_lv_var_) {
-			if(lv < prev_lv)
-					lv = prev_lv - max_lv_var_;
-				else
-					lv = prev_lv + max_lv_var_;
-		} 
-		// angular vel
-		if(fabs(prev_av - av) > max_av_var_) {
-			if(av < prev_av)
-					av = prev_av - max_av_var_;
-				else
-					av = prev_av + max_av_var_;
-		} 
-		
-		
-		
-		//Check max and min velocities
-		if(lv > space_->getMaxLinVel())
-			lv = space_->getMaxLinVel();
-		else if(lv < space_->getMinLinVel())
-			lv = space_->getMinLinVel();
-		
-		if(av > space_->getMaxAngVel())
-			av = space_->getMaxAngVel();
-		else if(av < (-space_->getMaxAngVel()))
-			av = space_->getMaxAngVel()*(-1);
-				
-		
-		/*if(first) {
-			first = false;
-			printf("2. p_lv:%.2f, n_lv:%.2f\n", prev_lv, lv); 
-		}*/
-		
-		//Dead velocity ranges
-		/*if(fabs(lv) < 0.08)
+		if(fabs(alpha) > 1.0) // 1.5r~86º  0.7~41º  0.79~45º
+		{
 			lv = 0.0;
-		if(fabs(av) < 0.05)
-			av = 0.0;
-		*/
+			av = 0.3;
+			if(alpha < 0.0)
+				av = -0.3;
+	
+		} else {
+		
+			//Astolfi
+			//float lv = kp * dist;
+			//float av = ka * alpha; // + ko * phi;
+			
+			if(steeringType_ == 1) {
+				//POSQ
+				lv = kp_ * tanh(kv_*dist);
+				av = ka_ * alpha + ko_ * phi;
+			} else {
+				//Improved-POSQ
+				lv = kp_ * tanh(kv_*dist) * exp(-fabs(alpha));
+				av = ka_ * alpha + ko_ * phi;
+			}
+			
+			
+			float ant_lv = lv;
+			
+			//Check velocities reacheability
+			// linear vel
+			if(fabs(prev_lv - lv) > max_lv_var_) {
+				if(lv < prev_lv)
+						lv = prev_lv - max_lv_var_;
+					else
+						lv = prev_lv + max_lv_var_;
+			} 
+			// angular vel
+			if(fabs(prev_av - av) > max_av_var_) {
+				if(av < prev_av)
+						av = prev_av - max_av_var_;
+					else
+						av = prev_av + max_av_var_;
+			} 
+			
+			
+			//Check max and min velocities
+			if(lv > space_->getMaxLinVel())
+				lv = space_->getMaxLinVel();
+			else if(lv < space_->getMinLinVel())
+				lv = space_->getMinLinVel();
+			
+			if(av > space_->getMaxAngVel())
+				av = space_->getMaxAngVel();
+			else if(av < (-space_->getMaxAngVel()))
+				av = space_->getMaxAngVel()*(-1);
+					
+			
+			/*if(first && prev_x == 0.0 && prev_y == 0.0) {
+				first = false;
+				printf("prev_lv: %.2f  n_lv:%.2f, n_lv2:%.2f\n", prev_lv, ant_lv, lv); 
+			}*/
+			
+			//Dead velocity ranges
+			/*if(fabs(lv) < 0.08)
+				lv = 0.0;
+			if(fabs(av) < 0.05)
+				av = 0.0;
+			*/
+		}
 		
 		//Propagate the movement
 		State* st = propagateStep(&currentState, lv, av);
@@ -1117,11 +1137,6 @@ bool upo_RRT::Steering::collisionFree3(Node* fromNode, Node* toNode, std::vector
 	float wth = toNode->getState()->getYaw();
 	
 	
-	float kp = space_->getMaxLinVel();  
-    float kv = 3.0;     
-    float ka = space_->getMaxAngVel();     
-    float ko = ka/8.0;    
-	
 	float lv = 0.0, av=0.0;
 	
 	float phi = 0.0;
@@ -1168,12 +1183,12 @@ bool upo_RRT::Steering::collisionFree3(Node* fromNode, Node* toNode, std::vector
 		//Velocities to command
 		if(steeringType_ == 1) {
 			//POSQ
-			lv = kp * tanh(kv*dist);
-			av = ka * alpha + ko * phi;
+			lv = kp_ * tanh(kv_*dist);
+			av = ka_ * alpha + ko_ * phi;
 		} else {
 			//Improved-POSQ
-			lv = (kp+0.5) * tanh(kv*dist) * exp(-fabs(alpha));
-			av = ka * alpha + ko * phi;
+			lv = kp_ * tanh(kv_*dist) * exp(-fabs(alpha));
+			av = ka_ * alpha + ko_ * phi;
 		}
 		
 		
