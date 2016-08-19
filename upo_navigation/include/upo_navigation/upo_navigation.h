@@ -265,11 +265,8 @@ namespace upo_nav {
 	  //MapGridVisualizer map_viz_;
 
 	  //RRT planner
-	  //RRTPlannerROS* rrt_planner_;
 	  upo_RRT_ros::RRT_ros_wrapper* rrt_planner_;
 
-	  //Controller to follow the RRT path
-	  //TrajectoryPlannerPP* pure_pursuit_;
 
       //boost::recursive_mutex configuration_mutex_;
       //dynamic_reconfigure::Server<move_base::MoveBaseConfig> *dsrv_;

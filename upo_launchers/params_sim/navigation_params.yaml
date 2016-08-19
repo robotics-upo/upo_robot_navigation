@@ -161,8 +161,8 @@ Navigation_features:
 
   # Weights for function costs
   w1:                         0.1   #goal dist
-  w2:                         0.4  #obstacle dist
-  w3:                         0.5  #proxemics
+  w2:                         0.5  #obstacle dist
+  w3:                         0.4  #proxemics
 
   
 

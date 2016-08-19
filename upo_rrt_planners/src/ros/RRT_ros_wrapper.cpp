@@ -1172,7 +1172,7 @@ std::vector<geometry_msgs::PoseStamped> upo_RRT_ros::RRT_ros_wrapper::path_inter
 		}
 	}
 	pathnew.push_back(path[path.size()-1]);
-	printf("Path interpolation. Original size: %u, new size: %u\n", (unsigned int)path.size(), (unsigned int)pathnew.size());
+	//printf("Path interpolation. Original size: %u, new size: %u\n", (unsigned int)path.size(), (unsigned int)pathnew.size());
 	return pathnew;
 }
 
