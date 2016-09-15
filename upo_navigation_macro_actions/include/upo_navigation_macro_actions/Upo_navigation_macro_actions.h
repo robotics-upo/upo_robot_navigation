@@ -3,11 +3,15 @@
 
 #include <vector>
 #include <string>
+#include <stdlib.h>
+#include <stdio.h>
 #include <ros/ros.h>
 #include <tf/transform_datatypes.h>
 #include <tf/transform_listener.h>
 #include <angles/angles.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <geometry_msgs/Twist.h>
 #include <move_base_msgs/MoveBaseAction.h>
 #include <nav_msgs/GetPlan.h>
 #include <actionlib_msgs/GoalStatusArray.h>
@@ -18,54 +22,74 @@
 #include <upo_navigation_macro_actions/NavigateWaypointAction.h>
 #include <upo_navigation_macro_actions/NavigateHomeAction.h>
 #include <upo_navigation_macro_actions/NavigateInteractionTargetAction.h>
-//#include <upo_navigation_macro_actions/NavigateInteractionTargetorGroupAction.h>
 #include <upo_navigation_macro_actions/WaitAction.h>
+#include <upo_navigation_macro_actions/YieldAction.h>
+#include <upo_navigation_macro_actions/WalkSideBySideAction.h>
+#include <upo_navigation_macro_actions/AssistedSteeringAction.h>
 
 #include <upo_navigation/upo_navigation.h>
 #include <upo_msgs/PersonPoseArrayUPO.h>
 
-//#include <boost/thread.hpp>  /* Mutex */
-#include <boost/thread/mutex.hpp>
+#include <upo_navigation_macro_actions/Yield.h>
+//#include <upo_navigation_macro_actions/WalkSideBySide.h>
+
+#include <boost/thread/mutex.hpp> //Mutex
+
+//Dynamic reconfigure
+#include <dynamic_reconfigure/server.h>
+#include <dynamic_reconfigure/IntParameter.h>
+#include <dynamic_reconfigure/StrParameter.h>
+#include <dynamic_reconfigure/BoolParameter.h>
+#include <dynamic_reconfigure/DoubleParameter.h>
+#include <dynamic_reconfigure/Reconfigure.h>
+#include <dynamic_reconfigure/Config.h>
+#include <upo_navigation_macro_actions/NavigationMacroActionsConfig.h>
+
+
 
 //namespace macroactions {
-
-	//typedef actionlib::SimpleActionServer<upo_navigation_macro_actions::NavigateWaypointAction> NWActionServer;
-	//typedef actionlib::SimpleActionServer<upo_navigation_macro_actions::NavigateHomeAction> NHActionServer;
-	//typedef actionlib::SimpleActionServer<upo_navigation_macro_actions::NavigateInteractionTargetAction> NITActionServer;
-	//typedef actionlib::SimpleActionServer<upo_navigation_macro_actions::WaitAction> WActionServer;
-
-	//typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
 
 
 	class Upo_navigation_macro_actions
 	{
 	
 		public:
+		
+			enum datatype{INT_TYPE=1, DOUBLE_TYPE=2, BOOL_TYPE=3, STRING_TYPE=4, GROUP_TYPE=5};
+		
 			Upo_navigation_macro_actions(tf::TransformListener& tf, upo_nav::UpoNavigation* nav);
 			~Upo_navigation_macro_actions();
 
 			void navigateWaypointCB(const upo_navigation_macro_actions::NavigateWaypointGoal::ConstPtr& goal);
 			void navigateHomeCB(const upo_navigation_macro_actions::NavigateHomeGoal::ConstPtr& goal);
 			void navigateInteractionTargetCB(const upo_navigation_macro_actions::NavigateInteractionTargetGoal::ConstPtr& goal);
-			//void navigateInteractionTargetorGroupCB(const upo_navigation_macro_actions::NavigateInteractionTargetorGroupGoal::ConstPtr& goal);
 			void waitCB(const upo_navigation_macro_actions::WaitGoal::ConstPtr& goal);
+			void yieldCB(const upo_navigation_macro_actions::YieldGoal::ConstPtr& goal);
+			void walkSideCB(const upo_navigation_macro_actions::WalkSideBySideGoal::ConstPtr& goal);
+			void assistedSteeringCB(const upo_navigation_macro_actions::AssistedSteeringGoal::ConstPtr& goal);
 			
 			void peopleCallback(const upo_msgs::PersonPoseArrayUPO::ConstPtr& msg);
-
-			//void feedbackReceived(const move_base_msgs::MoveBaseActionFeedback::ConstPtr& msg);
-			//void statusReceived(const actionlib_msgs::GoalStatusArray::ConstPtr& msg);
-			//void resultReceived(const move_base_msgs::MoveBaseActionResult::ConstPtr& msg);
+			void poseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg);
 
 			
+			bool reconfigureParameters(std::string node, std::string param_name, std::string value, const datatype type);
 
 		private:
 
 			upo_nav::UpoNavigation* UpoNav_;
+			
+			
+			//Dynamic reconfigure
+			boost::recursive_mutex configuration_mutex_;
+			dynamic_reconfigure::Server<upo_navigation_macro_actions::NavigationMacroActionsConfig> *dsrv_;
+			void reconfigureCB(upo_navigation_macro_actions::NavigationMacroActionsConfig &config, uint32_t level);
+			
 
 			void fixFrame(std::string& cad);
 			float normalizeAngle(float val, float min, float max);
 			geometry_msgs::PoseStamped transformPoseTo(geometry_msgs::PoseStamped pose_in, std::string frame_out);
-			geometry_msgs::PoseStamped approachWaypointSimple(upo_msgs::PersonPoseUPO* person, bool* new_waypoint);
+			geometry_msgs::PoseStamped approachIT(upo_msgs::PersonPoseUPO* person);
+			
 
 			tf::TransformListener* tf_listener_;
 
@@ -75,6 +99,9 @@
 			ros::NodeHandle nh3_;
 			ros::NodeHandle nh4_;
 			ros::NodeHandle nh5_;
+			ros::NodeHandle nh6_;
+			ros::NodeHandle nh7_;
+		
 
 			typedef actionlib::SimpleActionServer<upo_navigation_macro_actions::NavigateWaypointAction> NWActionServer;
 			NWActionServer* NWActionServer_;
@@ -82,10 +109,14 @@
 			NHActionServer* NHActionServer_;
 			typedef actionlib::SimpleActionServer<upo_navigation_macro_actions::NavigateInteractionTargetAction> NITActionServer;
 			NITActionServer* NITActionServer_;
-			//typedef actionlib::SimpleActionServer<upo_navigation_macro_actions::NavigateInteractionTargetorGroupAction> NITGActionServer;
-			//NITGActionServer* NITGActionServer_;
 			typedef actionlib::SimpleActionServer<upo_navigation_macro_actions::WaitAction> WActionServer;
 			WActionServer* WActionServer_;
+			typedef actionlib::SimpleActionServer<upo_navigation_macro_actions::YieldAction> YActionServer;
+			YActionServer* YActionServer_;
+			typedef actionlib::SimpleActionServer<upo_navigation_macro_actions::WalkSideBySideAction> WSActionServer;
+			WSActionServer* WSActionServer_;
+			typedef actionlib::SimpleActionServer<upo_navigation_macro_actions::AssistedSteeringAction> ASActionServer;
+			ASActionServer* ASActionServer_;
 
 
 			upo_navigation_macro_actions::NavigateWaypointFeedback nwfeedback_;
@@ -97,33 +128,58 @@
 			upo_navigation_macro_actions::NavigateInteractionTargetFeedback nitfeedback_;
 			upo_navigation_macro_actions::NavigateInteractionTargetResult nitresult_;
 
-			//upo_navigation_macro_actions::NavigateInteractionTargetorGroupFeedback nitfeedback_;
-			//upo_navigation_macro_actions::NavigateInteractionTargetorGroupResult nitresult_;
-
 			upo_navigation_macro_actions::WaitFeedback wfeedback_;
 			upo_navigation_macro_actions::WaitResult wresult_;
+			
+			upo_navigation_macro_actions::YieldFeedback yfeedback_;
+			upo_navigation_macro_actions::YieldResult yresult_;
+			
+			upo_navigation_macro_actions::WalkSideBySideFeedback wsfeedback_;
+			upo_navigation_macro_actions::WalkSideBySideResult wsresult_;
+			
+			upo_navigation_macro_actions::AssistedSteeringFeedback asfeedback_;
+			upo_navigation_macro_actions::AssistedSteeringResult asresult_;
 
-	  		//ros::Subscriber feedback_sub_;
-			//ros::Subscriber result_sub_;
-			//ros::Subscriber status_sub_;
-
-
-			//Client to connect with navigation server
-			//typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
-			//MoveBaseClient* ac_;
-
-			//ros::ServiceClient rrtplan_client_;
 
 			//Parameters to be read
 			double control_frequency_;
+			
+			// Wait
 			double secs_to_check_block_;
 			double block_dist_;
 			double secs_to_wait_;
-			bool social_approach_;
-
+		
+			// NavigateInteractionTarget
+			int social_approaching_type_;
+			
+			
+			// Yield
+			Yield* yield_;
+			double secs_to_yield_;
+			std::string yieldmap_;
+			bool robot_inzone_;
+			bool person_inzone_;
+			//bool person_inzone2_;
+			boost::mutex rinzone_mutex_;
+			boost::mutex pinzone_mutex_;
+			
+			
+			// Walk side-by-side
+			//WalkSideBySide* walk_;
+			
+			//Assisted steering
+			//AssistedSteering* as_;
+			
+			// Low battery
+			bool check_battery_level_;
+			std::string battery_topic_;
+			
+			
 			ros::Subscriber people_sub_;
 			std::vector<upo_msgs::PersonPoseUPO> people_;
 			boost::mutex people_mutex_;
+			ros::Subscriber amcl_sub_;
+			
 
 	};
 //};

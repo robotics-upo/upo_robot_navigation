@@ -1,7 +1,10 @@
 # Goal
-geometry_msgs/PoseStamped person_pose
+#geometry_msgs/PoseStamped person_pose
+upo_msgs/PersonPoseUPO person
 ---
 # Result
+string result
+uint32 value
 ---
 # Feedback. Current robot position
 geometry_msgs/PoseStamped base_position

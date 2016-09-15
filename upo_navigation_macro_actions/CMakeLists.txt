@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(upo_navigation_macro_actions)
 
+add_definitions(-std=c++11)
+
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
@@ -19,10 +21,14 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   upo_navigation
   upo_msgs
+  dynamic_reconfigure
 )
 
 ## System dependencies are found with CMake's conventions
 find_package(Boost REQUIRED COMPONENTS system)
+find_package(OpenCV REQUIRED)
+#find_package(yaml-cpp REQUIRED)
+
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures
@@ -75,8 +81,10 @@ find_package(Boost REQUIRED COMPONENTS system)
  	NavigateWaypoint.action
 	NavigateHome.action
 	NavigateInteractionTarget.action
-	#NavigateInteractionTargetorGroup.action
 	Wait.action
+	Yield.action
+	WalkSideBySide.action
+    AssistedSteering.action
  )
 
 ## Generate added messages and services with any dependencies listed here
@@ -105,10 +113,9 @@ generate_messages(
 ##     and list every .cfg file to be processed
 
 ## Generate dynamic reconfigure parameters in the 'cfg' folder
-# generate_dynamic_reconfigure_options(
-#   cfg/DynReconf1.cfg
-#   cfg/DynReconf2.cfg
-# )
+generate_dynamic_reconfigure_options(
+   cfg/NavigationMacroActions.cfg
+ )
 
 ###################################
 ## catkin specific configuration ##
@@ -120,10 +127,10 @@ generate_messages(
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES upo_navigation_macro_actions
-#  CATKIN_DEPENDS actionlib actionlib_msgs cmake_modules geometry_msgs move_base_msgs rosconsole roscpp std_msgs
-#  DEPENDS system_lib
+  INCLUDE_DIRS include
+  LIBRARIES upo_navigation_macro_actions
+  CATKIN_DEPENDS actionlib actionlib_msgs cmake_modules geometry_msgs move_base_msgs rosconsole roscpp std_msgs angles tf upo_navigation upo_msgs yaml-cpp dynamic_reconfigure
+  DEPENDS system_lib
 )
 
 ###########
@@ -136,6 +143,7 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -150,11 +158,14 @@ include_directories(
 
 ## Declare a C++ executable
 add_executable(upo_navigation_macro_actions 
+	src/Yield.cpp
+	#src/WalkSideBySide.cpp
 	src/Upo_navigation_macro_actions.cpp
 	src/Upo_navigation_macro_actions_node.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
+add_dependencies(upo_navigation_macro_actions upo_navigation_macro_actions_gencfg)
 add_dependencies(upo_navigation_macro_actions upo_navigation_macro_actions_gencpp)
 add_dependencies(upo_navigation_macro_actions geometry_msgs_gencpp)
 add_dependencies(upo_navigation_macro_actions nav_msgs_gencpp)
@@ -166,6 +177,8 @@ add_dependencies(upo_navigation_macro_actions ${${PROJECT_NAME}_EXPORTED_TARGETS
 ## Specify libraries to link a library or executable target against
 target_link_libraries(upo_navigation_macro_actions
    ${catkin_LIBRARIES}
+   ${OpenCV_LIBRARIES}
+   yaml-cpp
 )
 
 #############

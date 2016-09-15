@@ -53,6 +53,9 @@
   <build_depend>tf</build_depend>
   <build_depend>upo_navigation</build_depend>
   <build_depend>upo_msgs</build_depend>
+  <build_depend>common_rosdeps</build_depend>
+  <build_depend>yaml-cpp</build_depend>
+  <build_depend>dynamic_reconfigure</build_depend>
 
   <run_depend>actionlib</run_depend>
   <run_depend>actionlib_msgs</run_depend>
@@ -67,7 +70,9 @@
   <run_depend>tf</run_depend>
   <run_depend>upo_navigation</run_depend>
   <run_depend>upo_msgs</run_depend>
-
+  <run_depend>yaml-cpp</run_depend>
+  <run_depend>common_rosdeps</run_depend>
+  <run_depend>dynamic_reconfigure</run_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
