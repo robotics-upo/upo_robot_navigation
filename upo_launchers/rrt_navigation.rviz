@@ -77,15 +77,27 @@ Visualization Manager:
           Value: true
         fiducial_1:
           Value: true
-        fiducial_2:
-          Value: true
-        fiducial_3:
-          Value: true
         fiducial_4:
+          Value: true
+        giraff_head:
+          Value: true
+        giraff_stalk:
+          Value: true
+        head_camera:
+          Value: true
+        laserback:
+          Value: true
+        laserfront:
+          Value: true
+        left_wheel_link:
           Value: true
         map:
           Value: true
         odom:
+          Value: true
+        right_wheel_link:
+          Value: true
+        xtionPeople_link:
           Value: true
       Marker Scale: 1
       Name: TF
@@ -100,15 +112,25 @@ Visualization Manager:
                 base_fiducial_link:
                   fiducial_1:
                     {}
-                  fiducial_2:
-                    {}
-                  fiducial_3:
-                    {}
                   fiducial_4:
                     {}
                 base_laser_link_0:
                   {}
                 base_laser_link_1:
+                  {}
+                giraff_stalk:
+                  giraff_head:
+                    head_camera:
+                      {}
+                  xtionPeople_link:
+                    {}
+                laserback:
+                  {}
+                laserfront:
+                  {}
+                left_wheel_link:
+                  {}
+                right_wheel_link:
                   {}
       Update Interval: 0
       Value: true
@@ -181,7 +203,7 @@ Visualization Manager:
         X: 0
         Y: 0
         Z: 0
-      Topic: /upo_navigation_node/NavfnROS/plan
+      Topic: /upo_navigation_macro_actions/NavfnROS/plan
       Unreliable: false
       Value: true
     - Alpha: 1
@@ -229,7 +251,7 @@ Visualization Manager:
       Marker Topic: /upo_navigation_node/Navigation_features/gaussian_markers
       Name: MarkerArray
       Namespaces:
-        gaussians: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -259,6 +281,50 @@ Visualization Manager:
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
+        base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        giraff_head:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        giraff_stalk:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        head_camera:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        laserback:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        laserfront:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        left_wheel_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        right_wheel_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        xtionPeople_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
       Name: RobotModel
       Robot Description: robot_description
       TF Prefix: ""

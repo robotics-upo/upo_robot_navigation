@@ -20,10 +20,10 @@ global_costmap:
 
   static_layer: 
     map_topic: /map
-    unknown_cost_value: -1  #default=-1
+    unknown_cost_value: 255  #default=-1
     trinary_costmap: true
     lethal_cost_threshold: 100 #default=100
-    track_unknown_space: false
+    track_unknown_space: true
     use_maximum: false
     first_map_only: true #default=false
     subscribe_to_updates: false  #if true, it subscribes to topic /map_topic_updates

@@ -32,7 +32,7 @@ local_costmap:
     obstacle_range: 4.9 
     max_obstacle_range: 4.9
     raytrace_range: 5.8
-    track_unknown_space: true
+    track_unknown_space: false
     transform_tolerance: 0.2 #default=0.2
     observation_sources: laserfront_scan_sensor laserback_scan_sensor
     laserfront_scan_sensor: {sensor_frame: base_laser_link_0, data_type: LaserScan, topic: base_scan_0, marking: true, clearing: true, inf_is_valid: false, expected_update_rate: 1.0, obstacle_range: 4.95, raytrace_range: 5.8}

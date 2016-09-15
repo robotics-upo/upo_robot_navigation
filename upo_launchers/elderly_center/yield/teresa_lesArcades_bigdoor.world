@@ -60,7 +60,7 @@ define giraff_base position
   fiducial_return 2           	# Seen as "2" fiducial finders
 
   localization "gps"         	  
-  #localization_origin [0 0 0 0] 	# Start odometry at (0, 0, 0).
+  localization_origin [0 0 0 0] 	# Start odometry at (0, 0, 0).
 
   # alternative odometric localization with simple error model
   #localization "odom"        # Change to "gps" to have impossibly perfect, global odometry
@@ -171,14 +171,14 @@ window
 floorplan
 ( 
   name "LesArcades-stage"
-  bitmap "maps/LesArcades-no_chairs.pgm"  #803x662
+  bitmap "LesArcades-bigdoor.pgm"  #803x662
   size [40.150 33.100 2.500]  # x pix*0,05 m/pix = metros
   pose [ 20.075 16.550 0.000 0.000]
 )
 
 #---------throw in the pioneer --------------------------------
 
-teresa( pose [ 9.000 12.000 0.000 0.000 ] name "teresa" localization_origin [9 12 0 0] )
+teresa( pose [ 9.000 12.000 0.000 0.000 ] name "teresa" localization_origin [9 12 0 0])
 
 #person( pose [ 110 62 0.000 45.000 ] color "magenta" name "person1")
 #block( pose [ 113.365 59.865 0.000 1.570 ] color "purple" fiducial_return 1)
