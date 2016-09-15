@@ -54,6 +54,7 @@ void features::NavFeatures::setParams()
 	//Read the ROS params from the server
 	ros::NodeHandle n("~/Navigation_features");
 	
+	
 	//Load weights "w1, w2, ..."
 	w_.clear();
 	bool ok = true;
@@ -75,6 +76,9 @@ void features::NavFeatures::setParams()
 		}
 		i++;
 	}
+	
+	n.param<int>("upo_featureset", upo_featureset_, 0);
+	
 	
 	
 	n.param<bool>("use_laser_projection", use_laser_projection_, false);
@@ -102,32 +106,48 @@ void features::NavFeatures::setParams()
 			setupProjection(pc_topic, pc_type);
 		
 		}
-	
-		double front;
-		n.param<double>("stddev_person_front", front, 1.2);
-		double aside;
-		n.param<double>("stddev_person_aside", aside, (1.2/1.5)); //=0.8
-		
-		n.param<bool>("enable_grouping", grouping_, true); 
-		double aux;
-		n.param<double>("stddev_group", aux, 0.8);
-		stddev_group_ = (float)aux;
-		double aux2;
-		n.param<double>("grouping_distance", aux2, 1.5);
-		grouping_distance_ = (float)aux2;
-		
-		amp_ = 1.80;			//Amplitude, max value of the gaussian
-		sigmas_.push_back((float)front);  //front of person. front
-		sigmas_.push_back((float)aside); //aside of person. front
-		sigmas_.push_back(sigmas_.at(1)); //front of person. back
-		sigmas_.push_back(sigmas_.at(1)); //aside of person. back
 	}
+	
+	double front;
+	n.param<double>("stddev_person_front", front, 1.2);
+	double aside;
+	n.param<double>("stddev_person_aside", aside, (1.2/1.5)); //=0.8
+		
+	double right;
+	n.param<double>("stddev_person_right", right, 0.8); 
+		
+	n.param<bool>("enable_grouping", grouping_, true); 
+	double aux;
+	n.param<double>("stddev_group", aux, 0.8);
+	stddev_group_ = (float)aux;
+	double aux2;
+	n.param<double>("grouping_distance", aux2, 1.5);
+	grouping_distance_ = (float)aux2;
+		
+	amp_ = 1.80;			//Amplitude, max value of the gaussian
+	sigmas_.push_back((float)front);  //front of person. front
+	sigmas_.push_back((float)aside); //aside of person. front
+	sigmas_.push_back(sigmas_.at(1)); //front of person. back
+	sigmas_.push_back(sigmas_.at(1)); //aside of person. back
+	sigmas_.push_back(right); //right of person. front
+	sigmas_.push_back(right/2.5); //right of person. aside
+	
+	n.param<double>("approaching_angle", aux, 0.40);
+	approaching_angle_ = (float)aux;
+	
 	
 	sub_people_ = nh_.subscribe("/people/navigation", 1, &NavFeatures::peopleCallback, this); 
 	
 	goal_sub_ = nh_.subscribe("/rrt_goal", 1, &NavFeatures::goalCallback, this);
 	
 	pub_gaussian_markers_ = n.advertise<visualization_msgs::MarkerArray>("gaussian_markers", 1);
+	
+	//ros::ServiceServer service = nh_.advertiseService("setApproachingIT", setApproachingIT);
+
+	//Dynamic reconfigure
+	dsrv_ = new dynamic_reconfigure::Server<navigation_features::nav_featuresConfig>(n); //ros::NodeHandle("~")
+    dynamic_reconfigure::Server<navigation_features::nav_featuresConfig>::CallbackType cb = boost::bind(&NavFeatures::reconfigureCB, this, _1, _2);
+    dsrv_->setCallback(cb);
 	
 }
 
@@ -137,6 +157,25 @@ features::NavFeatures::~NavFeatures() {
 		delete uva_features_;
 }
 
+
+ void features::NavFeatures::reconfigureCB(navigation_features::nav_featuresConfig &config, uint32_t level){
+    boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
+    
+    upo_featureset_ = config.upo_featureset;
+    use_uva_features_ = config.use_uva_features;
+	use_laser_projection_ = config.use_laser_projection;
+	sigmas_[0] = config.stddev_person_front;
+	sigmas_[1] = config.stddev_person_aside;
+	sigmas_[2] = sigmas_[1];
+	sigmas_[3] = sigmas_[1];
+	sigmas_[4] = config.stddev_person_right;
+	sigmas_[5] = sigmas_[4]/2.5;
+	grouping_ = config.enable_grouping;
+	stddev_group_ = config.stddev_group;
+	grouping_distance_ = config.grouping_distance;
+	it_id_ = config.interaction_target_id;
+	//printf("upo_featureset. it_id:%i\n", it_id_);
+}
 
 
 void features::NavFeatures::setupProjection(std::string topic, int pc_type)
@@ -188,6 +227,8 @@ void features::NavFeatures::goalCallback(const geometry_msgs::PoseStamped::Const
 
 void features::NavFeatures::peopleCallback(const upo_msgs::PersonPoseArrayUPO::ConstPtr& msg) 
 {
+	boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
+	
 	if(use_uva_features_) {
 		uva_features_->setPeople(*msg);
 
@@ -215,6 +256,9 @@ void features::NavFeatures::setPeople(upo_msgs::PersonPoseArrayUPO p)
 	
 	peopleMutex_.unlock();
 }
+
+
+
 
 
 //Point cloud callback
@@ -331,7 +375,8 @@ void features::NavFeatures::updateDistTransform(){
 	} catch(...){
 		ROS_ERROR("\n\nNAV FEATURES. UPDATEDT. cv::distanceTransform!!!!!\n");
 	} 
-	
+
+	//boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
 
 	if(use_uva_features_) {
 		uva_features_->setDistanceTransform(dt);
@@ -354,13 +399,15 @@ std::vector<int> features::NavFeatures::worldToMap(geometry_msgs::Point32* world
 	pixels.push_back((int)floor(x_map/map_metadata->resolution ));
 	pixels.push_back((int)floor(y_map/map_metadata->resolution));
 	return pixels;
-};
+}
 
 
 
 
 
 void features::NavFeatures::setGoal(geometry_msgs::PoseStamped g) {
+
+	boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
 
 	if(use_uva_features_)
 		uva_features_->setGoal(g);
@@ -563,6 +610,7 @@ float features::NavFeatures::costmapPointCost(float x, float y) const {
 
 float features::NavFeatures::getCost(geometry_msgs::PoseStamped* s)
 {
+	boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
 	
 	if(use_uva_features_)
 		return uva_features_->getCost(s);	
@@ -589,19 +637,37 @@ float features::NavFeatures::getCost(geometry_msgs::PoseStamped* s)
 		printf("GetCost. Obs_cost out of range!!! = %.2f\n", obs_cost);
 	}
 	
-	//Proxemics cost
-	float prox_cost = proxemicsFeature(s);
-	if(prox_cost > 1.0 || prox_cost < 0.0) {
-		printf("GetCost. Prox_cost out of range!!!\n");
-		prox_cost = 0.0;
-	}
-	features.push_back(prox_cost);
+	if(upo_featureset_ == 0) {
 	
-	if(obs_cost == 1.0)
-		return 1.0;
+		//Proxemics cost
+		float prox_cost = proxemicsFeature(s);
+		if(prox_cost > 1.0 || prox_cost < 0.0) {
+			printf("GetCost. Prox_cost out of range!!!\n");
+			prox_cost = 0.0;
+		}
+		features.push_back(prox_cost);
+		
+		if(obs_cost == 1.0)
+			return 1.0;
 
-	if(prox_cost == 0.0 && obs_cost != 0.0)
-		return (0.5*dist_cost + 0.5*obs_cost);	
+		if(prox_cost == 0.0 && obs_cost != 0.0)
+			return (0.5*dist_cost + 0.5*obs_cost);	
+		
+	} else {  //split the proxemics cost
+		
+		std::vector<float> prox_costs = gaussianFeatures(s);
+		for(unsigned int i=0; i<prox_costs.size(); i++)
+			features.push_back(prox_costs[i]);
+			
+		if(obs_cost == 1.0)
+			return 1.0;
+	}
+	
+	
+	
+
+	//if(prox_cost == 0.0 && obs_cost != 0.0)
+	//	return (0.5*dist_cost + 0.5*obs_cost);	
 	//if(obs_cost == 0.0 && prox_cost != 0.0)
 	//	return (0.5*prox_cost + 0.5*dist_cost);
 	//if(prox_cost == 0.0 && obs_cost == 0.0)
@@ -620,6 +686,7 @@ float features::NavFeatures::getCost(geometry_msgs::PoseStamped* s)
 
 std::vector<float> features::NavFeatures::getFeatures(geometry_msgs::PoseStamped* s) 
 {
+	//boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
 
 	if(use_uva_features_)
 		return uva_features_->getFeatures(s);
@@ -633,11 +700,20 @@ std::vector<float> features::NavFeatures::getFeatures(geometry_msgs::PoseStamped
 	float obs_cost = obstacleDistFeature(s);
 	features.push_back(obs_cost);
 	
-	//Proxemics cost
-	float prox_cost = proxemicsFeature(s);
-	features.push_back(prox_cost);
-	
-	return features;
+	if(upo_featureset_ == 0) {
+		//Proxemics cost
+		float prox_cost = proxemicsFeature(s);
+		features.push_back(prox_cost);
+		
+		return features;
+		
+	} else {
+		std::vector<float> prox_costs = gaussianFeatures(s);
+		for(unsigned int i=0; i<prox_costs.size(); i++)
+			features.push_back(prox_costs[i]);
+			
+		return features;
+	}
 }
 
 
@@ -652,6 +728,8 @@ float features::NavFeatures::goalDistFeature(geometry_msgs::PoseStamped* s)  {
 
 
 float features::NavFeatures::obstacleDistFeature(geometry_msgs::PoseStamped* s)  {
+	
+	boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
 	
 	if(use_laser_projection_) {
 		
@@ -736,6 +814,7 @@ float features::NavFeatures::distance_functions(const float distance, const dist
 
 void features::NavFeatures::calculateGaussians()
 {
+	
 	std::vector<upo_msgs::PersonPoseUPO> people_aux;
 	std::string frame;
 	// read the person list (thread safe)
@@ -766,6 +845,10 @@ void features::NavFeatures::calculateGaussians()
 				f.sx = sigmas_[0]; // 1.2
 				f.sy = sigmas_[1]; // 1.2/1.5 = 0.8
 				
+				if(people_aux.at(i).id == it_id_)
+				{
+					f.type = FRONT_APPROACH;
+				}
 				gauss_aux.push_back(f);
 				
 				gaussian b;
@@ -793,7 +876,8 @@ void features::NavFeatures::calculateGaussians()
 				p2.y = p1.y + (grouping_distance_/2.0)*sin(p1.theta);
 				p2.theta = p1.theta;
 				cand.interaction_point = p2;
-				cand.group = -1;
+				cand.group_id = -1;
+				cand.id = people_aux.at(i).id;
 				group_candidates.push_back(cand);
 			}
 		}
@@ -803,19 +887,19 @@ void features::NavFeatures::calculateGaussians()
 		int group_number = 1;
 		for(unsigned int i=0; i<group_candidates.size(); i++)
 		{
-			if(group_candidates.at(i).group == -1) {
-				group_candidates.at(i).group = group_number;
+			if(group_candidates.at(i).group_id == -1) {
+				group_candidates.at(i).group_id = group_number;
 				group.push_back(group_candidates.at(i));
 				
 				geometry_msgs::Pose2D c1 = group_candidates.at(i).interaction_point;
 				for(unsigned int j=0; j<group_candidates.size(); j++)
 				{
-					if(j!=i && group_candidates.at(j).group == -1) {
+					if(j!=i && group_candidates.at(j).group_id == -1) {
 						geometry_msgs::Pose2D c2 = group_candidates.at(j).interaction_point;
 						float dist = sqrt((c1.x-c2.x)*(c1.x-c2.x) + (c1.y-c2.y)*(c1.y-c2.y));
 						if(dist < ((grouping_distance_/2.0)*0.9))
 						{
-							group_candidates.at(j).group = group_number;
+							group_candidates.at(j).group_id = group_number;
 							group.push_back(group_candidates.at(j));
 						}
 					}
@@ -835,6 +919,9 @@ void features::NavFeatures::calculateGaussians()
 						f.th = group.at(0).position.theta;
 						f.sx = sigmas_[0]; // 1.2
 						f.sy = sigmas_[1]; // 1.2/1.5 = 0.8
+						
+						if(group.at(0).id == it_id_)
+							f.type = FRONT_APPROACH;
 						
 						gauss_aux.push_back(f);
 						
@@ -872,6 +959,13 @@ void features::NavFeatures::calculateGaussians()
 									max_dist = d;
 							}
 						}
+						
+						bool ap = false;
+						for(unsigned int r=0; r<group.size() && (ap==false); r++)
+						{
+							if(group.at(r).id == it_id_)
+								ap = true;
+						}
 						th = normalizeAngle(th, -M_PI, M_PI);
 						th = th/group.size();
 						th = th + M_PI;
@@ -881,7 +975,10 @@ void features::NavFeatures::calculateGaussians()
 						y = y/group.size();
 						
 						gaussian g;
-						g.type = AROUND;
+						if(ap)
+							g.type = AROUND_APPROACH;
+						else
+							g.type = AROUND;
 						g.x = x;
 						g.y = y;
 						g.th = th;
@@ -908,6 +1005,11 @@ void features::NavFeatures::calculateGaussians()
 			f.sx = sigmas_[0]; // 1.2
 			f.sy = sigmas_[1]; // 1.2/1.5 = 0.8
 			
+			if(people_aux.at(i).id == it_id_)
+			{
+				f.type = FRONT_APPROACH;
+			}
+			
 			gauss_aux.push_back(f);
 			
 			gaussian b;
@@ -920,6 +1022,21 @@ void features::NavFeatures::calculateGaussians()
 			b.sy = sigmas_[3]; // 0.8
 			
 			gauss_aux.push_back(b);
+			
+			
+			if(upo_featureset_ == 1) {
+				
+				gaussian r;
+				r.type = RIGHT;
+				r.x = people_aux.at(i).position.x;
+				r.y = people_aux.at(i).position.y;
+				float angle = (tf::getYaw(people_aux.at(i).orientation)) - M_PI/2.0;
+				r.th = normalizeAngle(angle, -M_PI, M_PI);
+				r.sx = sigmas_[4]; // 0.8
+				r.sy = sigmas_[5]; // 0.4
+				
+				gauss_aux.push_back(r);
+			}
 			
 		}
 	}
@@ -963,6 +1080,7 @@ void features::NavFeatures::calculateGaussians()
 
 void features::NavFeatures::update()
 {
+	boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
 	calculateGaussians();
 
 	if(use_laser_projection_)
@@ -1022,7 +1140,17 @@ float features::NavFeatures::proxemicsFeature(geometry_msgs::PoseStamped* s)  {
 		//printf("robot x:%.2f, y:%.2f, sx:%.2f, sy:%.2f\n", x_r, y_r, it->sx, it->sy);
 		
 		float cost = 0.0;
-
+		
+		
+		if(it->type == FRONT_APPROACH || it->type == AROUND_APPROACH)
+		{
+			float angle = atan2(y_r, x_r);
+			if(angle > (-approaching_angle_) && angle < approaching_angle_ && x_r > 0.8) {
+				prox_cost = 0.0;
+				return prox_cost;
+			} else 
+				cost = gaussian_function(x_r, y_r, it->sx, it->sy);
+		}
 		if(it->type == AROUND) {
 			cost = gaussian_function(x_r, y_r, it->sx, it->sy);
 		} else if (it->type == FRONT) {
@@ -1051,6 +1179,89 @@ float features::NavFeatures::proxemicsFeature(geometry_msgs::PoseStamped* s)  {
 	}
 	//printf("prox_cost: %.3f\n", prox_cost);
 	return prox_cost;
+}
+
+
+
+
+std::vector<float> features::NavFeatures::gaussianFeatures(geometry_msgs::PoseStamped* s)
+{
+	std::vector<gaussian> gauss;
+	gaussianMutex_.lock();
+	gauss = gaussians_;
+	gaussianMutex_.unlock();
+	
+	std::vector<float> pcosts;
+	pcosts.push_back(0.0); //Front
+	pcosts.push_back(0.0); //Back
+	pcosts.push_back(0.0); //Right side
+	
+	//Remember not to group people to use this feature set
+	if(gauss.size() == 0) {
+		return pcosts;
+	}
+	
+	peopleMutex_.lock();
+	std::string people_frame = people_frame_id_;
+	peopleMutex_.unlock();
+	
+	//We need to transform the sample to the same frame of the people
+	geometry_msgs::PoseStamped robot = *s;
+	robot = transformPoseTo(robot, people_frame, false); //true
+	
+	if(robot.header.frame_id.empty()){
+		printf("frame id empty. returning 0\n");
+		return pcosts;
+	}
+	float rx = robot.pose.position.x; 
+	float ry = robot.pose.position.y;
+	
+	
+	for (std::vector<gaussian>::iterator it = gauss.begin(); it != gauss.end(); ++it)
+	{
+		//odom coordinates
+		float ph = it->th;
+		float px = it->x;
+		float py = it->y;
+		
+		/*
+		First, transform the robot location into gaussian location frame: 
+									|cos(th)  sin(th)  0|
+			Rotation matrix R(th)= 	|-sin(th) cos(th)  0|
+									|  0        0      1|
+					                     
+			x' = (xr-xp)*cos(th_p)+(yr-yp)*sin(th_p)
+			y' = (xr-xp)*(-sin(th_p))+(yr-yp)*cos(th_p)
+		*/
+		float x_r = (rx - px)*cos(ph) + (ry - py)*sin(ph);
+		float y_r = (rx - px)*(-sin(ph)) + (ry - py)*cos(ph);
+		
+		//printf("robot x:%.2f, y:%.2f, sx:%.2f, sy:%.2f\n", x_r, y_r, it->sx, it->sy);
+		
+
+		if (it->type == FRONT) {
+			if(x_r >= 0.0) {
+				float cost = gaussian_function(x_r, y_r, it->sx, it->sy);
+				if(cost > pcosts[0])
+					pcosts[0] = cost;
+			}
+		} else if(it->type == BACK){  
+			if(x_r > 0.0) {
+				float cost = gaussian_function(x_r, y_r, it->sx, it->sy);
+				if(cost > pcosts[1])
+					pcosts[1] = cost;
+			}
+		} else if(it->type == RIGHT) {
+			if(x_r > 0.0) {
+				float cost = gaussian_function(x_r, y_r, it->sx, it->sy);
+				if(cost > pcosts[2])
+					pcosts[2] = cost;
+			}
+		}
+		
+	}
+	
+	return pcosts;
 }
 
 

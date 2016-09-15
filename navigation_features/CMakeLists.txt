@@ -19,6 +19,8 @@ find_package(catkin REQUIRED COMPONENTS
   upo_msgs
   nav_msgs
   visualization_msgs
+  #message_generation
+  dynamic_reconfigure
 )
 
 ## System dependencies are found with CMake's conventions
@@ -65,11 +67,10 @@ find_package(OpenCV REQUIRED)
 # )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+ #add_service_files(
+ #  FILES
+ #  ApproachIT.srv
+ #)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -99,10 +100,9 @@ find_package(OpenCV REQUIRED)
 ##     and list every .cfg file to be processed
 
 ## Generate dynamic reconfigure parameters in the 'cfg' folder
-# generate_dynamic_reconfigure_options(
-#   cfg/DynReconf1.cfg
-#   cfg/DynReconf2.cfg
-# )
+ generate_dynamic_reconfigure_options(
+   cfg/nav_features.cfg
+ )
 
 ###################################
 ## catkin specific configuration ##
@@ -131,6 +131,8 @@ catkin_package(
 	upo_msgs 
 	nav_msgs 
 	visualization_msgs
+	#message_runtime
+	dynamic_reconfigure
 #  DEPENDS system_lib
 )
 
@@ -164,6 +166,7 @@ add_definitions(${EIGEN_DEFINITIONS})
 ## either from message generation or dynamic reconfigure
  add_dependencies(nav_features ${navigation_features_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
  add_dependencies(nav_features navigation_features_gencpp)
+ add_dependencies(nav_features navigation_features_gencfg)
  add_dependencies(nav_features upo_msgs_gencpp)
 
 

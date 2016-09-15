@@ -44,6 +44,13 @@
 //UVA features
 #include <navigation_features/uva_features.h>
 
+//Service msg
+//#include <navigation_features/ApproachIT.h>
+
+//Dynamic reconfigure
+#include <dynamic_reconfigure/server.h>
+#include <navigation_features/nav_featuresConfig.h>
+
 
 
 namespace features {
@@ -58,7 +65,8 @@ namespace features {
 				LEFT, 
 				RIGHT, 
 				AROUND, 
-				APPROACH,
+				FRONT_APPROACH,
+				AROUND_APPROACH
 			};
 			
 			enum dist_type{LINEAR_INC,LOG_INC,EXP_INC,INVERSE_DEC,LOG_DEC,EXP_DEC};
@@ -86,6 +94,8 @@ namespace features {
 			void pcCallback(const sensor_msgs::PointCloud::ConstPtr& pc_in);
 			void pc2Callback(const sensor_msgs::PointCloud2::ConstPtr& pc_in);
 			
+			void setApproachingIT();
+			
 			
 			void update();
 			void calculateGaussians();
@@ -106,6 +116,8 @@ namespace features {
 			float getProxemicsCost(float rx, float ry);		
 			float gaussian_function(float x, float y, bool fr);
 			float gaussian_function(float x, float y, float sx, float sy);
+			
+			std::vector<float> gaussianFeatures(geometry_msgs::PoseStamped* s);
 
 			geometry_msgs::PoseStamped transformPoseTo(geometry_msgs::PoseStamped pose_in, std::string frame_out, bool usetime);
 		
@@ -114,8 +126,13 @@ namespace features {
 			float normalizeAngle(float val, float min, float max);
 		
 			void setWeights(std::vector<float> we) {
+				printf("NavFeatures. Setting weights: \n");
 				w_.clear();
 				w_ = we;
+				for(unsigned int i=0; i<w_.size(); i++)
+				{
+					printf("w %u: %.3f\n", (i+1), w_[i]);
+				}
 			}
 
 			void setGoal(geometry_msgs::PoseStamped g); 
@@ -144,7 +161,8 @@ namespace features {
 			struct group_candidate {
 				geometry_msgs::Pose2D position;
 				geometry_msgs::Pose2D interaction_point;
-				int group;
+				int id;
+				int group_id;
 			};
 			
 			ros::Publisher 						pub_gaussian_markers_;
@@ -180,7 +198,6 @@ namespace features {
 			float 								insc_radius_robot_;
 			geometry_msgs::PoseStamped 			goal_;
 			float 								max_planning_dist_;
-			//float max_dist_2_;
 			float 								size_x_;
 			float 								size_y_;
 
@@ -191,10 +208,14 @@ namespace features {
 			ros::Subscriber 					sub_people_;
 			boost::mutex 						peopleMutex_;
 			std::string 						people_frame_id_;
-			//bool first_;
+			
+			//Id of the interaction target (if he/she exists)
+			int									it_id_;
+			float 								approaching_angle_;
 			
 			ros::Subscriber 					goal_sub_;
 			
+			//Grouping people
 			bool 								grouping_;
 			float 								stddev_group_;
 			float 								grouping_distance_;
@@ -206,6 +227,16 @@ namespace features {
 		
 			//Weights to balance the costs
 			std::vector<float> 					w_;
+			
+			//upo feature set to be used
+			int 								upo_featureset_;
+			
+			//Dynamic reconfigure
+			boost::recursive_mutex configuration_mutex_;
+			dynamic_reconfigure::Server<navigation_features::nav_featuresConfig> *dsrv_;
+			void reconfigureCB(navigation_features::nav_featuresConfig &config, uint32_t level);
+			//NavFeatures::nav_featuresConfig last_config_;
+			//NavFeatures::nav_featuresConfig default_config_;
 
 	};
 
