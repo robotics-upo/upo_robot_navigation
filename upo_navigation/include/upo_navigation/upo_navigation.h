@@ -117,6 +117,8 @@ namespace upo_nav {
       bool executeNavToPerson(geometry_msgs::PoseStamped goal, int id); 
       int pathFollow(geometry_msgs::PoseStamped& new_pose);
       int executeControllerCycle();
+      geometry_msgs::PoseStamped getRobotGlobalPosition();
+      void stopRRTPlanning();
 
 	  //---------------
 	  

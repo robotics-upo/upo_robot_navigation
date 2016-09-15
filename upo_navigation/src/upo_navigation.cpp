@@ -698,7 +698,7 @@ namespace upo_nav {
 
     //if the planner fails or returns a zero length plan, planning failed
     if(!planner_->makePlan(start, goal, plan) || plan.empty()){
-      ROS_WARN("A*MakePlan. Failed to find a  plan to point (%.2f, %.2f)", goal.pose.position.x, goal.pose.position.y);
+      ROS_WARN("A*MakePlan. Failed to find a  plan to point (%.2f, %.2f frame:%s)", goal.pose.position.x, goal.pose.position.y, goal.header.frame_id.c_str());
       return false;
     }
 
@@ -1071,6 +1071,7 @@ namespace upo_nav {
 			new_rrt_plan_ = true;
 			run_rrt_ = false;
 			local_plan_ = &rrt_plan; //odom coordinates
+			printf("RRT thread. Local plan of size:%u\n", (unsigned int)local_plan_->size());
 			rrt_mutex_.unlock();
 			got_plan = false;
 		}
@@ -1309,7 +1310,6 @@ namespace upo_nav {
       	}
 
 
-		//Check the distance of the current goal---------------------------
     	tf::Stamped<tf::Pose> global_pose;
     	if(!planner_costmap_ros_->getRobotPose(global_pose)) {
       			ROS_WARN("Unable to get pose of robot!!!");
@@ -1322,7 +1322,7 @@ namespace upo_nav {
 		rrt_mutex_.unlock();
 		
 
-		//distance from the robot to the current goal
+		//Check the distance of the current goal---------------------------
 		double robot_dist = sqrt(pow((goal_pose.pose.position.x - robot_pose.pose.position.x),2)+pow((goal_pose.pose.position.y - robot_pose.pose.position.y),2));
 		//distance from the intermediate goal to the final goal
 		//double final_dist = sqrt(pow((goal_pose.pose.position.x - global_goal_.pose.position.x),2)+pow((goal_pose.pose.position.y - global_goal_.pose.position.y),2));
@@ -1392,19 +1392,18 @@ namespace upo_nav {
 		
 		
 		//if RRT obtained a new local plan
+		rrt_mutex_.lock();
 		if(new_rrt_plan_) {
 		
 			//update the path
 			//pure_pursuit_->updatePlan(*local_plan_, true);
 			tc_->setPlan(*local_plan_);
-			pursue_status = 0;
 		
 			//disable flag
-			rrt_mutex_.lock();
 			new_rrt_plan_ = false;
-			rrt_mutex_.unlock();
-			
+			pursue_status = 0;
 		} 
+		rrt_mutex_.unlock();
 
 		//ros::WallDuration t9 = ros::WallTime::now() - startt;
 		//printf("Test 9: %.4f secs\n", t9.toSec());
@@ -1464,7 +1463,6 @@ namespace upo_nav {
   bool UpoNavigation::executeNavigation(geometry_msgs::PoseStamped goal)
   {
 	  printf("¡¡¡¡¡¡¡ExecuteNavigation: New goal received!!!!!!\n"); //Goal in map coordinates
-	  //printf("Goal in coordinates x:%.3f, y:%.3f, th:%.3f,frame: %s\n\n", goal.pose.position.x, goal.pose.position.y, tf::getYaw(goal.pose.orientation), (goal.header.frame_id).c_str());
 
 	if(shutdown_costmaps_){
       ROS_DEBUG_NAMED("upo_navigation","Starting up costmaps that were shut down previously");
@@ -1477,12 +1475,17 @@ namespace upo_nav {
       return false;
     }
 
+	//printf("ExecuteNav. GOAL frame: %s, x:%.2f, y:%.2f\n", goal.header.frame_id.c_str(), goal.pose.position.x, goal.pose.position.y);
+
 	//Local goal
     geometry_msgs::PoseStamped local_goal = goalToLocalFrame(goal);
+    
+    //printf("ExecuteNav. LOCAL frame: %s, x:%.2f, y:%.2f\n", local_goal.header.frame_id.c_str(), local_goal.pose.position.x, local_goal.pose.position.y);
 
 	//Global Goal for A* (Already in map coordinates, no transformation required)
-	//geometry_msgs::PoseStamped global_goal = goalToGlobalFrame(move_base_goal->target_pose);
 	global_goal_ = goalToGlobalFrame(goal);
+	
+	//printf("ExecuteNav. GLOBAL frame: %s, x:%.2f, y:%.2f\n", global_goal_.header.frame_id.c_str(), global_goal_.pose.position.x, global_goal_.pose.position.y);
 
 	//Intermediate point in the A* path which we use as the RRT goal 
 	geometry_msgs::PoseStamped intermediate_goal = global_goal_;
@@ -1501,7 +1504,7 @@ namespace upo_nav {
 			new_global_plan_ = true;
 		else {
 			new_global_plan_ = false;
-			ROS_ERROR("ERROR. No global A* plan created!!!");
+			ROS_ERROR("ERROR. No global A* plan created!!! global goal x:%.2f, y:%.2f", global_goal_.pose.position.x, global_goal_.pose.position.y);
 			return false;
 		}
 
@@ -1562,7 +1565,6 @@ namespace upo_nav {
  
  int UpoNavigation::pathFollow(geometry_msgs::PoseStamped& new_pose)
  {
-	 
 	//Check the distance of the current goal--------------------------
 	tf::Stamped<tf::Pose> global_pose;
 	if(!planner_costmap_ros_->getRobotPose(global_pose)) {
@@ -1579,139 +1581,180 @@ namespace upo_nav {
 	double rrt_radius = rrt_planner_->get_rrt_planning_radius();
 
 	//distance from the robot to the current goal
-	double robot_dist = sqrt(pow((goal_pose.pose.position.x - robot_pose.pose.position.x),2)+pow((goal_pose.pose.position.y - robot_pose.pose.position.y),2));
+	//double robot_dist = sqrt(pow((goal_pose.pose.position.x - robot_pose.pose.position.x),2)+pow((goal_pose.pose.position.y - robot_pose.pose.position.y),2));
 	//distance from the intermediate goal to the final goal
-	double final_dist = sqrt(pow((goal_pose.pose.position.x - global_goal_.pose.position.x),2)+pow((goal_pose.pose.position.y - global_goal_.pose.position.y),2));
-	if(final_dist > 0.2 /*&& robot_dist < 1.8*/) //we plan again with an updated goal
-	{
-		geometry_msgs::PoseStamped intermediate_goal;
-		
-		//Now take the last point of the global path inside
-		//the local area --> goal for the RRT*
-		unsigned int path_i = 0;
-		for(unsigned int i = 0; i < planner_plan_->size(); ++i) {
-			double gx = planner_plan_->at(i).pose.position.x;
-			double gy = planner_plan_->at(i).pose.position.y;
-			unsigned int map_x, map_y;
-			double dist_x = fabs(gx - robot_pose.pose.position.x);
-			double dist_y = fabs(gy - robot_pose.pose.position.y);
-			if (dist_x <= rrt_radius && dist_y <= rrt_radius) {
-				intermediate_goal = planner_plan_->at(i);
-				intermediate_goal.header.stamp = ros::Time::now();
-				path_i = i;
-				//intermediate_goal.header.frame_id = planner_plan_->at(i).header.frame_id;
-			}
-		}
-		//add orientation to the point
-		if((path_i+1) <= (planner_plan_->size()-1)) {
-			geometry_msgs::PoseStamped p1 = planner_plan_->at(path_i);
-			geometry_msgs::PoseStamped p2 = planner_plan_->at(path_i+1);
-			float x_diff = p2.pose.position.x - p1.pose.position.x;
-			float y_diff = p2.pose.position.y - p1.pose.position.y;
-			float yaw = atan2(y_diff, x_diff);
-			intermediate_goal.pose.orientation = tf::createQuaternionMsgFromYaw(yaw);
-		}
+	//double final_dist = sqrt(pow((goal_pose.pose.position.x - global_goal_.pose.position.x),2)+pow((goal_pose.pose.position.y - global_goal_.pose.position.y),2));
+	double dist = sqrt(pow((global_goal_.pose.position.x - robot_pose.pose.position.x),2)+pow((global_goal_.pose.position.y - robot_pose.pose.position.y),2));
 	
+	if(dist < 0.15) {
+		rrt_mutex_.lock();
+		rrt_goal_ = global_goal_;
+		rrt_sleep_ = true;
+		run_rrt_ = false;
+		rrt_mutex_.unlock();
 			
-			
-			//We update the local plan to an empty plan in order to stop the robot
-			//until get a new plan
-			//local_plan_->clear();
-			//pure_pursuit_->updatePlan(*local_plan_, true);
-			
-			
-			current_goal_pub_.publish(intermediate_goal);
-			//printf("------RRT* is going to plan---------\n");
-			//Tell the rrt thread to plan
-			rrt_mutex_.lock();
-			rrt_goal_ = intermediate_goal;
-			rrt_sleep_ = false;
-			run_rrt_ = true;
-			rrt_mutex_.unlock();
-			
-		} else if(robot_dist < 0.2) {
-			rrt_mutex_.lock();
-			rrt_sleep_ = true;
-			run_rrt_ = false;
-			rrt_mutex_.unlock();
-		}
-		//-------------------------------------------------------------------
+	} else {
 		
+		geometry_msgs::PoseStamped intermediate_goal;
+		//double dist = sqrt(pow((global_goal_.pose.position.x - robot_pose.pose.position.x),2)+pow((global_goal_.pose.position.y - robot_pose.pose.position.y),2));
+		if(dist > rrt_radius)
+		{
+			//Now take the last point of the global path inside
+			//the local area --> goal for the RRT*
+			unsigned int path_i = 0;
+			for(unsigned int i = 0; i < planner_plan_->size(); ++i) {
+				double gx = planner_plan_->at(i).pose.position.x;
+				double gy = planner_plan_->at(i).pose.position.y;
+				unsigned int map_x, map_y;
+				double dist_x = fabs(gx - robot_pose.pose.position.x);
+				double dist_y = fabs(gy - robot_pose.pose.position.y);
+				if (dist_x <= (rrt_radius) && dist_y <= (rrt_radius)) {
+					path_i = i;
+				}
+			}
+			//add orientation to the point
+			if(path_i < (planner_plan_->size()-1)) {
+				intermediate_goal = planner_plan_->at(path_i);
+				intermediate_goal.header.stamp = ros::Time::now();
+				intermediate_goal.header.frame_id = planner_plan_->at(path_i).header.frame_id;
+				geometry_msgs::PoseStamped p1 = planner_plan_->at(path_i);
+				geometry_msgs::PoseStamped p2 = planner_plan_->at(path_i+1);
+				float x_diff = p2.pose.position.x - p1.pose.position.x;
+				float y_diff = p2.pose.position.y - p1.pose.position.y;
+				float yaw = atan2(y_diff, x_diff);
+				intermediate_goal.pose.orientation = tf::createQuaternionMsgFromYaw(yaw);
+			} else {
+				intermediate_goal = global_goal_;
+			}
+				
+		} else {
+			intermediate_goal = global_goal_;
+		}		
+			
+		//We update the local plan to an empty plan in order to stop the robot
+		//until get a new plan
+		//local_plan_->clear();
+		//pure_pursuit_->updatePlan(*local_plan_, true);
+			
+		current_goal_pub_.publish(intermediate_goal);
+		//printf("------RRT* is going to plan---------\n");
+		//Tell the rrt thread to plan
+		rrt_mutex_.lock();
+		rrt_goal_ = intermediate_goal;
+		rrt_sleep_ = false;
+		run_rrt_ = true;
+		rrt_mutex_.unlock();
+			
+	} 
+	
+	//-------------------------------------------------------------------
+	//std::vector<geometry_msgs::PoseStamped> lplan;
 		
-		//if RRT obtained a new local plan
-		if(new_rrt_plan_) {
+	//if RRT obtained a new local plan
+	rrt_mutex_.lock();
+	if(new_rrt_plan_) {
 		
-			//update the path
-			//printf("updating pure_pursuit plan!!!!!\n");
-			//pure_pursuit_->updatePlan(*local_plan_, true);
+		//disable flag
+		new_rrt_plan_ = false;
+		//update the path
+		//printf("\nPathFollow. Setting local plan of size: %u\n", (unsigned int)local_plan_->size()); 
+		//lplan = *local_plan_;
+		//if(dist > 0.10)
 			tc_->setPlan(*local_plan_);
+	} 
+	rrt_mutex_.unlock();
+
+	//ros::WallDuration t9 = ros::WallTime::now() - startt;
+	//printf("Test 9: %.4f secs\n", t9.toSec());
 		
-			//disable flag
-			rrt_mutex_.lock();
-			new_rrt_plan_ = false;
-			rrt_mutex_.unlock();
-			
-		} 
+	//the real work on pursuing a goal is done here
+	int pursue_status = executeControllerCycle();
+	//ros::WallDuration t10 = ros::WallTime::now() - startt;
+	//printf("Test 10: %.4f secs\n", t10.toSec());
+	//}
 
-		//ros::WallDuration t9 = ros::WallTime::now() - startt;
-		//printf("Test 9: %.4f secs\n", t9.toSec());
+	//ros::WallDuration t11 = ros::WallTime::now() - startt;
+	//printf("Test 11: %.4f secs\n", t11.toSec());
+			
+	//if we're done, then we'll return from execute
+	if(pursue_status == 1) {
+			
+		ROS_INFO("*******GOAL REACHED******");
+		rrt_mutex_.lock();
+		rrt_sleep_ = true;
+		run_rrt_ = false;
+		local_plan_->clear();
+		tc_->setPlan(*local_plan_);
+		rrt_mutex_.unlock();
+			
+
+	} else if(pursue_status == -1) { //if we don't find a valid control, plan again.
+
+		//We update the local plan to a empty plan in order to stop the robot
+		//until we get a new plan
+		printf("PathFollow. Stopping the robot!!!!!!!\n");
+		//local_plan_->clear();
+		//tc_->setPlan(*local_plan_);
+
+		//Tell the rrt thread to plan
+		rrt_mutex_.lock();
+		run_rrt_ = true;
+		rrt_mutex_.unlock();
+	}
+
+	//map_viz_.publishCostCloud(controller_costmap_ros_->getCostmap());
 		
-		//the real work on pursuing a goal is done here
-		//if(pursue_status != 1) {
-			
-      	int pursue_status = executeControllerCycle();
-      		//ros::WallDuration t10 = ros::WallTime::now() - startt;
-			//printf("Test 10: %.4f secs\n", t10.toSec());
-		//}
+	//update feedback to correspond to our curent position
+	if(!planner_costmap_ros_->getRobotPose(global_pose)) {
+		ROS_WARN("Unable to get pose of robot!!!");
+		return -2;
+	}
+	geometry_msgs::PoseStamped current_position;
+	tf::poseStampedTFToMsg(global_pose, current_position);
 
-		//ros::WallDuration t11 = ros::WallTime::now() - startt;
-		//printf("Test 11: %.4f secs\n", t11.toSec());
-			
-      	//if we're done, then we'll return from execute
-      	if(pursue_status == 1) {
-			
-			ROS_INFO("*******GOAL REACHED******");
-			rrt_mutex_.lock();
-			rrt_sleep_ = true;
-			run_rrt_ = false;
-			rrt_mutex_.unlock();
-			
-
-		} else if(pursue_status == -1) { //if we don't find a valid control, plan again.
-
-			//We update the local plan to a empty plan in order to stop the robot
-			//until we get a new plan
-			printf("Stopping the robot!!!!!!!\n");
-			local_plan_->clear();
-			//pure_pursuit_->updatePlan(*local_plan_, true);
-			tc_->setPlan(*local_plan_);
-
-			//Tell the rrt thread to plan
-			rrt_mutex_.lock();
-			run_rrt_ = true;
-			rrt_mutex_.unlock();
-		}
-
-		//map_viz_.publishCostCloud(controller_costmap_ros_->getCostmap());
+	new_pose = current_position;
 		
-		//update feedback to correspond to our curent position
-		if(!planner_costmap_ros_->getRobotPose(global_pose)) {
-			ROS_WARN("Unable to get pose of robot!!!");
-			return -2;
-		}
-		geometry_msgs::PoseStamped current_position;
-		tf::poseStampedTFToMsg(global_pose, current_position);
-
-		new_pose = current_position;
-		
-		return pursue_status;
+	return pursue_status;
 		
   }  
   
   
   
   
+  void UpoNavigation::stopRRTPlanning()
+  {
+		geometry_msgs::PoseStamped g;
+		g.header.stamp = ros::Time::now();
+		g.header.frame_id = "base_link";
+		g.pose.position.x = 0.0;
+		g.pose.position.y = 0.0;
+		g.pose.orientation = tf::createQuaternionMsgFromYaw(0.0);
+		rrt_mutex_.lock();
+		rrt_goal_ = g;
+		rrt_sleep_ = true;
+		run_rrt_ = false;
+		rrt_mutex_.unlock();
+		
+		printf("¡¡¡¡Stopping RRT planning!!!!\n");
+		publishZeroVelocity();
+		local_plan_->clear();
+		tc_->setPlan(*local_plan_);
+  }
   
+  
+  
+  geometry_msgs::PoseStamped UpoNavigation::getRobotGlobalPosition()
+  {
+		geometry_msgs::PoseStamped current_position;
+		tf::Stamped<tf::Pose> global_pose;
+		if(!planner_costmap_ros_->getRobotPose(global_pose)) {
+			ROS_WARN("getRobotGlobalPosition. Unable to get pose of robot!!!");
+			return current_position;
+		}
+
+		tf::poseStampedTFToMsg(global_pose, current_position);
+		return current_position;
+  }
   
   
 
