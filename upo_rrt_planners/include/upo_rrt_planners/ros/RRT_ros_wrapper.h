@@ -31,6 +31,9 @@
 
 #include <upo_rrt_planners/ros/ValidityChecker.h>
 
+//Dynamic reconfigure
+//#include <dynamic_reconfigure/server.h>
+//#include <upo_rrt_planners/RRTRosWrapperConfig.h>
 
 
 

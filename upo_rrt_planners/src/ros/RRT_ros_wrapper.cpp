@@ -195,6 +195,7 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 	//inscribed_radius_ = irad;
 	//circumscribed_radius_ = crad;
 	//------------------------------------------
+	
 	inscribed_radius_  = (float)robot_radius;
 	circumscribed_radius_ = (float)robot_radius;
 
@@ -1018,7 +1019,7 @@ int upo_RRT_ros::RRT_ros_wrapper::RRT_local_plan(std::vector<geometry_msgs::Pose
 	cmd_vel.linear.x = vx;
 	cmd_vel.linear.y = vy;
 	cmd_vel.angular.z = vth;
-	printf("wrapper. init_lv: %.2f. Action 1. lv: %.2f, st:%u\n", start_lin_vel, vx, steps);
+	//printf("wrapper. init_lv: %.2f. Action 1. lv: %.2f, st:%u\n", start_lin_vel, vx, steps);
 	
 
 	

@@ -35,6 +35,7 @@ namespace upo_RRT
 			//2 dimensions, only one lv and one av
 			bool rrt_steer(Node* fromNode, Node* toNode, Node* newNode);
 			bool rrt_collisionFree(Node* fromNode, Node* toNode, Node& out);
+			bool accompany_steer(Node* fromNode, Node* toNode, Node* newNode);
 			
 			//Steering for 2 dimensions (x, y)
 			bool steer2(Node* fromNode, Node* toNode, Node* newNode);

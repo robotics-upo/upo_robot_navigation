@@ -45,9 +45,15 @@ namespace upo_RRT
 			void setRobotAcc(float linear_acc, float angular_acc) {
 				steering_->setAccelerations(linear_acc, angular_acc);
 			}
+			
+			void setAccompanySteer(bool s){
+				accompany_steer_ = s;
+			}
 
 
-		//private:
+		private:
+		
+			bool					accompany_steer_;
 		
 			//float 				maxRange_; //max distance to insert a new node
 			

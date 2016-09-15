@@ -5,7 +5,7 @@
 
 upo_RRT::RRT::RRT() : Planner() {
 	
-	
+	accompany_steer_ = false;
 }
 
 upo_RRT::RRT::~RRT() {
@@ -16,6 +16,9 @@ upo_RRT::RRT::~RRT() {
 
 bool upo_RRT::RRT::steer(Node* fromNode, Node* toNode, Node* newNode)
 {
+	if(accompany_steer_)
+		return steering_->accompany_steer(fromNode, toNode, newNode);
+		
 	return  steering_->rrt_steer(fromNode, toNode, newNode);
 	
 }

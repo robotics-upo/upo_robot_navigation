@@ -27,6 +27,8 @@ upo_RRT::Node::Node(State s) : parent_(NULL)
 upo_RRT::Node::Node(State s, Action a) : parent_(NULL)
 {
 	state_ = s;
+	state_.setLv(a.getVx());
+	state_.setAv(a.getVth());
 	control_.clear();
 	control_.push_back(a);
 	cost_ = 0.0;

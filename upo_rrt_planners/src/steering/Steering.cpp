@@ -222,8 +222,6 @@ bool upo_RRT::Steering::rrt_steer(Node* fromNode, Node* toNode, Node* newNode)
 	float rx = fromNode->getState()->getX();
 	float ry = fromNode->getState()->getY();
 	float rth = fromNode->getState()->getYaw();
-	//float r_lv = fromNode->getAction()->getVx();
-	//float r_av = fromNode->getAction()->getVth();
 	
 	//waypoint to reach
 	float wx = toNode->getState()->getX();
@@ -245,6 +243,10 @@ bool upo_RRT::Steering::rrt_steer(Node* fromNode, Node* toNode, Node* newNode)
 	
 	float prev_lv = fromNode->getState()->getLinVel();
 	float prev_av = fromNode->getState()->getAngVel();
+	//std::vector<Action*> act = fromNode->getAction();
+	//float prev_lv = act->at(act.size()-1)->getVx();
+	//float prev_av = act->at(act.size()-1)->getVth();
+	
 	// linear vel
 	if(fabs(prev_lv - lv) > max_lv_var_) {
 		if(lv < prev_lv)
@@ -313,6 +315,132 @@ bool upo_RRT::Steering::rrt_steer(Node* fromNode, Node* toNode, Node* newNode)
 }
 
 
+
+//Steering used in KinoRRT (only 2 dimensions, and one action between states)
+bool upo_RRT::Steering::accompany_steer(Node* fromNode, Node* toNode, Node* newNode)
+{
+	std::vector<State> istates;
+	
+	if(fromNode == NULL) {
+		printf("Steering. Nodo inicial igual a NULL\n"); 
+		return false;
+	}
+	if(toNode == NULL) {
+		printf("Steering. Nodo final igual a NULL\n"); 
+		return false;
+	}	
+	
+	max_lv_var_ = maxLinearAcc_ * timeStep_;
+	max_av_var_ = maxAngularAcc_ * timeStep_;
+	
+	
+	//Robot position
+	float rx = fromNode->getState()->getX();
+	float ry = fromNode->getState()->getY();
+	float rth = fromNode->getState()->getYaw();
+	
+	//waypoint to reach
+	float wx = toNode->getState()->getX();
+	float wy = toNode->getState()->getY();
+	float wth = toNode->getState()->getYaw();
+	
+	//printf("xr:%.2f, yr:%.2f, xw:%.2f, yw:%.2f\n", rx, ry, wx, wy); 
+	
+	// Transform way-point into local robot frame and get desired x,y,theta
+	float dx = (wx-rx)*cos(rth) + (wy-ry)*sin(rth);
+	float dy =-(wx-rx)*sin(rth) + (wy-ry)*cos(rth);
+	float dist = sqrt(dx*dx + dy*dy);
+	float dt = atan2(dy, dx);
+	
+	/*
+	//We need to know the target position at the same
+	//time that the robot is in 'fromNode'
+	double x,y;
+	xxxx_->getTargetPosition(double t, x, y);
+	//Calculate the distance between the robot and the target
+	float dist = sqrt((x-rx)*(x-rx) + (y-ry)*(y-ry));
+	*/
+	
+	//Velocities to command
+	float lv = space_->getMaxLinVel() * (dist/1.5); // *exp(-fabs(dt))
+	float av = space_->getMaxAngVel() * dt;
+	
+	float prev_lv = fromNode->getState()->getLinVel();
+	float prev_av = fromNode->getState()->getAngVel();
+	//std::vector<Action*> act = fromNode->getAction();
+	//float prev_lv = act->at(act.size()-1)->getVx();
+	//float prev_av = act->at(act.size()-1)->getVth();
+	
+	// linear vel
+	if(fabs(prev_lv - lv) > max_lv_var_) {
+		if(lv < prev_lv)
+				lv = prev_lv - max_lv_var_;
+			else
+				lv = prev_lv + max_lv_var_;
+	} 
+	// angular vel
+	if(fabs(prev_av - av) > max_av_var_) {
+		if(av < prev_av)
+				av = prev_av - max_av_var_;
+			else
+				av = prev_av + max_av_var_;
+	} 
+	
+	if(lv > space_->getMaxLinVel())
+		lv = space_->getMaxLinVel();
+	else if(lv < space_->getMinLinVel())
+		lv = space_->getMinLinVel();
+	
+	if(av > space_->getMaxAngVel())
+		av = space_->getMaxAngVel();
+	else if(av < (-space_->getMaxAngVel()))
+		av = space_->getMaxAngVel()*(-1);
+		
+	//Dead areas
+	/*if(fabs(lv) < 0.08)
+		lv = 0.0;
+	if(fabs(av) < 0.05)
+		av = 0.0;
+	*/
+	
+	
+	State currentState = *fromNode->getState();
+	
+	int numSteps = 0;
+	while(numSteps <= maxControlSteps_ && dist > space_->getGoalXYTolerance()) 
+	{
+			
+		State* newState = propagateStep(&currentState, lv, av);
+		
+		if(!space_->isStateValid(newState)) {
+			delete newState;
+			break;
+		}
+		
+		currentState = *newState;
+		delete newState;
+		
+		istates.push_back(currentState);
+		numSteps++;
+		dist = sqrt((wx-currentState.getX())*(wx-currentState.getX()) + (wy-currentState.getY())*(wy-currentState.getY()));
+	}
+	
+	if(numSteps == 0) {
+		return false;
+	}
+	Action action(lv, 0.0, av, numSteps);
+	//Node* newNode = new Node(currentState, action); 
+	newNode->setState(currentState);
+	newNode->addAction(action);
+	newNode->setIntermediateStates(istates);
+	
+	return true;
+	
+}
+
+
+
+
 bool upo_RRT::Steering::rrt_collisionFree(Node* fromNode, Node* toNode, Node& out)
 {
 	std::vector<State> istates;
@@ -334,8 +462,6 @@ bool upo_RRT::Steering::rrt_collisionFree(Node* fromNode, Node* toNode, Node& ou
 	float rx = fromNode->getState()->getX();
 	float ry = fromNode->getState()->getY();
 	float rth = fromNode->getState()->getYaw();
-	//float r_lv = fromNode->getAction()->getVx();
-	//float r_av = fromNode->getAction()->getVth();
 	
 	//waypoint to reach
 	float wx = toNode->getState()->getX();
@@ -357,6 +483,10 @@ bool upo_RRT::Steering::rrt_collisionFree(Node* fromNode, Node* toNode, Node& ou
 	
 	float prev_lv = fromNode->getState()->getLinVel();
 	float prev_av = fromNode->getState()->getAngVel();
+	//std::vector<Action*> act = fromNode->getAction();
+	//float prev_lv = act->at(act.size()-1)->getVx();
+	//float prev_av = act->at(act.size()-1)->getVth();
+	
 	// linear vel
 	if(fabs(prev_lv - lv) > max_lv_var_) {
 		if(lv < prev_lv)
@@ -469,8 +599,9 @@ bool upo_RRT::Steering::steer2(Node* fromNode, Node* toNode, Node* newNode)
 	float incCost = 0.0;
 	float AccCost = fromNode->getAccCost();
 	
-	//float prev_lv = act.at(act.size()-1)->getVx();
-	//float prev_av = act.at(act.size()-1)->getVth();
+	//std::vector<Action*> act = fromNode->getAction();
+	//float prev_lv = act->at(act.size()-1)->getVx();
+	//float prev_av = act->at(act.size()-1)->getVth();
 	float prev_lv = fromNode->getState()->getLinVel();
 	float prev_av = fromNode->getState()->getAngVel();
 	
@@ -628,8 +759,8 @@ bool upo_RRT::Steering::collisionFree2(Node* fromNode, Node* toNode, std::vector
 	max_av_var_ = maxAngularAcc_ * timeStep_;
 	
 	//std::vector<Action*> act = fromNode->getAction();
-	//float prev_lv = act.at(act.size()-1)->getVx();
-	//float prev_av = act.at(act.size()-1)->getVth();
+	//float prev_lv = act->at(act.size()-1)->getVx();
+	//float prev_av = act->at(act.size()-1)->getVth();
 	float prev_lv = fromNode->getState()->getLinVel();
 	float prev_av = fromNode->getState()->getAngVel();
 	
