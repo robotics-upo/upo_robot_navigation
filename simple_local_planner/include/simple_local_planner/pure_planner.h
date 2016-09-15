@@ -13,12 +13,10 @@
 //for obstacle data access
 #include <costmap_2d/costmap_2d.h>
 #include <costmap_2d/cost_values.h>
-//#include <simple_local_planner/footprint_helper.h>
 
 #include <simple_local_planner/world_model.h>
 #include <simple_local_planner/trajectory.h>
-//#include <simple_local_planner/Position2DInt.h>
-//#include <simple_local_planner/SimpleLocalPlannerConfig.h>
+#include <simple_local_planner/SimpleLocalPlannerConfig.h>
 
 //we'll take in a path as a vector of poses
 #include <geometry_msgs/PoseStamped.h>
@@ -28,9 +26,6 @@
 //for some datatypes
 #include <tf/transform_datatypes.h>
 
-//for creating a local cost grid
-//#include <simple_local_planner/map_cell.h>
-//#include <simple_local_planner/map_grid.h>
 
 namespace simple_local_planner {
   /**
@@ -92,7 +87,7 @@ namespace simple_local_planner {
       /**
        * @brief Reconfigures the trajectory planner
        */
-      //void reconfigure(SimpleLocalPlannerConfig &cfg);
+      void reconfigure(SimpleLocalPlannerConfig &cfg);
 
 
       /**
@@ -138,33 +133,6 @@ namespace simple_local_planner {
       bool checkTrajectory(double x, double y, double theta, double vx, double vy, 
           double vtheta, double vx_samp, double vy_samp, double vtheta_samp);
 
-      /**
-       * @brief  Generate and score a single trajectory
-       * @param x The x position of the robot  
-       * @param y The y position of the robot  
-       * @param theta The orientation of the robot
-       * @param vx The x velocity of the robot
-       * @param vy The y velocity of the robot
-       * @param vtheta The theta velocity of the robot
-       * @param vx_samp The x velocity used to seed the trajectory
-       * @param vy_samp The y velocity used to seed the trajectory
-       * @param vtheta_samp The theta velocity used to seed the trajectory
-       * @return The score (as double)
-       */
-      //double scoreTrajectory(double x, double y, double theta, double vx, double vy, 
-       //   double vtheta, double vx_samp, double vy_samp, double vtheta_samp);
-
-      /**
-       * @brief Compute the components and total cost for a map grid cell
-       * @param cx The x coordinate of the cell in the map grid
-       * @param cy The y coordinate of the cell in the map grid
-       * @param path_cost Will be set to the path distance component of the cost function
-       * @param goal_cost Will be set to the goal distance component of the cost function
-       * @param occ_cost Will be set to the costmap value of the cell
-       * @param total_cost Will be set to the value of the overall cost function, taking into account the scaling parameters
-       * @return True if the cell is traversible and therefore a legal location for the robot to move to
-       */
-      //bool getCellCosts(int cx, int cy, float &path_cost, float &goal_cost, float &occ_cost, float &total_cost);
 
       /** @brief Set the footprint specification of the robot. */
       void setFootprint( std::vector<geometry_msgs::Point> footprint ) { footprint_spec_ = footprint; }
@@ -201,13 +169,11 @@ namespace simple_local_planner {
        */
       double footprintCost(double x_i, double y_i, double theta_i);
 
-      //simple_local_planner::FootprintHelper footprint_helper_;
+      
+	
+	  boost::mutex configuration_mutex_;
 
 
-    
-
-      //MapGrid path_map_; ///< @brief The local map grid where we propagate path distance
-      //MapGrid goal_map_; ///< @brief The local map grid where we propagate goal distance
       const costmap_2d::Costmap2D& costmap_; ///< @brief Provides access to cost map information
 	   
       WorldModel& world_model_; ///< @brief The world model that the controller uses for collision detection
@@ -230,7 +196,7 @@ namespace simple_local_planner {
       double inscribed_radius_, circumscribed_radius_;
 
 
-      //boost::mutex configuration_mutex_;
+      
       
       // Pure pursuit params
       int wp_index_;

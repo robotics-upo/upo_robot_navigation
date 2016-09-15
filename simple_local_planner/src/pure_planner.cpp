@@ -25,94 +25,28 @@ using namespace costmap_2d;
 
 namespace simple_local_planner{
 
-  /*void PurePlanner::reconfigure(SimpleLocalPlannerConfig &cfg)
+  void PurePlanner::reconfigure(SimpleLocalPlannerConfig &cfg)
   {
       SimpleLocalPlannerConfig config(cfg);
 
       boost::mutex::scoped_lock l(configuration_mutex_);
-
-      acc_lim_x_ = config.acc_lim_x;
-      acc_lim_y_ = config.acc_lim_y;
-      acc_lim_theta_ = config.acc_lim_theta;
-
-      max_vel_x_ = config.max_vel_x;
-      min_vel_x_ = config.min_vel_x;
       
-      max_vel_th_ = config.max_vel_theta;
-      min_vel_th_ = config.min_vel_theta;
-      min_in_place_vel_th_ = config.min_in_place_vel_theta;
+		acc_lim_trans_ = config.max_trans_acc;
+		acc_lim_rot_ = config.max_rot_acc;
+		max_vel_x_ = config.max_trans_vel;
+		min_vel_x_ = config.min_trans_vel;
+		max_vel_th_ = config.max_rot_vel;
+		min_vel_th_ = config.min_rot_vel;
+		min_in_place_vel_th_ = config.min_in_place_rot_vel;
+		goal_lin_tolerance_ = config.xy_goal_tolerance;
+		goal_ang_tolerance_ = config.yaw_goal_tolerance;
+		wp_tolerance_ = config.wp_tolerance; 
+		sim_time_ = config.sim_time;
+		sim_granularity_ = config.sim_granularity;
+		angular_sim_granularity_ = config.angular_sim_granularity;
 
-      sim_time_ = config.sim_time;
-      sim_granularity_ = config.sim_granularity;
-      angular_sim_granularity_ = config.angular_sim_granularity;
 
-      pdist_scale_ = config.pdist_scale;
-      gdist_scale_ = config.gdist_scale;
-      occdist_scale_ = config.occdist_scale;
-
-      if (meter_scoring_) {
-        //if we use meter scoring, then we want to multiply the biases by the resolution of the costmap
-        double resolution = costmap_.getResolution();
-        gdist_scale_ *= resolution;
-        pdist_scale_ *= resolution;
-        occdist_scale_ *= resolution;
-      }
-
-      oscillation_reset_dist_ = config.oscillation_reset_dist;
-      escape_reset_dist_ = config.escape_reset_dist;
-      escape_reset_theta_ = config.escape_reset_theta;
-
-      vx_samples_ = config.vx_samples;
-      vtheta_samples_ = config.vtheta_samples;
-
-      if (vx_samples_ <= 0) {
-          config.vx_samples = 1;
-          vx_samples_ = config.vx_samples;
-          ROS_WARN("You've specified that you don't want any samples in the x dimension. We'll at least assume that you want to sample one value... so we're going to set vx_samples to 1 instead");
-      }
-      if(vtheta_samples_ <= 0) {
-          config.vtheta_samples = 1;
-          vtheta_samples_ = config.vtheta_samples;
-          ROS_WARN("You've specified that you don't want any samples in the theta dimension. We'll at least assume that you want to sample one value... so we're going to set vtheta_samples to 1 instead");
-      }
-
-      heading_lookahead_ = config.heading_lookahead;
-
-      holonomic_robot_ = config.holonomic_robot;
-      
-      backup_vel_ = config.escape_vel;
-
-      dwa_ = config.dwa;
-
-      heading_scoring_ = config.heading_scoring;
-      heading_scoring_timestep_ = config.heading_scoring_timestep;
-
-      simple_attractor_ = config.simple_attractor;
-
-      //y-vels
-      string y_string = config.y_vels;
-      vector<string> y_strs;
-      boost::split(y_strs, y_string, boost::is_any_of(", "), boost::token_compress_on);
-
-      vector<double>y_vels;
-      for(vector<string>::iterator it=y_strs.begin(); it != y_strs.end(); ++it) {
-          istringstream iss(*it);
-          double temp;
-          iss >> temp;
-          y_vels.push_back(temp);
-          //ROS_INFO("Adding y_vel: %e", temp);
-      }
-
-      y_vels_ = y_vels;
-
-		
-	
-	sim_time_ = 0.5;
-	min_vel_th_ = 0.1;
-	max_vel_th_ = 0.3; //0.5;
-	wp_tolerance_ = 0.5;
-	min_in_place_vel_th_ = 0.5; //0.5;
-  }*/
+  }
 
 
 
@@ -161,25 +95,6 @@ namespace simple_local_planner{
 
   PurePlanner::~PurePlanner(){}
 
-
-
-  /*bool PurePlanner::getCellCosts(int cx, int cy, float &path_cost, float &goal_cost, float &occ_cost, float &total_cost) {
-    MapCell cell = path_map_(cx, cy);
-    MapCell goal_cell = goal_map_(cx, cy);
-    if (cell.within_robot) {
-        return false;
-    }
-    occ_cost = costmap_.getCost(cx, cy);
-    if (cell.target_dist == path_map_.obstacleCosts() ||
-        cell.target_dist == path_map_.unreachableCellCosts() ||
-        occ_cost >= costmap_2d::INSCRIBED_INFLATED_OBSTACLE) {
-        return false;
-    }
-    path_cost = cell.target_dist;
-    goal_cost = goal_cell.target_dist;
-    total_cost = pdist_scale_ * path_cost + gdist_scale_ * goal_cost + occdist_scale_ * occ_cost;
-    return true;
-  }*/
 
 
 
@@ -477,19 +392,7 @@ namespace simple_local_planner{
 
 
 
-  /*double PurePlanner::scoreTrajectory(double x, double y, double theta, double vx, double vy,
-      double vtheta, double vx_samp, double vy_samp, double vtheta_samp) {
-    Trajectory t;
-    double impossible_cost = path_map_.obstacleCosts();
-    generateTrajectory(x, y, theta,
-                       vx, vy, vtheta,
-                       vx_samp, vy_samp, vtheta_samp,
-                       acc_lim_x_, acc_lim_y_, acc_lim_th_,
-                       impossible_cost, t);
 
-    // return the cost.
-    return double( t.cost_ );
-  }*/
 
 
 
@@ -511,6 +414,8 @@ namespace simple_local_planner{
   bool PurePlanner::findBestAction(tf::Stamped<tf::Pose> global_pose, tf::Stamped<tf::Pose> global_vel,
       geometry_msgs::Twist& cmd_vel)
   {
+
+	boost::mutex::scoped_lock l(configuration_mutex_);
 	
 	goal_reached_ = false;
 	double vx, vy = 0.0, vt;

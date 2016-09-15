@@ -7,7 +7,7 @@ find_package(catkin REQUIRED
             roscpp
             tf
             #message_generation
-            #dynamic_reconfigure
+            dynamic_reconfigure
             nav_core
             pcl_conversions
             rostest
@@ -46,9 +46,9 @@ add_definitions(${EIGEN_DEFINITIONS})
 #)
 
 # dynamic reconfigure
-#generate_dynamic_reconfigure_options(
-#    cfg/PureLocalPlanner.cfg
-#)
+generate_dynamic_reconfigure_options(
+    cfg/SimpleLocalPlanner.cfg
+)
 
 catkin_package(
     INCLUDE_DIRS include
@@ -57,7 +57,7 @@ catkin_package(
         pure_planner_ros
     CATKIN_DEPENDS
         roscpp
-        #dynamic_reconfigure
+        dynamic_reconfigure
         #message_generation
         tf
         pluginlib
@@ -78,7 +78,7 @@ add_library(simple_local_planner
 	src/costmap_model.cpp
 	src/trajectory.cpp
  )
-#add_dependencies(simple_local_planner simple_local_planner_gencfg)
+add_dependencies(simple_local_planner simple_local_planner_gencfg)
 add_dependencies(simple_local_planner simple_local_planner_gencpp)
 add_dependencies(simple_local_planner nav_msgs_gencpp)
 target_link_libraries(simple_local_planner

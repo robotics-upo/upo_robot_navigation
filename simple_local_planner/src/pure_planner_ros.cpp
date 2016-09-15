@@ -57,8 +57,8 @@ PLUGINLIB_EXPORT_CLASS(simple_local_planner::PurePlannerROS, nav_core::BaseLocal
 
 namespace simple_local_planner {
 
-  /*void PurePlannerROS::reconfigureCB(SimpleLocalPlannerConfig &config, uint32_t level) {
-      if (setup_ && config.restore_defaults) {
+  void PurePlannerROS::reconfigureCB(SimpleLocalPlannerConfig &config, uint32_t level) {
+      /*if (setup_ && config.restore_defaults) {
         config = default_config_;
         //Avoid looping
         config.restore_defaults = false;
@@ -66,10 +66,10 @@ namespace simple_local_planner {
       if ( ! setup_) {
         default_config_ = config;
         setup_ = true;
-      }
+      }*/
       tc_->reconfigure(config);
-      reached_goal_ = false;
-  }*/
+      //reached_goal_ = false;
+  }
 
   PurePlannerROS::PurePlannerROS() :
       world_model_(NULL), tc_(NULL), costmap_ros_(NULL), tf_(NULL), setup_(false), initialized_(false), odom_helper_("odom") {}
@@ -152,9 +152,9 @@ namespace simple_local_planner {
       //map_viz_.initialize(name, global_frame_, boost::bind(&TrajectoryPlanner::getCellCosts, tc_, _1, _2, _3, _4, _5, _6));
       initialized_ = true;
 
-      //dsrv_ = new dynamic_reconfigure::Server<BaseLocalPlannerConfig>(private_nh);
-      //dynamic_reconfigure::Server<SimpleLocalPlannerConfig>::CallbackType cb = boost::bind(&TrajectoryPlannerROS::reconfigureCB, this, _1, _2);
-      //dsrv_->setCallback(cb);
+      dsrv_ = new dynamic_reconfigure::Server<SimpleLocalPlannerConfig>(private_nh);
+      dynamic_reconfigure::Server<SimpleLocalPlannerConfig>::CallbackType cb = boost::bind(&PurePlannerROS::reconfigureCB, this, _1, _2);
+      dsrv_->setCallback(cb);
 
     } else {
       ROS_WARN("This planner has already been initialized, doing nothing");
@@ -363,76 +363,6 @@ namespace simple_local_planner {
     return true;
   }
 
-
-
-
-
-
-  /*bool PurePlannerROS::checkTrajectory(double vx_samp, double vy_samp, double vtheta_samp, bool update_map){
-    tf::Stamped<tf::Pose> global_pose;
-    if(costmap_ros_->getRobotPose(global_pose)){
-      if(update_map){
-        //we need to give the planne some sort of global plan, since we're only checking for legality
-        //we'll just give the robots current position
-        std::vector<geometry_msgs::PoseStamped> plan;
-        geometry_msgs::PoseStamped pose_msg;
-        tf::poseStampedTFToMsg(global_pose, pose_msg);
-        plan.push_back(pose_msg);
-        tc_->updatePlan(plan);
-      }
-
-      //copy over the odometry information
-      nav_msgs::Odometry base_odom;
-      {
-        boost::recursive_mutex::scoped_lock lock(odom_lock_);
-        base_odom = base_odom_;
-      }
-
-      return tc_->checkTrajectory(global_pose.getOrigin().x(), global_pose.getOrigin().y(), tf::getYaw(global_pose.getRotation()),
-          base_odom.twist.twist.linear.x,
-          base_odom.twist.twist.linear.y,
-          base_odom.twist.twist.angular.z, vx_samp, vy_samp, vtheta_samp);
-
-    }
-    ROS_WARN("Failed to get the pose of the robot. No trajectories will pass as legal in this case.");
-    return false;
-  }*/
-
-
-
-
-
-  /*
-   double TrajectoryPlannerROS::scoreTrajectory(double vx_samp, double vy_samp, double vtheta_samp, bool update_map){
-    // Copy of checkTrajectory that returns a score instead of True / False
-    tf::Stamped<tf::Pose> global_pose;
-    if(costmap_ros_->getRobotPose(global_pose)){
-      if(update_map){
-        //we need to give the planne some sort of global plan, since we're only checking for legality
-        //we'll just give the robots current position
-        std::vector<geometry_msgs::PoseStamped> plan;
-        geometry_msgs::PoseStamped pose_msg;
-        tf::poseStampedTFToMsg(global_pose, pose_msg);
-        plan.push_back(pose_msg);
-        tc_->updatePlan(plan, true);
-      }
-
-      //copy over the odometry information
-      nav_msgs::Odometry base_odom;
-      {
-        boost::recursive_mutex::scoped_lock lock(odom_lock_);
-        base_odom = base_odom_;
-      }
-
-      return tc_->scoreTrajectory(global_pose.getOrigin().x(), global_pose.getOrigin().y(), tf::getYaw(global_pose.getRotation()),
-          base_odom.twist.twist.linear.x,
-          base_odom.twist.twist.linear.y,
-          base_odom.twist.twist.angular.z, vx_samp, vy_samp, vtheta_samp);
-
-    }
-    ROS_WARN("Failed to get the pose of the robot. No trajectories will pass as legal in this case.");
-    return -1.0;
-  }*/
 
 
 
