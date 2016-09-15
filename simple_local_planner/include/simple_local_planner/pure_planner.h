@@ -213,6 +213,20 @@ namespace simple_local_planner {
 	  bool new_plan_;
 	  double controller_freq_;
 	  bool goal_reached_;
+	  
+	  
+	  
+	  float inline normalizeAngle(float val, float min, float max) {
+			float norm = 0.0;
+			if (val >= min)
+				norm = min + fmod((val - min), (max-min));
+			else
+				norm = max - fmod((min - val), (max-min));
+					
+			return norm;
+		}
+	  
+	  
 
       /**
        * @brief  Compute x position based on velocity

@@ -1462,7 +1462,7 @@ namespace upo_nav {
   //Similar to executeCb
   bool UpoNavigation::executeNavigation(geometry_msgs::PoseStamped goal)
   {
-	  printf("¡¡¡¡¡¡¡ExecuteNavigation: New goal received!!!!!!\n"); //Goal in map coordinates
+	  //printf("¡¡¡¡¡¡¡ExecuteNavigation: New goal received!!!!!!\n"); //Goal in map coordinates
 
 	if(shutdown_costmaps_){
       ROS_DEBUG_NAMED("upo_navigation","Starting up costmaps that were shut down previously");
@@ -1565,7 +1565,7 @@ namespace upo_nav {
  
  int UpoNavigation::pathFollow(geometry_msgs::PoseStamped& new_pose)
  {
-	//Check the distance of the current goal--------------------------
+	
 	tf::Stamped<tf::Pose> global_pose;
 	if(!planner_costmap_ros_->getRobotPose(global_pose)) {
       	ROS_WARN("Unable to get pose of robot!!!");
@@ -1578,20 +1578,42 @@ namespace upo_nav {
 	geometry_msgs::PoseStamped goal_pose = rrt_goal_;
 	rrt_mutex_.unlock();
 		
-	double rrt_radius = rrt_planner_->get_rrt_planning_radius();
+	float rrt_radius = rrt_planner_->get_rrt_planning_radius();
 
-	//distance from the robot to the current goal
-	//double robot_dist = sqrt(pow((goal_pose.pose.position.x - robot_pose.pose.position.x),2)+pow((goal_pose.pose.position.y - robot_pose.pose.position.y),2));
-	//distance from the intermediate goal to the final goal
-	//double final_dist = sqrt(pow((goal_pose.pose.position.x - global_goal_.pose.position.x),2)+pow((goal_pose.pose.position.y - global_goal_.pose.position.y),2));
-	double dist = sqrt(pow((global_goal_.pose.position.x - robot_pose.pose.position.x),2)+pow((global_goal_.pose.position.y - robot_pose.pose.position.y),2));
+	//Check the distance of the current goal--------------------------
+	float dist = sqrt(pow((global_goal_.pose.position.x - robot_pose.pose.position.x),2)+pow((global_goal_.pose.position.y - robot_pose.pose.position.y),2));
 	
-	if(dist < 0.15) {
+	/*float ang_dist = tf::getYaw(global_goal_.pose.orientation) - tf::getYaw(robot_pose.pose.orientation);
+	printf("Goal th:%.3f, robot th:%.3f, angle_dist:%.3f", tf::getYaw(global_goal_.pose.orientation), tf::getYaw(robot_pose.pose.orientation), ang_dist);
+	ang_dist = normalizeAngle(ang_dist, -M_PI, M_PI);
+	printf(" ang_dist_norm:%.3f\n", ang_dist);
+	
+	//TODO: this is provisional. If we receive a goal
+	//in the same point with different orientation, the system will fail
+	if(dist < 0.15 && fabs(ang_dist) < 0.15) {
+		ROS_INFO("¡¡¡¡ GOAL REACHED !!!!");
 		rrt_mutex_.lock();
+		rrt_sleep_ = true;
+		run_rrt_ = false;
+		local_plan_->clear();
+		tc_->setPlan(*local_plan_);
+		rrt_mutex_.unlock();
+		return 1;
+	}*/
+	
+	if(dist < 0.20) {
+		rrt_mutex_.lock();
+		new_rrt_plan_ = false;
 		rrt_goal_ = global_goal_;
 		rrt_sleep_ = true;
 		run_rrt_ = false;
 		rrt_mutex_.unlock();
+		geometry_msgs::PoseStamped p = goalToLocalFrame(global_goal_);
+		//p.pose.position.x = 0.0;
+		//p.pose.orientation.y = 0.0;
+		std::vector<geometry_msgs::PoseStamped> parray;
+		parray.push_back(p);
+		tc_->setPlan(parray);
 			
 	} else {
 		

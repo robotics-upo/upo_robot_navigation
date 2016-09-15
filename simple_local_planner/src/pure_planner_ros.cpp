@@ -165,7 +165,7 @@ namespace simple_local_planner {
 
   PurePlannerROS::~PurePlannerROS() {
     //make sure to clean things up
-    //delete dsrv_;
+    delete dsrv_;
 
     if(tc_ != NULL)
       delete tc_;
@@ -188,7 +188,7 @@ namespace simple_local_planner {
     global_plan_.clear();
     global_plan_ = orig_global_plan;
     
-    //reset the at goal flag
+    //reset the goal flag
     reached_goal_ = false;
 
     return true;
@@ -210,6 +210,11 @@ namespace simple_local_planner {
     if (!costmap_ros_->getRobotPose(global_pose)) {
       return false;
     }
+    
+    
+    //TODO: Check here if we have already reached the goal
+    
+
 
     std::vector<geometry_msgs::PoseStamped> transformed_plan;
     //get the global plan in our frame

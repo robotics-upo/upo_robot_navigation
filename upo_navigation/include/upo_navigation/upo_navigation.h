@@ -196,6 +196,16 @@ namespace upo_nav {
       geometry_msgs::PoseStamped goalToGlobalFrame(const geometry_msgs::PoseStamped& goal_pose_msg);
 
 	  geometry_msgs::PoseStamped goalToLocalFrame(const geometry_msgs::PoseStamped& goal_pose_msg);
+	  
+	  float normalizeAngle(float val, float min, float max) {
+			float norm = 0.0;
+			if (val >= min)
+				norm = min + fmod((val - min), (max-min));
+			else
+				norm = max - fmod((min - val), (max-min));
+					
+			return norm;
+	  }
 	
 
       /**

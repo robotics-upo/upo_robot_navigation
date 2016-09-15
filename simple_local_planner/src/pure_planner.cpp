@@ -431,7 +431,7 @@ namespace simple_local_planner{
 		cmd_vel.angular.x = 0.0;
 		cmd_vel.angular.y = 0.0;
 		cmd_vel.angular.z = vt;
-		//printf("PurePursuit waiting for a path\n");
+		//printf("FindBestAction. PurePursuit waiting for a path\n");
 		return true;
 	}
 		
@@ -465,13 +465,14 @@ namespace simple_local_planner{
     //goal_map_.setLocalGoal(costmap_, global_plan_);
     //ROS_DEBUG("Path/Goal distance computed");
 
-	// Check if we are close enought to the goal
+	// Check if we are close enough to the goal
 	double dist_goal = sqrt((rx-goal_x_)*(rx-goal_x_)+(ry-goal_y_)*(ry-goal_y_));
 	double dist_start = sqrt((rx-start_x_)*(rx-start_x_)+(ry-start_y_)*(ry-start_y_)); 
 
-	//printf("in_place: %.2f, max_th: %.2f, min_th: %.2f\n", min_in_place_vel_th_, max_vel_th_, min_vel_th_);
+	
 	if(dist_goal < goal_lin_tolerance_)
 	{
+		//printf("FindBestAction. dist_goal: %.2f. rx:%.2f, ry:%.2f, goalx:%.2f, goaly:%.2f\n", dist_goal, rx, ry, goal_x_, goal_y_);
 		// Stop the robot
 		vx = 0.0;
 		vy = 0.0;
@@ -483,20 +484,21 @@ namespace simple_local_planner{
 			running_ = false;
 			goal_reached_ = true; 
 		}
-		else if(goal_t_ > rt)
+		/*else if(goal_t_ > rt)
 			vt = min_in_place_vel_th_;
 		else
 			vt = -min_in_place_vel_th_;
-		
+		*/
 		// Modified by Noé
-		/*else {
-			double ang_diff = angles::shortest_angular_distance(rt, goal_t_);
-			//printf("Angle diff: %.3f\n", ang_diff*180.0/M_PI);
+		else {
+			float ang_diff = goal_t_ - rt;
+			ang_diff = normalizeAngle(ang_diff, -M_PI, M_PI);
 			if(ang_diff > 0.0)
 				vt = min_in_place_vel_th_;
 			else
 				vt = -min_in_place_vel_th_;
-		}*/
+		}
+		
 		//Added by Noé
 		cmd_vel.linear.x = vx;
 		cmd_vel.linear.y = vy;
