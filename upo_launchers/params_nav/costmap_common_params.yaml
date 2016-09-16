@@ -8,8 +8,8 @@
 footprint: [ [0.32, 0], [0.2263, -0.2263], [0, -0.32], [-0.2263, -0.2263], [-0.32, 0], [-0.2263, 0.2263], [0, 0.32], [0.2263, 0.2263]]
 
 # Inscribed and circunscribed radius in m
-inscribed_radius: 0.34            
-circumscribed_radius: 0.34  
+inscribed_radius: 0.32            
+circumscribed_radius: 0.32  
 
 # Obstacle inflation in m (circumscribed robot radius)
 #inflation_radius: 0.32  
@@ -17,6 +17,4 @@ circumscribed_radius: 0.34
 transform_tolerance: 0.5 
 map_type: costmap
 
-unknown_cost_value:     0
-# The following parameters are only used if map_type is set to "costmap":
-track_unknown_space: false
+

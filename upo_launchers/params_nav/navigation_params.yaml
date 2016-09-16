@@ -57,10 +57,10 @@ RRT_ros_wrapper:
   # 4 -> Kinodynamic RRTstar 
   # 5 -> Kinodynamic simplified RRTstar
   rrt_planner_type:           2 
-  rrt_solve_time:             1.0 
+  rrt_solve_time:             0.8 
   rrt_goal_bias:              0.05 
   rrt_max_insertion_dist:     0.25 #0.25<-2  0.50 o 1.0<-4
-  rrt_goal_xy_tol:            0.1
+  rrt_goal_xy_tol:            0.12
   rrt_goal_th_tol:            0.12
   # If we want to interpolate the resulting path
   # if we don't. This value should be 0 or below 0.
@@ -130,7 +130,7 @@ RRT_ros_wrapper:
   show_rrt_statistics:        false
   show_intermediate_states:   false #use only in case of kino
 
-  robot_radius:               0.34  #meters
+  robot_radius:               0.32  #meters
 
   # between [0-1]
   # if the equality of the path costs is below
@@ -154,15 +154,25 @@ Navigation_features:
   # Gaussian functions
   stddev_person_front:        1.2
   stddev_person_aside:        0.8
+  #stddev_person_right:        0.8  #only used in upo_featureset 1
 
   enable_grouping:            true  
   stddev_group:               0.8
   grouping_distance:          1.5
 
-  # Weights for function costs
+  # 0 -> 3 features
+  # 1 -> 5 features
+  upo_featureset:             0
+  # Weights for function costs (featureset 0)
   w1:                         0.1   #goal dist
   w2:                         0.5  #obstacle dist
   w3:                         0.4  #proxemics
+  # Weights for function costs (featureset 1)
+  #w1:                         0.1   #goal dist
+  #w2:                         0.2  #obstacle dist
+  #w3:                         0.25  #person front
+  #w4:                         0.15 # person back 
+  #w5:                         0.3 # person right side
 
   
 

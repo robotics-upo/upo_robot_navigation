@@ -128,7 +128,7 @@ void Upo_navigation_macro_actions::reconfigureCB(upo_navigation_macro_actions::N
 	secs_to_wait_ = config.secs_to_wait;
 	social_approaching_type_ = config.social_approaching_type;
 	secs_to_yield_ = config.secs_to_yield;
-	check_battery_level_ = config.check_battery_level;
+	//check_battery_level_ = config.check_battery_level;
 	
 }
 

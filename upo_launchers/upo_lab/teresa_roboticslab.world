@@ -60,17 +60,17 @@ define giraff_base position
   fiducial_return 2           	# Seen as "1" fiducial finders
 
   localization "gps"         	  
-  localization_origin [0 0 0 0] 	# Start odometry at (0, 0, 0).
+  #localization_origin [0 0 0 0] 	# Start odometry at (0, 0, 0).
 
   # alternative odometric localization with simple error model
   #localization "odom"        # Change to "gps" to have impossibly perfect, global odometry
   #odom_error [ 0.05 0.05 0.0 0.01 ]   	# Odometry error or slip in X, Y, Z and Theta
                                    	# (Uniform random distribution)   
 
-  # four DOF kinematics limits
+   # four DOF kinematics limits
   # [ xmin xmax ymin ymax zmin zmax amin amax ]				
-  velocity_bounds [-0.5 0.5 0 0 0 0 -90.0 90.0 ]					
-  acceleration_bounds [-1.5 1.5 0 0 0 0 -90 90.0 ]
+  velocity_bounds [-0.4 0.4 0 0 0 0 -28.65 28.65 ]					
+  acceleration_bounds [-1.0 1.0 0 0 0 0 -57.3 57.3 ]
 )
 
 # ----------------- The TERESA standard configuration -----------------------------------
@@ -175,7 +175,7 @@ floorplan
 
 #---------throw in the pioneer --------------------------------
 
-teresa( pose [ 10.920 2.730 0.000 171.200 ] name "teresa") #pose [ 11.600 5.500 0.000 -160.000 ]
+teresa( pose [ 10.920 2.730 0.000 171.200 ] name "teresa" localization_origin [10.920 2.730 0 171.200]) 
 
 #block( pose [ 10.374 6.179 0.000 -163.166 ] color "purple" name "group" size [0.450 0.900 1.700] fiducial_return 2)
 block( pose [ 9.032 4.077 0.000 -103.032 ] color "purple" name "person1" fiducial_return 1)
