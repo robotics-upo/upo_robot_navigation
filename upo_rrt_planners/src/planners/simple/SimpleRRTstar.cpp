@@ -125,7 +125,7 @@ std::vector<upo_RRT::Node> upo_RRT::SimpleRRTstar::solve(float secs)
 				//if(randState)
 				//	delete randState;
 				
-				if(fullBiasing_)
+				if(fullBiasing_ && !first_path_.empty())
 				{
 					randState = *space_->samplePathBiasing(&first_path_, pathBias_stddev_);
 					

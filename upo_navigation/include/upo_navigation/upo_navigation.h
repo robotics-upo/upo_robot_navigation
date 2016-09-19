@@ -206,6 +206,11 @@ namespace upo_nav {
 					
 			return norm;
 	  }
+	  
+	  
+	  void setPathToBias(std::vector<geometry_msgs::PoseStamped> path_to_follow) {
+				rrt_planner_->setBiasingPath(&path_to_follow);
+			}
 	
 
       /**

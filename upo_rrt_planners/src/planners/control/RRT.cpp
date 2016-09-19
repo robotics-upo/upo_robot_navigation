@@ -86,7 +86,7 @@ std::vector<upo_RRT::Node> upo_RRT::RRT::solve(float secs)
 			//Sample a random valid state
 			unsigned int cont = 0;
 			do {
-				if(fullBiasing_) {
+				if(fullBiasing_ && !first_path_.empty()) {
 					randState = *space_->samplePathBiasing(&first_path_, pathBias_stddev_);
 					cont++;
 					

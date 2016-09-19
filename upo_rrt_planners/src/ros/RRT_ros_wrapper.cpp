@@ -89,9 +89,11 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 	}
 	
 	//All
-	//private_nh.param<bool>("full_path_biasing", full_path_biasing_, false);
-	//private_nh.param<double>("full_path_stddev_bias", aux, 0.8);
-	//full_path_stddev_bias_ = (float)aux;
+	private_nh.param<bool>("full_path_biasing", full_path_biasing_, false);
+	private_nh.param<double>("full_path_stddev", aux, 1.2);
+	full_path_stddev_ = (float)aux;
+	private_nh.param<double>("full_path_bias", aux, 0.8);
+	full_path_bias_ = (float)aux;
 	
 	
 	//if RRT or RRT* are kinodynamics
@@ -221,7 +223,7 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 			rrt_planner_->as<upo_RRT::SimpleRRTstar>()->set_useKnearest(rrtstar_use_k_nearest_);
 			rrt_planner_->as<upo_RRT::SimpleRRTstar>()->set_useFirstPathBiasing(rrtstar_first_path_biasing_);
 			rrt_planner_->as<upo_RRT::SimpleRRTstar>()->setRewireFactor(rrtstar_rewire_factor_);
-			if(rrtstar_first_path_biasing_ /*&& !full_path_biasing_*/) {
+			if(rrtstar_first_path_biasing_ && !full_path_biasing_) {
 				rrt_planner_->as<upo_RRT::SimpleRRTstar>()->setPathBias(rrtstar_first_path_bias_);
 				rrt_planner_->as<upo_RRT::SimpleRRTstar>()->setPathBias_stddev(rrtstar_first_path_stddev_bias_);
 			}
@@ -249,7 +251,7 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 			rrt_planner_->as<upo_RRT::RRTstar>()->setRewireFactor(rrtstar_rewire_factor_);
 			rrt_planner_->as<upo_RRT::RRTstar>()->setSteeringType(kino_steeringType_);
 			rrt_planner_->as<upo_RRT::RRTstar>()->setMotionCostType(motionCostType_); 
-			if(rrtstar_first_path_biasing_ /*&& !full_path_biasing_*/) {
+			if(rrtstar_first_path_biasing_ && !full_path_biasing_) {
 				rrt_planner_->as<upo_RRT::RRTstar>()->setPathBias(rrtstar_first_path_bias_);
 				rrt_planner_->as<upo_RRT::RRTstar>()->setPathBias_stddev(rrtstar_first_path_stddev_bias_);
 			}
@@ -268,7 +270,7 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 			rrt_planner_->as<upo_RRT::HalfRRTstar>()->setRewireFactor(rrtstar_rewire_factor_);
 			rrt_planner_->as<upo_RRT::HalfRRTstar>()->setSteeringType(kino_steeringType_);
 			rrt_planner_->as<upo_RRT::HalfRRTstar>()->setMotionCostType(motionCostType_); 
-			if(rrtstar_first_path_biasing_ /*&& !full_path_biasing_*/) {
+			if(rrtstar_first_path_biasing_ && !full_path_biasing_) {
 				rrt_planner_->as<upo_RRT::HalfRRTstar>()->setPathBias(rrtstar_first_path_bias_);
 				rrt_planner_->as<upo_RRT::HalfRRTstar>()->setPathBias_stddev(rrtstar_first_path_stddev_bias_);
 			}
@@ -288,12 +290,12 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 	rrt_planner_->setGoalTolerance(goal_xy_tol_, goal_th_tol_);
 	rrt_planner_->setStoreTree(visualize_tree_);
 	
-	/*if(full_path_biasing_) {
+	if(full_path_biasing_) {
 		rrt_planner_->setFullBiasing(full_path_biasing_);
-		rrt_planner_->setPathBias(1.0);
-		rrt_planner_->setPathBias_stddev(full_path_stddev_bias_);
-		rrt_planner_->setGoalBias(0.0);
-	}*/
+		rrt_planner_->setPathBias(full_path_bias_);
+		rrt_planner_->setPathBias_stddev(full_path_stddev_);
+		//rrt_planner_->setGoalBias(0.0);
+	}
 	
 }
 
@@ -514,10 +516,10 @@ void upo_RRT_ros::RRT_ros_wrapper::setup_controller(float controller_freq, float
 	
 	//Full path biasing
 	full_path_biasing_ = true;
-	full_path_stddev_bias_ = path_stddev;
+	full_path_stddev_ = path_stddev;
 	rrt_planner_->setFullBiasing(full_path_biasing_);
 	rrt_planner_->setPathBias(1.0);
-	rrt_planner_->setPathBias_stddev(full_path_stddev_bias_);
+	rrt_planner_->setPathBias_stddev(full_path_stddev_);
 	//rrt_planner_->setGoalBias(0.0);
 	
 	
@@ -1176,6 +1178,28 @@ std::vector<geometry_msgs::PoseStamped> upo_RRT_ros::RRT_ros_wrapper::path_inter
 	//printf("Path interpolation. Original size: %u, new size: %u\n", (unsigned int)path.size(), (unsigned int)pathnew.size());
 	return pathnew;
 }
+
+
+
+
+void upo_RRT_ros::RRT_ros_wrapper::setBiasingPath(std::vector<geometry_msgs::PoseStamped>* path_to_follow) {
+	
+	if(full_path_biasing_) {
+		//Transform path_to_be_followed into a vector of RRT states
+		std::vector<upo_RRT::State> state_path;
+		for(unsigned int i=0; i<path_to_follow->size(); i++)
+		{
+			geometry_msgs::PoseStamped p = path_to_follow->at(i);
+			float x = p.pose.position.x;
+			float y = p.pose.position.y;
+			float yaw = tf::getYaw(p.pose.orientation);
+			upo_RRT::State state(x, y, yaw);
+			state_path.push_back(state);
+		}
+		rrt_planner_->setBiasingPath(&state_path);
+	}
+}
+
 
 
 

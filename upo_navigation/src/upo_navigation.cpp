@@ -1128,9 +1128,9 @@ namespace upo_nav {
 	//if the goal is outside the local area, we use the A* and RRT*; if not, we use just the RRT* 
 	//double max_x_from_robot = ((controller_costmap_ros_->getCostmap()->getSizeInMetersX())/2);
 	//double max_y_from_robot = ((controller_costmap_ros_->getCostmap()->getSizeInMetersY())/2);
-	if(fabs(local_goal.pose.position.x) > rrt_radius ||
-		fabs(local_goal.pose.position.y) > rrt_radius)
-	{
+	//if(fabs(local_goal.pose.position.x) > rrt_radius ||
+	//	fabs(local_goal.pose.position.y) > rrt_radius)
+	//{
 		planner_plan_->clear();
 		//Plan with A*
       	if(makePlan(global_goal_, *planner_plan_)) //planner_plan is in map coordinates
@@ -1175,9 +1175,18 @@ namespace upo_nav {
 			intermediate_goal.pose.orientation = tf::createQuaternionMsgFromYaw(yaw);
 		} 
 		
-	} else {
-		intermediate_goal = global_goal_;
-	}
+		//----new-------
+		std::vector<geometry_msgs::PoseStamped> path_to_follow;
+		for(unsigned int i = 0; i <= path_i; ++i) {
+			geometry_msgs::PoseStamped out = goalToLocalFrame(planner_plan_->at(i));
+			path_to_follow.push_back(out);
+		}
+		setPathToBias(path_to_follow);
+		
+		
+	//} else {
+	//	intermediate_goal = global_goal_;
+	//}
 
 	current_goal_pub_.publish(intermediate_goal);
 	//Tell the rrt thread to plan
@@ -1223,9 +1232,9 @@ namespace upo_nav {
 				local_goal = goalToLocalFrame(new_goal.target_pose);
 
           		//if the goal is outside the local area, we use the A* and RRT*; if not, we use just the RRT* 
-				if(fabs(local_goal.pose.position.x) > rrt_radius ||
-						fabs(local_goal.pose.position.y) > rrt_radius)
-				{
+				//if(fabs(local_goal.pose.position.x) > rrt_radius ||
+				//		fabs(local_goal.pose.position.y) > rrt_radius)
+				//{
 					planner_plan_->clear();
 					//Plan with A*
       				if(makePlan(global_goal_, *planner_plan_))
@@ -1269,9 +1278,18 @@ namespace upo_nav {
 						intermediate_goal.pose.orientation = tf::createQuaternionMsgFromYaw(yaw);
 					} 
 					
-				} else {
-					intermediate_goal = global_goal_;
-				}
+					//----new-------
+					std::vector<geometry_msgs::PoseStamped> path_to_follow;
+					for(unsigned int i = 0; i <= path_i; ++i) {
+						geometry_msgs::PoseStamped out = goalToLocalFrame(planner_plan_->at(i));
+						path_to_follow.push_back(out);
+					}
+					setPathToBias(path_to_follow);
+					
+					
+				//} else {
+				//	intermediate_goal = global_goal_;
+				//}
 
 				//We update the local plan to an empty plan in order to stop the robot
 				//until get a new plan
@@ -1328,29 +1346,50 @@ namespace upo_nav {
 		//double final_dist = sqrt(pow((goal_pose.pose.position.x - global_goal_.pose.position.x),2)+pow((goal_pose.pose.position.y - global_goal_.pose.position.y),2));
 		//if(final_dist >= 0.2 /*&& robot_dist < 1.8*/) //we plan again with an updated goal
 		
-		if(robot_dist < 0.2) {
+		/*if(robot_dist < 0.2) {
 			rrt_mutex_.lock();
 			rrt_goal_ = global_goal_;
 			rrt_sleep_ = true;
 			run_rrt_ = false;
 			rrt_mutex_.unlock();
 			
+		}*/
+		if(robot_dist < 0.2) {
+			rrt_mutex_.lock();
+			new_rrt_plan_ = false;
+			rrt_goal_ = global_goal_;
+			rrt_sleep_ = true;
+			run_rrt_ = false;
+			rrt_mutex_.unlock();
+			geometry_msgs::PoseStamped p = goalToLocalFrame(global_goal_);
+			//p.pose.position.x = 0.0;
+			//p.pose.orientation.y = 0.0;
+			std::vector<geometry_msgs::PoseStamped> parray;
+			parray.push_back(p);
+			tc_->setPlan(parray);
 		} else {
 		
-			double dist = sqrt(pow((global_goal_.pose.position.x - robot_pose.pose.position.x),2)+pow((global_goal_.pose.position.y - robot_pose.pose.position.y),2));
-			if(dist > rrt_radius)
-			{
+			//double dist = sqrt(pow((global_goal_.pose.position.x - robot_pose.pose.position.x),2)+pow((global_goal_.pose.position.y - robot_pose.pose.position.y),2));
+			//if(dist > rrt_radius)
+			//{
 				//Now take the last point of the global path inside
 				//the local area --> goal for the RRT*
 				unsigned int path_i = 0;
+				unsigned int closest = 0;
+				float max_dist = 100.0;
 				for(unsigned int i = 0; i < planner_plan_->size(); ++i) {
 					double gx = planner_plan_->at(i).pose.position.x;
 					double gy = planner_plan_->at(i).pose.position.y;
 					unsigned int map_x, map_y;
-					double dist_x = fabs(gx - robot_pose.pose.position.x);
-					double dist_y = fabs(gy - robot_pose.pose.position.y);
+					float dist_x = fabs(gx - robot_pose.pose.position.x);
+					float dist_y = fabs(gy - robot_pose.pose.position.y);
+					float dist = sqrt((dist_x*dist_x)+(dist_y*dist_y));
 					if (dist_x <= (rrt_radius) && dist_y <= (rrt_radius)) {
 						path_i = i;
+					}
+					if(dist < max_dist) {
+						closest = i;
+						max_dist = dist;
 					}
 				}
 				//add orientation to the point
@@ -1368,9 +1407,19 @@ namespace upo_nav {
 					intermediate_goal = global_goal_;
 				}
 				
-			} else {
-				intermediate_goal = global_goal_;
-			}
+				
+				//----new-------
+				std::vector<geometry_msgs::PoseStamped> path_to_follow;
+				for(unsigned int i = closest; i <= path_i; ++i) {
+					geometry_msgs::PoseStamped out = goalToLocalFrame(planner_plan_->at(i));
+					path_to_follow.push_back(out);
+				}
+				setPathToBias(path_to_follow);
+				
+				
+			//} else {
+			//	intermediate_goal = global_goal_;
+			//}
 			
 			//We update the local plan to an empty plan in order to stop the robot
 			//until get a new plan
@@ -1495,9 +1544,9 @@ namespace upo_nav {
 	//if the goal is outside the local area, we use the A* and RRT*; if not, we use just the RRT* 
 	//double max_x_from_robot = ((controller_costmap_ros_->getCostmap()->getSizeInMetersX())/2);
 	//double max_y_from_robot = ((controller_costmap_ros_->getCostmap()->getSizeInMetersY())/2);
-	if(fabs(local_goal.pose.position.x) > rrt_radius ||
-		fabs(local_goal.pose.position.y) > rrt_radius)
-	{
+	//if(fabs(local_goal.pose.position.x) > rrt_radius ||
+	//	fabs(local_goal.pose.position.y) > rrt_radius)
+	//{
 		planner_plan_->clear();
 		//Plan with A*
       	if(makePlan(global_goal_, *planner_plan_)) //planner_plan is in map coordinates
@@ -1519,7 +1568,7 @@ namespace upo_nav {
 		//Now take the last point of the global path inside
 		//the local area --> goal for the RRT*
 		unsigned int path_i = 0;
-		for(unsigned int i = 0; i < planner_plan_->size(); ++i) {
+		for(unsigned int i = planner_plan_->size()-1; i > 0; --i) {
 			double gx = planner_plan_->at(i).pose.position.x;
 			double gy = planner_plan_->at(i).pose.position.y;
 			unsigned int map_x, map_y;
@@ -1544,7 +1593,16 @@ namespace upo_nav {
 		} else {
 			intermediate_goal = global_goal_;
 		}
-	}
+		
+		//----new-------
+		std::vector<geometry_msgs::PoseStamped> path_to_follow;
+		for(unsigned int i = 0; i <= path_i; ++i) {
+			geometry_msgs::PoseStamped out = goalToLocalFrame(planner_plan_->at(i));
+			path_to_follow.push_back(out);
+		}
+		setPathToBias(path_to_follow);
+		//---------------
+	//}
 
 	current_goal_pub_.publish(intermediate_goal);
 	//Tell the rrt thread to plan
@@ -1618,20 +1676,26 @@ namespace upo_nav {
 	} else {
 		
 		geometry_msgs::PoseStamped intermediate_goal;
-		//double dist = sqrt(pow((global_goal_.pose.position.x - robot_pose.pose.position.x),2)+pow((global_goal_.pose.position.y - robot_pose.pose.position.y),2));
-		if(dist > rrt_radius)
-		{
+		//if(dist > rrt_radius)
+		//{
 			//Now take the last point of the global path inside
 			//the local area --> goal for the RRT*
 			unsigned int path_i = 0;
+			unsigned int closest = 0;
+			float max_dist = 100.0;
 			for(unsigned int i = 0; i < planner_plan_->size(); ++i) {
 				double gx = planner_plan_->at(i).pose.position.x;
 				double gy = planner_plan_->at(i).pose.position.y;
 				unsigned int map_x, map_y;
-				double dist_x = fabs(gx - robot_pose.pose.position.x);
-				double dist_y = fabs(gy - robot_pose.pose.position.y);
+				float dist_x = fabs(gx - robot_pose.pose.position.x);
+				float dist_y = fabs(gy - robot_pose.pose.position.y);
+				float dist = sqrt((dist_x*dist_x)+(dist_y*dist_y));
 				if (dist_x <= (rrt_radius) && dist_y <= (rrt_radius)) {
 					path_i = i;
+				}
+				if(dist < max_dist) {
+					closest = i;
+					max_dist = dist;
 				}
 			}
 			//add orientation to the point
@@ -1648,10 +1712,20 @@ namespace upo_nav {
 			} else {
 				intermediate_goal = global_goal_;
 			}
+			
+			//----new-------
+			std::vector<geometry_msgs::PoseStamped> path_to_follow;
+			for(unsigned int i = closest; i <= path_i; ++i) {
+				geometry_msgs::PoseStamped out = goalToLocalFrame(planner_plan_->at(i));
+				path_to_follow.push_back(out);
+			}
+			setPathToBias(path_to_follow);
+		//---------------
+			
 				
-		} else {
-			intermediate_goal = global_goal_;
-		}		
+		//} else {
+		//	intermediate_goal = global_goal_;
+		//}		
 			
 		//We update the local plan to an empty plan in order to stop the robot
 		//until get a new plan

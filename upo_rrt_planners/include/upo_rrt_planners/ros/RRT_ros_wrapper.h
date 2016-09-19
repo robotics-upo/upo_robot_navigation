@@ -75,8 +75,10 @@ namespace upo_RRT_ros {
 				checker_->setWeights(w);
 			}
 			
-			//For full path biasing
+			//For full path biasing using the kinodynamic RRT local controller
 			int RRT_local_plan(std::vector<geometry_msgs::PoseStamped> path_to_follow, float start_lin_vel, float start_ang_vel, geometry_msgs::Twist& cmd_vel);
+			
+			void setBiasingPath(std::vector<geometry_msgs::PoseStamped>* path_to_follow);
 			
 			
 			//std::vector<float> get_features_count(geometry_msgs::PoseStamped* goal, std::vector<geometry_msgs::PoseStamped>* path, upo_msgs::PersonPoseArrayUPO* people);
@@ -161,7 +163,8 @@ namespace upo_RRT_ros {
 			float 							rrtstar_first_path_stddev_bias_;
 			float 							rrtstar_rewire_factor_;
 			bool							full_path_biasing_;
-			float 							full_path_stddev_bias_;
+			float 							full_path_stddev_;
+			float 							full_path_bias_;
 			int 							kino_minControlSteps_;
 			int 							kino_maxControlSteps_;
 			float 							kino_linAcc_;
