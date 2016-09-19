@@ -1,0 +1,14 @@
+<!-- -->
+<launch>
+  <include file="$(find upo_launchers)/upo_lab/upolab_macro_actions.launch"/>
+  <!--<include file="$(find upo_launchers)/LesArcades/nav_lesArcades-chairs.launch"/>-->
+  <node pkg="decision_making_uva" name="upo_event_manager" type="upo_event_manager.py" output="screen"/>
+  <node pkg="decision_making_uva" name="upo_pilot_interface_bridge" type="upo_pilot_interface_bridge.py" output="screen"/>
+  <!--<node pkg="decision_making_uva" name="interaction_target_identifier" type="interaction_target_identifier.py" output="screen"/>-->
+
+  <node pkg="decision_making_uva" name="upo_navigation_behavior_fsm" type="upo_navigation_behavior_fsm.py" output="screen">
+    <param name="waypoint_defs" value="$(find upo_launchers)/upo_lab/maps/waypoint_defs.yaml"/>
+  </node>
+
+  <node pkg="smach_viewer" name="smach_viewer" type="smach_viewer.py"/>
+</launch>

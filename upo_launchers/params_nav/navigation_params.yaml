@@ -68,9 +68,13 @@ RRT_ros_wrapper:
 
   #if the planner is RRT* 
   rrtstar_use_k_nearest:      false
-  rrtstar_path_biasing:       true
+  rrtstar_path_biasing:       false
   rrtstar_path_bias:          0.8
   rrtstar_stddev_bias:        0.4
+
+  full_path_biasing:          true
+  full_path_stddev:           1.2
+  full_path_bias:             0.8 
 
   #get the RRT* costs from a costmap
   use_fc_in_costmap:          false

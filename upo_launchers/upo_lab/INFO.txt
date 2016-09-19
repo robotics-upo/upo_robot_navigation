@@ -1,0 +1,11 @@
+
+1. Launch the navigation system, the navigation macro-actions and the state machine:
+roslaunch upolab_nav_behavior_sim.launch
+(for real robot:  roslaunch real_upolab_nav_behavior.launch)
+
+2. Launch the test program:
+rosrun decision_making_uva upo_nav_behavior_tester.py
+
+3. Optional. To test the assisted steering action (dummy for the moment), run the teleop_keypboard (sudo apt-get install ros-indigo-teleop-twist-keyboard).
+(The simulated topic of Twist messages from the interface is /teresa/cmd_vel)
+roslaunch upo_navigation_macro_actions teleop_keyboard.launch 
