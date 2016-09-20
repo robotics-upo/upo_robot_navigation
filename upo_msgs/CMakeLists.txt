@@ -51,6 +51,8 @@ find_package(catkin REQUIRED COMPONENTS
    FILES
    PersonPoseArrayUPO.msg
    PersonPoseUPO.msg
+   PersonGoalArrayUPO.msg
+   PersonGoalUPO.msg
  )
 
 ## Generate services in the 'srv' folder
