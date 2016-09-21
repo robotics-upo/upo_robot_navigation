@@ -163,6 +163,9 @@ features::NavFeatures::~NavFeatures() {
     
     upo_featureset_ = config.upo_featureset;
     use_uva_features_ = config.use_uva_features;
+	if(use_uva_features_ && uva_features_ == NULL) {
+		uva_features_ = new uva_cost_functions::UvaFeatures(tf_listener_);
+	}
 	use_laser_projection_ = config.use_laser_projection;
 	sigmas_[0] = config.stddev_person_front;
 	sigmas_[1] = config.stddev_person_aside;
