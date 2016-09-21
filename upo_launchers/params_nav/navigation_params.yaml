@@ -57,7 +57,7 @@ RRT_ros_wrapper:
   # 4 -> Kinodynamic RRTstar 
   # 5 -> Kinodynamic simplified RRTstar
   rrt_planner_type:           2 
-  rrt_solve_time:             0.8 
+  rrt_solve_time:             0.9 
   rrt_goal_bias:              0.05 
   rrt_max_insertion_dist:     0.25 #0.25<-2  0.50 o 1.0<-4
   rrt_goal_xy_tol:            0.12
@@ -123,7 +123,7 @@ RRT_ros_wrapper:
   rrt_yaw_resolution:         0.02
   rrt_min_linear_vel:         0.0
   rrt_max_linear_vel:         0.4
-  rrt_max_angular_vel:        0.5
+  rrt_max_angular_vel:        1.2
   rrt_lin_vel_resolution:     0.05
   rrt_ang_vel_resolution:     0.1
   rrt_nn_type:                1
@@ -158,7 +158,7 @@ Navigation_features:
   # Gaussian functions
   stddev_person_front:        1.2
   stddev_person_aside:        0.8
-  #stddev_person_right:        0.8  #only used in upo_featureset 1
+  #stddev_person_right:       0.8  #only used in upo_featureset 1
 
   enable_grouping:            true  
   stddev_group:               0.8
@@ -190,9 +190,9 @@ PurePlanner:
   max_rot_acc:                1.0
   max_trans_vel:              0.4 
   min_trans_vel:              0.1
-  max_rot_vel:                0.5
-  min_rot_vel:                0.1
-  min_in_place_rot_vel:       0.4
+  max_rot_vel:                1.2
+  min_rot_vel:                0.6
+  min_in_place_rot_vel:       0.8
 
 # Goal Tolerance Parameters
   yaw_goal_tolerance:         0.1

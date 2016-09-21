@@ -57,8 +57,8 @@
     <param name="resample_interval" value="2"/>
     <param name="recovery_alpha_slow" value="0"/> <!--0.001--><!-- 0 -->
     <param name="recovery_alpha_fast" value="0"/> <!--0.1--><!-- 0 -->
-    <param name="initial_pose_x" value="9" /> <!--11.1-->
-    <param name="initial_pose_y" value="12" /> <!--5.2-->
+    <param name="initial_pose_x" value="8.1" /> <!--11.1-->
+    <param name="initial_pose_y" value="15.25" /> <!--5.2-->
     <param name="initial_pose_a" value="0" /><!-- -2.79 radians -->
   </node>
 
@@ -69,7 +69,7 @@
 	 <node pkg="upo_navigation_macro_actions" type="upo_navigation_macro_actions" name="upo_navigation_macro_actions" output="screen" launch-prefix="xterm -e gdb --args"  >
 
 		<!-- frecuency of checking the block situation (seconds)-->
-		<param name="secs_to_check_block" type="double" value="10.0" /> 
+		<param name="secs_to_check_block" type="double" value="15.0" /> 
 		<!-- minimum distance that the robot should have moved in "secs_to_check_block" time from 
 		its position to determine a blocked situation -->
 		<param name="block_dist" type="double" value="0.4" /> 

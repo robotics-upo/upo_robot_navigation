@@ -175,7 +175,7 @@ floorplan
 
 #---------throw in the pioneer --------------------------------
 
-teresa( pose [7.850 15.208 0.000 -12.938 ] name "teresa" localization_origin [8.1 15.25 0 0]) 
+teresa( pose [8.1 15.25 0.000 0 ] name "teresa" localization_origin [8.1 15.25 0 0]) 
 
 block( pose [10.250 15.000 0.000 0.000] color "purple" name "person1" fiducial_return 1)
 block( pose [10.000 7.500 0.000 0.000 ] color "purple" name "person2" fiducial_return 2)

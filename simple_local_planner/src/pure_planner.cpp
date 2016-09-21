@@ -44,8 +44,7 @@ namespace simple_local_planner{
 		sim_time_ = config.sim_time;
 		sim_granularity_ = config.sim_granularity;
 		angular_sim_granularity_ = config.angular_sim_granularity;
-
-
+		//printf("\nPure Planner Reconfigure. new wp_tolerance: %.2f\n", wp_tolerance_);
   }
 
 

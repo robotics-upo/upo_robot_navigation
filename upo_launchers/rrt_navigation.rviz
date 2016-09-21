@@ -77,8 +77,6 @@ Visualization Manager:
           Value: true
         fiducial_1:
           Value: true
-        fiducial_4:
-          Value: true
         giraff_head:
           Value: true
         giraff_stalk:
@@ -111,8 +109,6 @@ Visualization Manager:
               base_link:
                 base_fiducial_link:
                   fiducial_1:
-                    {}
-                  fiducial_4:
                     {}
                 base_laser_link_0:
                   {}
@@ -211,7 +207,7 @@ Visualization Manager:
       Color: 0; 0; 0
       Enabled: true
       Name: Polygon
-      Topic: /upo_navigation_node/local_costmap/footprint
+      Topic: /upo_navigation_macro_actions/local_costmap/footprint
       Unreliable: false
       Value: true
     - Alpha: 1
@@ -243,12 +239,12 @@ Visualization Manager:
       Marker Topic: /rrt_goal_marker
       Name: Marker
       Namespaces:
-        basic_shapes: true
+        {}
       Queue Size: 1
       Value: true
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /upo_navigation_node/Navigation_features/gaussian_markers
+      Marker Topic: /upo_navigation_macro_actions/Navigation_features/gaussian_markers
       Name: MarkerArray
       Namespaces:
         {}
@@ -268,7 +264,7 @@ Visualization Manager:
       Marker Topic: /rrt_path_points
       Name: Marker
       Namespaces:
-        basic_shapes: true
+        {}
       Queue Size: 100
       Value: true
     - Alpha: 1
@@ -336,7 +332,7 @@ Visualization Manager:
       Marker Topic: /rrt_tree
       Name: Marker
       Namespaces:
-        rrt_tree: true
+        {}
       Queue Size: 100
       Value: true
     - Alpha: 1
@@ -374,14 +370,6 @@ Visualization Manager:
       Marker Topic: /rrt_path_interpol_points
       Name: Marker
       Namespaces:
-        basic_shapes: true
-      Queue Size: 100
-      Value: true
-    - Class: rviz/MarkerArray
-      Enabled: true
-      Marker Topic: /visualise_vector
-      Name: MarkerArray
-      Namespaces:
         {}
       Queue Size: 100
       Value: true
@@ -409,22 +397,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 15.265
+      Distance: 10.8218
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 15.2565
-        Y: 12.1931
-        Z: 0.43354
+        X: 12.5481
+        Y: 16.1495
+        Z: 0.438246
       Name: Current View
       Near Clip Distance: 0.01
       Pitch: 1.5698
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 4.67992
+      Yaw: 5.50492
     Saved: ~
 Window Geometry:
   Displays:

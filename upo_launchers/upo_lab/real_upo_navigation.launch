@@ -29,9 +29,9 @@
    </node>-->
 
 
-  <node pkg="laser_assembler" type="laser_assembler" name="laser_assembler2" args="/scanfront /scanback">
+  <!--<node pkg="laser_assembler" type="laser_assembler" name="laser_assembler2" args="/scanfront /scanback">
 	<remap from="scan" to="scan360"/>
-  </node>
+  </node>-->
 
 
   <!--- amcl -->

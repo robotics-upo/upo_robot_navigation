@@ -51,6 +51,7 @@ Upo_navigation_macro_actions::Upo_navigation_macro_actions(tf::TransformListener
 		yield_ = new Yield(&yieldmap_, &yieldpoint_file);
 
 	robot_inzone_ = false;
+	robot_inzone2_ = false;
 	person_inzone_ = false;
 
 	//Assisted driving
@@ -292,6 +293,10 @@ void Upo_navigation_macro_actions::navigateWaypointCB(const upo_navigation_macro
 
 		if(exit)
 			return;
+			
+		
+		changeParametersNarrowPlaces();
+			
 
 		boost::recursive_mutex::scoped_lock l(configuration_mutex_);
 
@@ -478,6 +483,8 @@ void Upo_navigation_macro_actions::navigateHomeCB(const upo_navigation_macro_act
 		if(exit)
 			return;
 		
+		
+		changeParametersNarrowPlaces();
 		
 		boost::recursive_mutex::scoped_lock l(configuration_mutex_);	
 			
@@ -869,7 +876,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 		if(exit) 
 			return;
 	
-		
+		changeParametersNarrowPlaces();
 		
 		//Check the yield situation
 		pinzone_mutex_.lock();
@@ -1592,6 +1599,7 @@ void Upo_navigation_macro_actions::peopleCallback(const upo_msgs::PersonPoseArra
 			if(yield_->getType(out.pose.position.x, out.pose.position.y, ok) == SUPERNARROW) {
 				if(ok) {
 					inside = true;
+					//printf("PERSON inside supernarrow zone!!!\n");
 				}
 			}
 		}
@@ -1606,32 +1614,45 @@ void Upo_navigation_macro_actions::peopleCallback(const upo_msgs::PersonPoseArra
 void Upo_navigation_macro_actions::poseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg)
 {
 	
-	rinzone_mutex_.lock();
-	bool in = robot_inzone_;
-	rinzone_mutex_.unlock();
 	
 	double x = msg->pose.pose.position.x;
 	double y = msg->pose.pose.position.y;
 	bool ok;
 	bool inside = false;
+	bool inside2 = false;
 	if(yield_->getType(x, y, ok) == NARROW)
 	{
 		if(ok) {
 			inside = true;
-			
 		} 
-		if(ok && !in) {
-			//Inside the narrow area. Change the parameter
-			reconfigureParameters(std::string("/upo_navigation_macro_actions/PurePlannerROS"), std::string("wp_tolerance"), std::string("0.25"), DOUBLE_TYPE);
-		}
-	} else if(in) {
-		//Outside area. Establish the regular parameter
-		reconfigureParameters(std::string("/upo_navigation_macro_actions/PurePlannerROS"), std::string("wp_tolerance"), std::string("0.5"), DOUBLE_TYPE);
-	} 
+	} else if(yield_->getType(x, y, ok) == SUPERNARROW)
+		inside2 = true;
 	
 	rinzone_mutex_.lock();
 	robot_inzone_ = inside;
+	robot_inzone2_ = inside2;
 	rinzone_mutex_.unlock();
+}
+
+
+
+void Upo_navigation_macro_actions::changeParametersNarrowPlaces()
+{
+	rinzone_mutex_.lock();
+	bool in = robot_inzone_;
+	bool in2 = robot_inzone2_;
+	rinzone_mutex_.unlock();
+	if(in || in2) {
+		//Inside the narrow area. Change the parameter  
+		//printf("\nINSIDE the narrow area. Change the wp_tolerance parameter to 0.25\n\n");
+		reconfigureParameters(std::string("/upo_navigation_macro_actions/PurePlannerROS"), std::string("wp_tolerance"), std::string("0.25"), DOUBLE_TYPE);
+		reconfigureParameters(std::string("/upo_navigation_macro_actions/PurePlannerROS"), std::string("sim_time"), std::string("0.25"), DOUBLE_TYPE);
+	} else {
+		//Outside area. Establish the regular parameter
+		//printf("\nOUTSIDE the narrow area. Change the wp_tolerance parameter to 0.5\n\n");
+		reconfigureParameters(std::string("/upo_navigation_macro_actions/PurePlannerROS"), std::string("wp_tolerance"), std::string("0.5"), DOUBLE_TYPE);
+		reconfigureParameters(std::string("/upo_navigation_macro_actions/PurePlannerROS"), std::string("sim_time"), std::string("0.5"), DOUBLE_TYPE);
+	}
 }
 
 

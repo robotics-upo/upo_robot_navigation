@@ -599,7 +599,7 @@ std::vector<geometry_msgs::PoseStamped> upo_RRT_ros::RRT_ros_wrapper::RRT_plan(g
 	
 	//computations needed before starting planning
 	//In this case, we calculate the gaussian functions over the current people
-	checker_->setInitialTime(ros::Time::now());
+	checker_->setInitialTime(time);
 	checker_->preplanning_computations();
 	
 	std::vector<upo_RRT::Node> path;

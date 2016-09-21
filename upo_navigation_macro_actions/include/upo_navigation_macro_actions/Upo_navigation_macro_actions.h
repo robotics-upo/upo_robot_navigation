@@ -71,7 +71,7 @@
 			void peopleCallback(const upo_msgs::PersonPoseArrayUPO::ConstPtr& msg);
 			void poseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg);
 
-			
+			void changeParametersNarrowPlaces();
 			bool reconfigureParameters(std::string node, std::string param_name, std::string value, const datatype type);
 
 		private:
@@ -158,6 +158,7 @@
 			double secs_to_yield_;
 			std::string yieldmap_;
 			bool robot_inzone_;
+			bool robot_inzone2_;
 			bool person_inzone_;
 			//bool person_inzone2_;
 			boost::mutex rinzone_mutex_;

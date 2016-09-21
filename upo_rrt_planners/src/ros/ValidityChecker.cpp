@@ -46,7 +46,7 @@ bool upo_RRT_ros::ValidityChecker::isValid(upo_RRT::State* s) const
 			p_in.header.stamp = ros::Time(0);
 	} else 
 		p_in.header.stamp = time_;
-		
+	
 	p_in.pose.position.x = s->getX();
 	p_in.pose.position.y = s->getY();
 	p_in.pose.orientation = tf::createQuaternionMsgFromYaw(s->getYaw());
@@ -302,7 +302,8 @@ float upo_RRT_ros::ValidityChecker::getCost(upo_RRT::State* s)
 		pose.header.frame_id = "base_link"; 
 		if((ros::Time::now()-time_).toSec() > 2.0)
 			time_ = ros::Time::now();
-		pose.header.stamp = time_; //ros::Time(0);
+		pose.header.stamp = time_; 
+		//pose.header.stamp = ros::Time(0);
 		pose.pose.position.x = s->getX();
 		pose.pose.position.y = s->getY();
 		pose.pose.orientation = tf::createQuaternionMsgFromYaw(s->getYaw());
