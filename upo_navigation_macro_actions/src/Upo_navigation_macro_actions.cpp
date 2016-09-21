@@ -50,9 +50,11 @@ Upo_navigation_macro_actions::Upo_navigation_macro_actions(tf::TransformListener
 	} else
 		yield_ = new Yield(&yieldmap_, &yieldpoint_file);
 
+	robot_inzone_ = false;
+	person_inzone_ = false;
 
 	//Assisted driving
-	//as_ = new AssistedSteering(odomtopic, lasertopic, in_cmd_vel_topic, out_cmd_vel_topic);
+	//as_ = new AssistedSteering(tf_listener_, odomtopic, lasertopic, in_cmd_vel_topic, out_cmd_vel_topic);
 	//as_->pause();
 
 	//Dynamic reconfigure
@@ -1603,6 +1605,11 @@ void Upo_navigation_macro_actions::peopleCallback(const upo_msgs::PersonPoseArra
 
 void Upo_navigation_macro_actions::poseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg)
 {
+	
+	rinzone_mutex_.lock();
+	bool in = robot_inzone_;
+	rinzone_mutex_.unlock();
+	
 	double x = msg->pose.pose.position.x;
 	double y = msg->pose.pose.position.y;
 	bool ok;
@@ -1613,6 +1620,13 @@ void Upo_navigation_macro_actions::poseCallback(const geometry_msgs::PoseWithCov
 			inside = true;
 			
 		} 
+		if(ok && !in) {
+			//Inside the narrow area. Change the parameter
+			reconfigureParameters(std::string("/upo_navigation_macro_actions/PurePlannerROS"), std::string("wp_tolerance"), std::string("0.25"), DOUBLE_TYPE);
+		}
+	} else if(in) {
+		//Outside area. Establish the regular parameter
+		reconfigureParameters(std::string("/upo_navigation_macro_actions/PurePlannerROS"), std::string("wp_tolerance"), std::string("0.5"), DOUBLE_TYPE);
 	} 
 	
 	rinzone_mutex_.lock();

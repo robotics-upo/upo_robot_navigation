@@ -26,6 +26,7 @@ upo_RRT_ros::ValidityChecker::ValidityChecker(bool use_fc_costmap, tf::Transform
 	}
 	dimensions_ = dimensions;
 	distanceType_ = distType;
+	time_ = ros::Time::now();
 }
 
 
@@ -39,7 +40,13 @@ bool upo_RRT_ros::ValidityChecker::isValid(upo_RRT::State* s) const
 {
 	geometry_msgs::PoseStamped p_in;
 	p_in.header.frame_id = "base_link"; 
-	p_in.header.stamp = ros::Time(0);
+	//p_in.header.stamp = ros::Time(0); //this is a problem when the planning time is long. the time stamp should be the time when the rrt started to plan.
+	if((ros::Time::now()-time_).toSec() > 2.0) {
+			//time_ = ros::Time::now();
+			p_in.header.stamp = ros::Time(0);
+	} else 
+		p_in.header.stamp = time_;
+		
 	p_in.pose.position.x = s->getX();
 	p_in.pose.position.y = s->getY();
 	p_in.pose.orientation = tf::createQuaternionMsgFromYaw(s->getYaw());
@@ -81,7 +88,7 @@ bool upo_RRT_ros::ValidityChecker::isValid(upo_RRT::State* s) const
 			//if number of points in the footprint is less than 3, we'll just assume a circular robot
 			//if(myfootprint->size() < 3){
 			cost = glo_costmap_->getCost(cell_x, cell_y);
-			if(cost == costmap_2d::LETHAL_OBSTACLE || cost == costmap_2d::INSCRIBED_INFLATED_OBSTACLE || cost == costmap_2d::NO_INFORMATION)
+			if(cost == costmap_2d::LETHAL_OBSTACLE || cost == costmap_2d::INSCRIBED_INFLATED_OBSTACLE || cost == costmap_2d::NO_INFORMATION || cost == -1)
 				return false;
 			//}
 		}
@@ -102,7 +109,7 @@ bool upo_RRT_ros::ValidityChecker::isValid(upo_RRT::State* s) const
 		//if number of points in the footprint is less than 3, we'll just assume a circular robot
 		//if(myfootprint->size() < 3){
 		cost = loc_costmap_->getCost(cell_x, cell_y);
-		if(cost == costmap_2d::LETHAL_OBSTACLE || cost == costmap_2d::INSCRIBED_INFLATED_OBSTACLE || cost == costmap_2d::NO_INFORMATION)
+		if(cost == costmap_2d::LETHAL_OBSTACLE || cost == costmap_2d::INSCRIBED_INFLATED_OBSTACLE || cost == costmap_2d::NO_INFORMATION || cost == -1)
 			return false;
 		//}
 
@@ -293,7 +300,9 @@ float upo_RRT_ros::ValidityChecker::getCost(upo_RRT::State* s)
 	} else  {
 		geometry_msgs::PoseStamped pose;
 		pose.header.frame_id = "base_link"; 
-		pose.header.stamp = ros::Time(0);
+		if((ros::Time::now()-time_).toSec() > 2.0)
+			time_ = ros::Time::now();
+		pose.header.stamp = time_; //ros::Time(0);
 		pose.pose.position.x = s->getX();
 		pose.pose.position.y = s->getY();
 		pose.pose.orientation = tf::createQuaternionMsgFromYaw(s->getYaw());

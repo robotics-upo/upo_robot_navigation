@@ -1160,7 +1160,8 @@ namespace upo_nav {
 			double dist_y = fabs(gy - robot_pose.pose.position.y);
 			if (dist_x <= (rrt_radius) && dist_y <= (rrt_radius)) {
 				path_i = i;
-			}
+			} else
+				break;
 		}
    		//printf("!!!!map goal x:%.2f, y:%.2f\n", intermediate_goal.pose.position.x, intermediate_goal.pose.position.y);
    		//add orientation to the point
@@ -1264,7 +1265,8 @@ namespace upo_nav {
 						double dist_y = fabs(gy - robot_pose.pose.position.y);
 						if (dist_x <= (rrt_radius) && dist_y <= (rrt_radius)) {
 							path_i = i;
-						}
+						} else
+							break;
 					}
 					//add orientation to the point
 					if(path_i < (planner_plan_->size()-1)) {
@@ -1384,14 +1386,32 @@ namespace upo_nav {
 					float dist_x = fabs(gx - robot_pose.pose.position.x);
 					float dist_y = fabs(gy - robot_pose.pose.position.y);
 					float dist = sqrt((dist_x*dist_x)+(dist_y*dist_y));
-					if (dist_x <= (rrt_radius) && dist_y <= (rrt_radius)) {
-						path_i = i;
-					}
 					if(dist < max_dist) {
 						closest = i;
 						max_dist = dist;
 					}
 				}
+				
+				std::vector<geometry_msgs::PoseStamped> path_to_follow;
+				for(unsigned int i = closest; i < planner_plan_->size(); ++i) {
+					
+					geometry_msgs::PoseStamped out = goalToLocalFrame(planner_plan_->at(i));
+					path_to_follow.push_back(out);
+					
+					double gx = planner_plan_->at(i).pose.position.x;
+					double gy = planner_plan_->at(i).pose.position.y;
+					unsigned int map_x, map_y;
+					float dist_x = fabs(gx - robot_pose.pose.position.x);
+					float dist_y = fabs(gy - robot_pose.pose.position.y);
+					float dist = sqrt((dist_x*dist_x)+(dist_y*dist_y));
+					if (dist_x <= (rrt_radius) && dist_y <= (rrt_radius)) {
+						path_i = i;
+					} else
+						break;
+				}
+				
+				setPathToBias(path_to_follow);
+				
 				//add orientation to the point
 				if(path_i < (planner_plan_->size()-1)) {
 					intermediate_goal = planner_plan_->at(path_i);
@@ -1408,13 +1428,6 @@ namespace upo_nav {
 				}
 				
 				
-				//----new-------
-				std::vector<geometry_msgs::PoseStamped> path_to_follow;
-				for(unsigned int i = closest; i <= path_i; ++i) {
-					geometry_msgs::PoseStamped out = goalToLocalFrame(planner_plan_->at(i));
-					path_to_follow.push_back(out);
-				}
-				setPathToBias(path_to_follow);
 				
 				
 			//} else {
@@ -1568,7 +1581,8 @@ namespace upo_nav {
 		//Now take the last point of the global path inside
 		//the local area --> goal for the RRT*
 		unsigned int path_i = 0;
-		for(unsigned int i = planner_plan_->size()-1; i > 0; --i) {
+		//for(unsigned int i = planner_plan_->size()-1; i > 0; --i) {
+		for(unsigned int i = 0; i < planner_plan_->size(); ++i) {
 			double gx = planner_plan_->at(i).pose.position.x;
 			double gy = planner_plan_->at(i).pose.position.y;
 			unsigned int map_x, map_y;
@@ -1577,7 +1591,8 @@ namespace upo_nav {
 			if (dist_x <= rrt_radius && dist_y <= rrt_radius) {
 				path_i = i;
 				//intermediate_goal.header.frame_id = move_base_goal->target_pose.header.frame_id;
-			}
+			} else
+				break;
 		}
    		//printf("!!!!map goal x:%.2f, y:%.2f\n", intermediate_goal.pose.position.x, intermediate_goal.pose.position.y);
    		//add orientation to the point
@@ -1678,7 +1693,7 @@ namespace upo_nav {
 		geometry_msgs::PoseStamped intermediate_goal;
 		//if(dist > rrt_radius)
 		//{
-			//Now take the last point of the global path inside
+			//Now take the point of the global path inside
 			//the local area --> goal for the RRT*
 			unsigned int path_i = 0;
 			unsigned int closest = 0;
@@ -1690,14 +1705,33 @@ namespace upo_nav {
 				float dist_x = fabs(gx - robot_pose.pose.position.x);
 				float dist_y = fabs(gy - robot_pose.pose.position.y);
 				float dist = sqrt((dist_x*dist_x)+(dist_y*dist_y));
-				if (dist_x <= (rrt_radius) && dist_y <= (rrt_radius)) {
-					path_i = i;
-				}
 				if(dist < max_dist) {
 					closest = i;
 					max_dist = dist;
 				}
 			}
+			
+			std::vector<geometry_msgs::PoseStamped> path_to_follow;
+			for(unsigned int i = closest; i < planner_plan_->size(); ++i) {
+				
+				geometry_msgs::PoseStamped out = goalToLocalFrame(planner_plan_->at(i));
+				path_to_follow.push_back(out);
+				
+				double gx = planner_plan_->at(i).pose.position.x;
+				double gy = planner_plan_->at(i).pose.position.y;
+				unsigned int map_x, map_y;
+				float dist_x = fabs(gx - robot_pose.pose.position.x);
+				float dist_y = fabs(gy - robot_pose.pose.position.y);
+				float dist = sqrt((dist_x*dist_x)+(dist_y*dist_y));
+				if (dist_x <= (rrt_radius) && dist_y <= (rrt_radius)) {
+					path_i = i;
+				} else
+					break;
+			}
+			
+			setPathToBias(path_to_follow);
+			
+			
 			//add orientation to the point
 			if(path_i < (planner_plan_->size()-1)) {
 				intermediate_goal = planner_plan_->at(path_i);
@@ -1713,14 +1747,8 @@ namespace upo_nav {
 				intermediate_goal = global_goal_;
 			}
 			
-			//----new-------
-			std::vector<geometry_msgs::PoseStamped> path_to_follow;
-			for(unsigned int i = closest; i <= path_i; ++i) {
-				geometry_msgs::PoseStamped out = goalToLocalFrame(planner_plan_->at(i));
-				path_to_follow.push_back(out);
-			}
-			setPathToBias(path_to_follow);
-		//---------------
+			
+	
 			
 				
 		//} else {

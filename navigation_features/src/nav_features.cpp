@@ -448,7 +448,7 @@ bool features::NavFeatures::poseValid(geometry_msgs::PoseStamped* pose)
 		//if number of points in the footprint is less than 3, we'll just assume a circular robot
 		//if(myfootprint->size() < 3){
 		cost = costmap_global_->getCost(cell_x, cell_y);
-		if(cost == costmap_2d::LETHAL_OBSTACLE || cost == costmap_2d::INSCRIBED_INFLATED_OBSTACLE || cost == costmap_2d::NO_INFORMATION)
+		if(cost == costmap_2d::LETHAL_OBSTACLE || cost == costmap_2d::INSCRIBED_INFLATED_OBSTACLE || cost == costmap_2d::NO_INFORMATION || cost == -1)
 			return false;
 		//}
 	}
@@ -469,7 +469,7 @@ bool features::NavFeatures::poseValid(geometry_msgs::PoseStamped* pose)
 	//if number of points in the footprint is less than 3, we'll just assume a circular robot
 	//if(myfootprint->size() < 3){
 	cost = costmap_local_->getCost(cell_x, cell_y);
-	if(cost == costmap_2d::LETHAL_OBSTACLE || cost == costmap_2d::INSCRIBED_INFLATED_OBSTACLE || cost == costmap_2d::NO_INFORMATION)
+	if(cost == costmap_2d::LETHAL_OBSTACLE || cost == costmap_2d::INSCRIBED_INFLATED_OBSTACLE || cost == costmap_2d::NO_INFORMATION || cost == -1)
 		return false;
 	//}
 

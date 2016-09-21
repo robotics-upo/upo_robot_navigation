@@ -87,6 +87,10 @@ namespace upo_RRT_ros
 		//Pre-computations needed just before starting planning
 		void preplanning_computations();
 		
+		void setInitialTime(ros::Time t) {
+			time_ = t;
+		}
+		
 		
 		private:
 		
@@ -100,6 +104,8 @@ namespace upo_RRT_ros
 		unsigned int 						dimensions_;
 		int 								distanceType_;
 		bool								get_cost_from_costmap_;
+		
+		ros::Time							time_;
 		
 
 	};
