@@ -52,7 +52,6 @@ bool upo_RRT_ros::ValidityChecker::isValid(upo_RRT::State* s) const
 	p_in.pose.orientation = tf::createQuaternionMsgFromYaw(s->getYaw());
 	
 	
-	
 	if(!get_cost_from_costmap_)  
 	{
 		//If we calculate the validity in a normal way 

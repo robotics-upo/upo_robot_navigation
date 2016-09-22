@@ -440,7 +440,12 @@ bool features::NavFeatures::poseValid(geometry_msgs::PoseStamped* pose)
 		geometry_msgs::PoseStamped p_out_map;
 		try {					
 			tf_listener_->transformPose("map", p_in, p_out_map); 
-		}catch (tf::TransformException ex){
+			
+		}catch (tf::ExtrapolationException ex) {
+			p_in.header.stamp = ros::Time(0);
+			tf_listener_->transformPose("map", p_in, p_out_map); 
+		}	
+		catch (tf::TransformException ex){
 			ROS_WARN("isValid. x:%.2f, y:%.2f. TransformException: %s",x_i, y_i, ex.what());
 			return false;
 		}
@@ -460,7 +465,12 @@ bool features::NavFeatures::poseValid(geometry_msgs::PoseStamped* pose)
 	geometry_msgs::PoseStamped p_out_odom;
 	try {					
 		tf_listener_->transformPose("odom", p_in, p_out_odom); 
-	}catch (tf::TransformException ex){
+		
+	} catch (tf::ExtrapolationException ex) {
+		p_in.header.stamp = ros::Time(0);
+		tf_listener_->transformPose("odom", p_in, p_out_odom);  
+	}
+	catch (tf::TransformException ex){
 		ROS_WARN("isValid. x:%.2f, y:%.2f. TransformException: %s",x_i, y_i, ex.what());
 		return false;
 	}
