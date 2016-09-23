@@ -1645,8 +1645,8 @@ void Upo_navigation_macro_actions::changeParametersNarrowPlaces()
 	if(/*in ||*/ in2) {
 		//Inside the narrow area. Change the parameter  
 		//printf("\nINSIDE the narrow area. Change the wp_tolerance parameter to 0.25\n\n");
-		reconfigureParameters(std::string("/upo_navigation_macro_actions/PurePlannerROS"), std::string("wp_tolerance"), std::string("0.25"), DOUBLE_TYPE);
-		reconfigureParameters(std::string("/upo_navigation_macro_actions/PurePlannerROS"), std::string("sim_time"), std::string("0.25"), DOUBLE_TYPE);
+		reconfigureParameters(std::string("/upo_navigation_macro_actions/PurePlannerROS"), std::string("wp_tolerance"), std::string("0.35"), DOUBLE_TYPE);
+		reconfigureParameters(std::string("/upo_navigation_macro_actions/PurePlannerROS"), std::string("sim_time"), std::string("0.3"), DOUBLE_TYPE);
 	} else {
 		//Outside area. Establish the regular parameter
 		//printf("\nOUTSIDE the narrow area. Change the wp_tolerance parameter to 0.5\n\n");
