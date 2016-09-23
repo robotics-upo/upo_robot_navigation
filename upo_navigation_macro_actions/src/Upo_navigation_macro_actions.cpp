@@ -1642,7 +1642,7 @@ void Upo_navigation_macro_actions::changeParametersNarrowPlaces()
 	bool in = robot_inzone_;
 	bool in2 = robot_inzone2_;
 	rinzone_mutex_.unlock();
-	if(in || in2) {
+	if(/*in ||*/ in2) {
 		//Inside the narrow area. Change the parameter  
 		//printf("\nINSIDE the narrow area. Change the wp_tolerance parameter to 0.25\n\n");
 		reconfigureParameters(std::string("/upo_navigation_macro_actions/PurePlannerROS"), std::string("wp_tolerance"), std::string("0.25"), DOUBLE_TYPE);
