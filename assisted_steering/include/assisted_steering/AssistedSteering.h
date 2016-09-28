@@ -59,6 +59,8 @@ namespace assisted_steering {
 
 			tf::TransformListener* 			tf_;
 
+			bool							isActive_;
+
 			std::string 					laser_topic_;
 
 			std::string 					odom_topic_;

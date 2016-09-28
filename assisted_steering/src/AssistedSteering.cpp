@@ -31,8 +31,10 @@ void AssistedSteering::setup() {
 	n.param<double>("max_lin_acc", max_lin_acc_, 1.0);
 	n.param<double>("max_ang_acc", max_ang_acc_, 1.0);
 	n.param<double>("time_step", time_step_, 0.05);
+	n.param<bool>("is_active", isActive_, true);
 	max_lv_var_ = max_lin_acc_ * time_step_;
 	max_av_var_ = max_ang_acc_ * time_step_;
+
 
 	odom_helper_ = new OdometryHelperRos(odom_topic_);
 
@@ -61,6 +63,7 @@ void AssistedSteering::reconfigureCB(assisted_steering::AssistedSteeringConfig &
 	time_step_ = config.time_step;
 	robot_radius_ = config.robot_radius;
 	granularity_ = config.granularity;
+	isActive_ = config.is_active;
 
 	max_lv_var_ = max_lin_acc_ * time_step_;
 	max_av_var_ = max_ang_acc_ * time_step_;
@@ -85,14 +88,20 @@ void AssistedSteering::cmdvelCallback(const geometry_msgs::Twist::ConstPtr& msg)
 	twist_mutex_.lock();
 	twist_ = *msg;
 	twist_mutex_.unlock();
-	//Get current robot velocity
-    odom_helper_->getRobotVel(robot_vel_);
-	//Check if the command is valid
-	if(!checkCommand(&twist_)){
-		printf("\nPOSSIBLE COLLISION. Looking for a valid command...\n\n");
-		//look for a valid command
-		findValidCmd(&twist_);
-	}
+
+
+	boost::recursive_mutex::scoped_lock l(configuration_mutex_);
+
+	if(isActive_) {
+		//Get current robot velocity
+		odom_helper_->getRobotVel(robot_vel_);
+		//Check if the command is valid
+		if(!checkCommand(&twist_)){
+			printf("\nPOSSIBLE COLLISION. Looking for a valid command...\n\n");
+			//look for a valid command
+			findValidCmd(&twist_);
+		}
+	} 
 	out_cmdvel_pub_.publish(twist_);
 	
 }
@@ -152,7 +161,6 @@ void AssistedSteering::saturateVelocities(geometry_msgs::Twist* twist)
 
 bool AssistedSteering::findValidCmd(geometry_msgs::Twist* twist)
 {
-	boost::recursive_mutex::scoped_lock l(configuration_mutex_);
 
 	float lv = twist->linear.x;
 	float av = twist->angular.z;
@@ -205,7 +213,7 @@ bool AssistedSteering::findValidCmd(geometry_msgs::Twist* twist)
 
 bool AssistedSteering::checkCommand(geometry_msgs::Twist* twist)
 {
-	boost::recursive_mutex::scoped_lock l(configuration_mutex_);
+	//boost::recursive_mutex::scoped_lock l(configuration_mutex_);
 
 	saturateVelocities(twist);	
 
