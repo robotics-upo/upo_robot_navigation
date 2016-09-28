@@ -238,13 +238,14 @@ bool AssistedSteering::checkCommand(geometry_msgs::Twist* twist)
 	sensor_msgs::LaserScan laser = laser_scan_;
 	laser_mutex_.unlock();
 
-	for(unsigned int i=0; i<steps; i++)
+	int ini = floor(steps/2.0 + 0.5);
+	for(unsigned int i=ini; i<steps; i++)
 	{
 		float lin_dist = lv * dt;
 		th = th + (av * dt);
 		//normalization just in case
 		th = normalizeAngle(th, -M_PI, M_PI);
-		x = x + lin_dist*cos(th);
+		x = x + lin_dist*cos(th); //cos(th+av*dt/2.0)
 		y = y + lin_dist*sin(th); 
 		if(inCollision(x, y, &laser))
 			return false;
@@ -282,7 +283,7 @@ bool AssistedSteering::inCollision(float x, float y, sensor_msgs::LaserScan* sca
 	}
 
 	float range_dist = scan->ranges[i];
-	if(range_dist <= (d+robot_radius_)) {
+	if(fabs(range_dist - d) <= robot_radius_) {
 		//printf("-----------collision in the front-------------\n");
 		return true;
 	}
@@ -304,7 +305,7 @@ bool AssistedSteering::inCollision(float x, float y, sensor_msgs::LaserScan* sca
 	for(unsigned int j=1; j<=nranges; j++) {
 		int newi = (i-j) % scan->ranges.size();
 		range_dist = scan->ranges[newi];
-		if(range_dist < (d+robot_radius_)) {
+		if(fabs(range_dist - d) <= robot_radius_) {
 			//printf("collision in the left! ind:%i dist:%.2f\n", newi, range_dist);
 			return true;
 		}
@@ -314,7 +315,7 @@ bool AssistedSteering::inCollision(float x, float y, sensor_msgs::LaserScan* sca
 	for(unsigned int k=1; k<=nranges; k++) {
 		int newi = (i+k) % scan->ranges.size();
 		range_dist = scan->ranges[newi];
-		if(range_dist < (d+robot_radius_)) {
+		if(fabs(range_dist - d) <= robot_radius_) {
 			//printf("collision in the right! ind:%i dist:%.2f\n", newi, range_dist);
 			return true;
 		}
@@ -322,7 +323,6 @@ bool AssistedSteering::inCollision(float x, float y, sensor_msgs::LaserScan* sca
 
 	return false;
 }
-
 
 
 
