@@ -32,6 +32,8 @@ void AssistedSteering::setup() {
 	n.param<double>("max_ang_acc", max_ang_acc_, 1.0);
 	n.param<double>("time_step", time_step_, 0.05);
 	n.param<bool>("is_active", isActive_, true);
+	n.param<double>("ang_vel_inc", ang_vel_inc_, 0.20);
+	n.param<double>("lin_vel_inc", lin_vel_inc_, 0.10);
 	max_lv_var_ = max_lin_acc_ * time_step_;
 	max_av_var_ = max_ang_acc_ * time_step_;
 
@@ -64,6 +66,8 @@ void AssistedSteering::reconfigureCB(assisted_steering::AssistedSteeringConfig &
 	robot_radius_ = config.robot_radius;
 	granularity_ = config.granularity;
 	isActive_ = config.is_active;
+	ang_vel_inc_ = config.ang_vel_inc;
+	lin_vel_inc_ = config.lin_vel_inc;
 
 	max_lv_var_ = max_lin_acc_ * time_step_;
 	max_av_var_ = max_ang_acc_ * time_step_;
@@ -168,19 +172,19 @@ bool AssistedSteering::findValidCmd(geometry_msgs::Twist* twist)
 	float aux_lv = lv;
 	float aux_av = av;
 
-	float ang_inc = 0.15;
-	float lin_inc = 0.1;
+	//float ang_inc = 0.15;
+	//float lin_inc = 0.1;
 
 	float slot = 0.0;
 	//if(lv > 0.0) {
 		//Linear vels
 		for(unsigned int i=0; i<3; i++)
 		{
-			aux_lv = lv - (lin_inc*i);
+			aux_lv = lv - (lin_vel_inc_*i);
 			//Angular vels
 			for(unsigned int j=1; j<=3; j++)
 			{
-				aux_av = av + (ang_inc*j);
+				aux_av = av + (ang_vel_inc_*j);
 				twist->linear.x = aux_lv;
 				twist->angular.z = aux_av;
 				if(checkCommand(twist)) {
@@ -190,7 +194,7 @@ bool AssistedSteering::findValidCmd(geometry_msgs::Twist* twist)
 				printf("Velocities lv:%.3f, av:%.3f not valid\n", twist->linear.x, twist->angular.z);
 
 				
-				aux_av = av - (ang_inc*j);
+				aux_av = av - (ang_vel_inc_*j);
 				twist->linear.x = aux_lv;
 				twist->angular.z = aux_av;
 				if(checkCommand(twist)) {

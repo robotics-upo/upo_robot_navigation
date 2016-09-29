@@ -89,6 +89,8 @@ namespace assisted_steering {
 			double							time_step_;
 			double 							robot_radius_;
 			double							granularity_;
+			double							ang_vel_inc_;
+			double							lin_vel_inc_;
 
 			float 							max_lv_var_;
 			float 							max_av_var_;
