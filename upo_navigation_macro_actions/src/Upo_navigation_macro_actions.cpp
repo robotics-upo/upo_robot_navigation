@@ -295,7 +295,7 @@ void Upo_navigation_macro_actions::navigateWaypointCB(const upo_navigation_macro
 			return;
 			
 		
-		changeParametersNarrowPlaces();
+		//changeParametersNarrowPlaces();
 			
 
 		boost::recursive_mutex::scoped_lock l(configuration_mutex_);
@@ -484,7 +484,7 @@ void Upo_navigation_macro_actions::navigateHomeCB(const upo_navigation_macro_act
 			return;
 		
 		
-		changeParametersNarrowPlaces();
+		//changeParametersNarrowPlaces();
 		
 		boost::recursive_mutex::scoped_lock l(configuration_mutex_);	
 			
@@ -876,7 +876,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 		if(exit) 
 			return;
 	
-		changeParametersNarrowPlaces();
+		//changeParametersNarrowPlaces();
 		
 		//Check the yield situation
 		pinzone_mutex_.lock();

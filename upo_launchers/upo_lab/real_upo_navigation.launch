@@ -7,6 +7,9 @@
   <!--turn on the laser and launch them-->
   <include file="$(find teresa_driver)/launch/lasers.launch" />
 
+   <!-- assisted steering -->
+  <!--include file="$(find upo_launchers)/upo_lab/assisted_steering.launch"/-->
+
   <!--launch the xtion cameras-->
   <include file="$(find teresa_driver)/launch/xtions.launch" />
   <!--laser generated from the navigation xtion-->
@@ -20,13 +23,13 @@
   <node pkg="map_server" type="map_server" name="map_server" args="$(find upo_launchers)/upo_lab/maps/robotics_lab.yaml" />
 
 
-  <!--<include file="$(find teresa_to_spencer)/launch/laser_filter.launch" >
+  <include file="$(find teresa_to_spencer)/launch/laser_filter.launch" >
  	<arg name="use_360" value="false"/>
   </include>
 
   <node pkg="laser_assembler" type="laser_assembler" name="laser_assembler2" args="/scanfront_filtered /scanback_filtered">
         <remap from="scan" to="scan360_filtered"/>
-   </node>-->
+   </node>
 
 
   <!--<node pkg="laser_assembler" type="laser_assembler" name="laser_assembler2" args="/scanfront /scanback">

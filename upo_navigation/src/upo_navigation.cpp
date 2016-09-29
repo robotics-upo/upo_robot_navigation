@@ -1860,7 +1860,7 @@ namespace upo_nav {
 		rrt_mutex_.unlock();
 		
 		printf("¡¡¡¡Stopping RRT planning!!!!\n");
-		publishZeroVelocity();
+		//publishZeroVelocity();
 		local_plan_->clear();
 		tc_->setPlan(*local_plan_);
   }

@@ -4,8 +4,12 @@
 	<master auto="start"/>
 
 
-  <!--turn on the laser and launch them-->
-  <include file="$(find teresa_driver)/launch/lasers.launch" />
+   <!--turn on the laser and launch them-->
+   <include file="$(find teresa_driver)/launch/lasers.launch" />
+
+   <!-- assisted steering -->
+  <!--include file="$(find upo_launchers)/upo_lab/assisted_steering.launch"/-->
+
 
   <!--launch the xtion cameras-->
   <include file="$(find teresa_driver)/launch/xtions.launch" />
@@ -13,8 +17,9 @@
   <include file="$(find depthcamscan)/launch/depthcamscan.launch"/>
 
   <!--transform people receive to UPO messages format-->
-  <node pkg="spencer_to_upo_people" type="spencer_to_upo_people" name="spencer_to_upo_people" output="screen" />
-
+  <node pkg="spencer_to_upo_people" type="spencer_to_upo_people" name="spencer_to_upo_people" output="screen" >
+	<param name="is_active" type="bool" value="false" />
+  </node>
 
   <!-- Run the map server -->
   <node pkg="map_server" type="map_server" name="map_server" args="$(find upo_launchers)/upo_lab/maps/upolab.yaml" />
