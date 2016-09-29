@@ -4,7 +4,7 @@
   <include file="$(find upo_launchers)/upo_lab/real_upolab_macro_actions.launch"/>
 
   <!-- People localisation -->
-  <include file="$(find uva_launchers)/launch/combined_tracking.launch"/>
+  <!--include file="$(find uva_launchers)/launch/combined_tracking.launch"/-->
 
   <node pkg="decision_making_uva" name="upo_event_manager" type="upo_event_manager.py" output="screen"/>
   <node pkg="decision_making_uva" name="upo_pilot_interface_bridge" type="upo_pilot_interface_bridge.py" output="screen"/>
