@@ -67,6 +67,12 @@ Upo_navigation_macro_actions::Upo_navigation_macro_actions(tf::TransformListener
 	ros::NodeHandle nh;
 	people_sub_ = nh.subscribe("/people/navigation", 1, &Upo_navigation_macro_actions::peopleCallback, this); 
 	amcl_sub_   = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/amcl_pose", 1, &Upo_navigation_macro_actions::poseCallback, this);
+
+
+	//Services for walking side by side
+	start_client_ = nh.serviceClient<wsbs::start>("/wsbs/start");
+	stop_client_ = nh.serviceClient<wsbs::stop>("/wsbs/stop");
+	wsbs_status_sub_ = nh.subscribe<std_msgs::UInt8>("/wsbs/status", 1, &Upo_navigation_macro_actions::wsbsCallback, this);
 	
 
 	//Initialize action servers
@@ -1207,6 +1213,34 @@ void Upo_navigation_macro_actions::walkSideCB(const upo_navigation_macro_actions
 	sprintf(buf, "Walking with target id %i", p.id);
 	std::string st = std::string(buf);
 
+	/*
+	uint32 target_id
+	float64 goal_x
+	float64 goal_y
+	float64 goal_radius
+	---
+	uint8 error_code
+	*/
+	wsbs::start start_srv;
+	start_srv.request.target_id = p.id;
+	start_srv.request.goal_x = 0;
+	start_srv.request.goal_y = 0;
+	start_srv.request.goal_radius = -1;
+
+	if (!start_client_.call(start_srv))
+	{
+		ROS_INFO("Setting ABORTED state. sevice call failed!");
+		wsresult_.result = "Aborted. Walking sbs error 2";
+		wsresult_.value = 2;
+		WSActionServer_->setAborted(wsresult_, "Walking sbs aborted.");
+	}
+	/*if(start_srv.response.error_code != 0) { //ERROR 
+		ROS_INFO("Setting ABORTED state. Error_code received: %u", start_srv.response.error_code);
+		wsresult_.result = "Aborted. Walking sbs error 2";
+		wsresult_.value = 2;
+		WSActionServer_->setAborted(wsresult_, "Walking sbs aborted.");
+	}*/
+
 	ros::Rate r(control_frequency_);	
 	
 	while(nh6_.ok())
@@ -1217,39 +1251,92 @@ void Upo_navigation_macro_actions::walkSideCB(const upo_navigation_macro_actions
         	if(WSActionServer_->isNewGoalAvailable()){
 				
 				upo_navigation_macro_actions::WalkSideBySideGoal new_goal = *WSActionServer_->acceptNewGoal();
-				
-				time_init = ros::Time::now();
+				p = new_goal.it;
+
+				//First stop the current wsbs
+				wsbs::stop stop_srv;
+				if (!stop_client_.call(stop_srv))
+				{
+					ROS_INFO("Setting ABORTED state. Stop service call failed");
+					wsresult_.result = "Aborted. Walking sbs error while stopping";
+					wsresult_.value = 2;
+					WSActionServer_->setAborted(wsresult_, "Walking sbs aborted.");
+				} 
+				/*if(stop_srv.response.error_code != 0) { //ERROR 
+					ROS_INFO("Setting ABORTED state. Error code received: %u", stop_srv.response.error_code);
+					wsresult_.result = "Aborted. Walking sbs error while stopping";
+					wsresult_.value = 2;
+					WSActionServer_->setAborted(wsresult_, "Walking sbs aborted.");
+				}*/
+
+				//Now, start!
+				start_srv.request.target_id = p.id;
+				start_srv.request.goal_x = 0;
+				start_srv.request.goal_y = 0;
+				start_srv.request.goal_radius = -1;
+				if (!start_client_.call(start_srv))
+				{
+					ROS_INFO("Setting ABORTED state. Start sevice call failed");
+					wsresult_.result = "Aborted. Walking sbs error 2";
+					wsresult_.value = 2;
+					WSActionServer_->setAborted(wsresult_, "Walking sbs aborted.");
+				}
+				/*if(start_srv.response.error_code != 0) { //ERROR 					
+					ROS_INFO("Setting ABORTED state. Error code received: %u", start_srv.response.error_code);
+					wsresult_.result = "Aborted. Walking sbs error 2";
+					wsresult_.value = 2;
+					WSActionServer_->setAborted(wsresult_, "Walking sbs aborted.");
+				}*/
 	
 			} else {
           		//if we've been preempted explicitly we need to shut things down
-          		UpoNav_->resetState();
+          		//UpoNav_->resetState();
 
           		//notify the ActionServer that we've successfully preempted
           		ROS_DEBUG_NAMED("upo_navigation_macro_actions","upo_navigation preempting the current goal");
           		wsresult_.result = "Preempted";
 				wsresult_.value = 1;
-				WSActionServer_->setPreempted(wsresult_, "Navigation preempted");
+				WSActionServer_->setPreempted(wsresult_, "Walking sbs preempted");
 
           		//we'll actually return from execute after preempting
           		return;
         	}
 		}
 		
-		
-		wsfeedback_.text = st;
+		//Check the status
+		wsbs_mutex_.lock();
+		int status = wsbs_status_;
+		wsbs_mutex_.unlock();
 
-		//check the blocked situation.
-		double time = (ros::Time::now() - time_init).toSec();
-		//printf("Time: %.2f, secs_to_wait: %.2f\n", time, secs_to_wait_);
-		if(time >= 8.0)
-		{
+
+		wsfeedback_.text = "WalkSideBySide running"; 
+
+		/*
+		WAITING_FOR_START  = 0,
+		WAITING_FOR_ODOM   = 1,
+		WAITING_FOR_LASER  = 2,
+		WAITING_FOR_XTION  = 3,
+		WAITING_FOR_PEOPLE = 4,
+		WAITING_FOR_GOALS  = 5,
+		RUNNING            = 6,
+		TARGET_LOST        = 7,
+		FINISHED           = 8
+		*/
+		if(status == 8) {
 			ROS_INFO("WalkSideBySide. Setting SUCCEEDED state");
 			wsresult_.result = "Succeeded";
 			wsresult_.value = 0;
 			WSActionServer_->setSucceeded(wsresult_, "Target goal reached");
 			wsfeedback_.text = "WalkSideBySide finished successfully";
 			exit = true;
-		} 
+		} else if(status <= 5) {
+			ROS_INFO("Setting ABORTED state. Status received: %u", status);
+			wsresult_.result = "Aborted. Walking sbs error 2";
+			wsresult_.value = 2;
+			WSActionServer_->setAborted(wsresult_, "Walking sbs aborted.");
+			wsfeedback_.text = "WalkSideBySide aborted";
+			exit = true;
+		}
 		
 		WSActionServer_->publishFeedback(wsfeedback_);
 		
@@ -1568,6 +1655,24 @@ void Upo_navigation_macro_actions::assistedSteeringCB(const upo_navigation_macro
 
 
 
+void Upo_navigation_macro_actions::wsbsCallback(const std_msgs::UInt8::ConstPtr& msg)
+{
+	/*
+	WAITING_FOR_START  = 0,
+    WAITING_FOR_ODOM   = 1,
+    WAITING_FOR_LASER  = 2,
+    WAITING_FOR_XTION  = 3,
+    WAITING_FOR_PEOPLE = 4,
+    WAITING_FOR_GOALS  = 5,
+    RUNNING  = 6,
+    TARGET_LOST  = 7,
+    FINISHED = 8
+	*/
+	wsbs_mutex_.lock();
+	wsbs_status_ = msg->data;
+	wsbs_mutex_.unlock();
+}
+
 
 
 
@@ -1666,8 +1771,14 @@ geometry_msgs::PoseStamped Upo_navigation_macro_actions::transformPoseTo(geometr
 		tf_listener_->transformPose(frame_out.c_str(), in, pose_out);
 	}catch (tf::TransformException ex){
 		ROS_WARN("TransformException in method transformPoseTo: %s",ex.what());
+		pose_out.header = in.header;
+		pose_out.header.stamp = ros::Time::now();
+		pose_out.pose.position.x = 0.0;
+		pose_out.pose.position.y = 0.0;
+		pose_out.pose.position.z = 0.0;
+		pose_out.pose.orientation = tf::createQuaternionMsgFromYaw(0.0);
 	}
-	//printf("Tranform pose. frame_in: %s, x:%.2f, y:%.2f, frame_out: %s, x:%.2f, y:%.2f\n", in.header.frame_id.c_str(), in.pose.position.x, in.pose.position.y, frame_out.c_str(), pose_out.pose.position.x, pose_out.pose.position.y);
+	
 	return pose_out;
 }
 

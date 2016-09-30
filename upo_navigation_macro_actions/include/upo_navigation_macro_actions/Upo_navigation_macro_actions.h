@@ -31,7 +31,12 @@
 #include <upo_msgs/PersonPoseArrayUPO.h>
 
 #include <upo_navigation_macro_actions/Yield.h>
+
+//For walking side by side
 //#include <upo_navigation_macro_actions/WalkSideBySide.h>
+#include <wsbs/start.h>
+#include <wsbs/stop.h>
+#include <std_msgs/UInt8.h>
 
 #include <boost/thread/mutex.hpp> //Mutex
 
@@ -70,6 +75,7 @@
 			
 			void peopleCallback(const upo_msgs::PersonPoseArrayUPO::ConstPtr& msg);
 			void poseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg);
+			void wsbsCallback(const std_msgs::UInt8::ConstPtr& msg);
 
 			void changeParametersNarrowPlaces();
 			bool reconfigureParameters(std::string node, std::string param_name, std::string value, const datatype type);
@@ -167,6 +173,11 @@
 			
 			// Walk side-by-side
 			//WalkSideBySide* walk_;
+			ros::ServiceClient start_client_;
+			ros::ServiceClient stop_client_;
+			ros::Subscriber wsbs_status_sub_;
+			boost::mutex wsbs_mutex_;
+			int wsbs_status_;
 			
 			//Assisted steering
 			//AssistedSteering* as_;
