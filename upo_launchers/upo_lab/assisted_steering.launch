@@ -11,12 +11,12 @@
 	<param name="odom_topic" type="string" value="odom" />
 	<param name="cmdvel_topic" type="string" value="teresa/cmd_vel" />
 	<param name="new_cmdvel_topic" type="string" value="cmd_vel" />
-	<param name="max_lin_vel" type="double" value="0.5" />
+	<param name="max_lin_vel" type="double" value="0.32" />
 	<param name="max_ang_vel" type="double" value="0.8" />
 	<param name="max_lin_acc" type="double" value="1.0" />
 	<param name="max_ang_acc" type="double" value="1.0" />
-	<param name="time_step" type="double" value="0.5" />
-	<param name="granularity" type="double" value="0.025" />
+	<param name="time_step" type="double" value="1.0" />
+	<param name="granularity" type="double" value="0.05" />
 	<param name="robot_radius" type="double" value="0.32" />
 	<param name="is_active" type="bool" value="true" />
 	
