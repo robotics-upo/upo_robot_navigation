@@ -180,7 +180,10 @@ bool AssistedSteering::findValidCmd(geometry_msgs::Twist* twist)
 		//Linear vels
 		for(unsigned int i=0; i<3; i++)
 		{
-			aux_lv = lv - (lin_vel_inc_*i);
+			aux_lv = fabs(lv) - (lin_vel_inc_*i);
+			if(lv < 0.0){
+				aux_lv *= (-1);
+			}
 			//Angular vels
 			for(unsigned int j=1; j<=3; j++)
 			{
