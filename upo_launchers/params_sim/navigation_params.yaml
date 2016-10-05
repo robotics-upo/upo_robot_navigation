@@ -69,8 +69,8 @@ RRT_ros_wrapper:
   #if the planner is RRT* or kinoRRT* 
   rrtstar_use_k_nearest:      false
   rrtstar_first_path_biasing: false
-  rrtstar_path_bias:          0.8
-  rrtstar_stddev_bias:        0.4
+  rrtstar_first_path_bias:    0.8
+  rrtstar_first_path_stddev:  0.4
 
   full_path_biasing:          true
   full_path_stddev:           1.2
@@ -134,7 +134,7 @@ RRT_ros_wrapper:
   show_rrt_statistics:        false
   show_intermediate_states:   false #use true only in case of kino
 
-  robot_radius:               0.32  #meters
+  robot_radius:               0.345  #meters
 
   # between [0-1]
   # if the equality of the path costs is below

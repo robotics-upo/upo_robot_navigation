@@ -78,6 +78,7 @@
 			void wsbsCallback(const std_msgs::UInt8::ConstPtr& msg);
 
 			void changeParametersNarrowPlaces();
+			void changeParametersNarrowPlaces2();
 			bool reconfigureParameters(std::string node, std::string param_name, std::string value, const datatype type);
 
 		private:
@@ -191,6 +192,8 @@
 			std::vector<upo_msgs::PersonPoseUPO> people_;
 			boost::mutex people_mutex_;
 			ros::Subscriber amcl_sub_;
+
+			double initial_stddev_;
 			
 
 	};

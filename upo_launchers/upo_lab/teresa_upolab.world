@@ -77,7 +77,7 @@ define giraff_base position
 define teresa giraff_base
 (
   # Actual size
-  size [0.440 0.440 1.600]
+  size [0.488 0.488 1.600]
 
   # The pioneer's center of rotation is offset from its center of area
   #origin [-0.045 0.000 0.000 0.000]

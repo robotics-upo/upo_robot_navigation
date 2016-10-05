@@ -91,6 +91,10 @@ Upo_navigation_macro_actions::Upo_navigation_macro_actions(tf::TransformListener
 	YActionServer_->start();
 	WSActionServer_->start();
 	ASActionServer_->start();
+
+	ros::NodeHandle nodeh("~/RRT_ros_wrapper");
+	nodeh.getParam("full_path_stddev", initial_stddev_);
+
 }
 
 
@@ -302,7 +306,7 @@ void Upo_navigation_macro_actions::navigateWaypointCB(const upo_navigation_macro
 			
 		
 		//changeParametersNarrowPlaces();
-			
+		changeParametersNarrowPlaces2();			
 
 		boost::recursive_mutex::scoped_lock l(configuration_mutex_);
 
@@ -491,6 +495,7 @@ void Upo_navigation_macro_actions::navigateHomeCB(const upo_navigation_macro_act
 		
 		
 		//changeParametersNarrowPlaces();
+		changeParametersNarrowPlaces2();
 		
 		boost::recursive_mutex::scoped_lock l(configuration_mutex_);	
 			
@@ -883,6 +888,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 			return;
 	
 		//changeParametersNarrowPlaces();
+		changeParametersNarrowPlaces2();
 		
 		//Check the yield situation
 		pinzone_mutex_.lock();
@@ -1146,6 +1152,7 @@ geometry_msgs::PoseStamped Upo_navigation_macro_actions::approachIT(upo_msgs::Pe
 
 bool Upo_navigation_macro_actions::reconfigureParameters(std::string node, std::string param_name, std::string value, const datatype type)
 {
+	//printf("RECONFIGURE PARAMETERS METHOD\n");
 	dynamic_reconfigure::ReconfigureRequest srv_req;
     dynamic_reconfigure::ReconfigureResponse srv_resp;
     dynamic_reconfigure::IntParameter param1;
@@ -1162,16 +1169,18 @@ bool Upo_navigation_macro_actions::reconfigureParameters(std::string node, std::
 			conf.ints.push_back(param1);
 			break;
 		
+		case DOUBLE_TYPE:
+			param3.name = param_name.c_str();
+			//printf("type double. Value: %s\n", param3.name.c_str());
+			param3.value = stod(value);
+			//printf("conversion to double: %.3f\n", param3.value);
+			conf.doubles.push_back(param3);
+			break;
+
 		case BOOL_TYPE:
 			param2.name = param_name.c_str();
 			param2.value = stoi(value);
 			conf.bools.push_back(param2);
-			break;
-		
-		case DOUBLE_TYPE:
-			param3.name = param_name.c_str();
-			param3.value = stod(value);
-			conf.doubles.push_back(param3);
 			break;
 		
 		case STRING_TYPE:
@@ -1190,7 +1199,6 @@ bool Upo_navigation_macro_actions::reconfigureParameters(std::string node, std::
       ROS_ERROR("Could not call the service %s reconfigure the param %s to %s", service.c_str(), param_name.c_str(), value.c_str());
       return false;
     }
-    //ROS_DEBUG("New quality %d", jpeg_quality);
     return true;
 }
 
@@ -1686,6 +1694,7 @@ void Upo_navigation_macro_actions::peopleCallback(const upo_msgs::PersonPoseArra
 	rinzone_mutex_.lock();
 	bool robotin = robot_inzone_;
 	rinzone_mutex_.unlock();
+
 	
 	bool inside = false;
 	//bool inside2 = false;
@@ -1725,14 +1734,21 @@ void Upo_navigation_macro_actions::poseCallback(const geometry_msgs::PoseWithCov
 	bool ok;
 	bool inside = false;
 	bool inside2 = false;
+
+	ros::NodeHandle n("~/RRT_ros_wrapper");
+	double dev;
+	n.getParam("full_path_stddev", dev); 	
+
+
 	if(yield_->getType(x, y, ok) == NARROW)
 	{
 		if(ok) {
 			inside = true;
 		} 
-	} else if(yield_->getType(x, y, ok) == SUPERNARROW)
+	} else if(yield_->getType(x, y, ok) == SUPERNARROW) {
 		inside2 = true;
-	
+	} 
+
 	rinzone_mutex_.lock();
 	robot_inzone_ = inside;
 	robot_inzone2_ = inside2;
@@ -1759,6 +1775,39 @@ void Upo_navigation_macro_actions::changeParametersNarrowPlaces()
 		reconfigureParameters(std::string("/upo_navigation_macro_actions/PurePlannerROS"), std::string("sim_time"), std::string("0.5"), DOUBLE_TYPE);
 	}
 }
+
+
+void Upo_navigation_macro_actions::changeParametersNarrowPlaces2()
+{
+	ros::NodeHandle n("~/RRT_ros_wrapper");
+	double dev;
+	n.getParam("full_path_stddev", dev); 
+
+	rinzone_mutex_.lock();
+	bool in = robot_inzone_;
+	bool in2 = robot_inzone2_;
+	rinzone_mutex_.unlock();
+
+	if(in) {
+		if(dev != 0.5) {
+			printf("dev: %.3f != 0.5!!!\n", dev);
+			reconfigureParameters(std::string("/upo_navigation_macro_actions/RRT_ros_wrapper"), std::string("full_path_stddev"), std::string("0.5"), DOUBLE_TYPE);
+		}
+
+	} else if(in2) {
+		if(dev != 0.2) {
+			printf("dev: %.3f != 0.2!!!\n", dev);
+			reconfigureParameters(std::string("/upo_navigation_macro_actions/RRT_ros_wrapper"), std::string("full_path_stddev"), std::string("0.2"), DOUBLE_TYPE);
+		}
+	} else if(dev != initial_stddev_) {
+			printf("dev: %.3f != initial_stddev: %.3f!!!\n", dev, initial_stddev_);
+			reconfigureParameters(std::string("/upo_navigation_macro_actions/RRT_ros_wrapper"), std::string("full_path_stddev"), std::to_string(initial_stddev_), DOUBLE_TYPE);
+	}
+	
+
+}
+
+
 
 
 

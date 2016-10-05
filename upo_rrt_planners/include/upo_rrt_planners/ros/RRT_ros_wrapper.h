@@ -1,3 +1,10 @@
+/********************************************************************
+*
+* Software License Agreement (BSD License)
+*
+*  Author: Noé Pérez Higueras
+*********************************************************************/
+
 #ifndef UPO_RRT_ROS_WRAPPER_
 #define UPO_RRT_ROS_WRAPPER_
 
@@ -32,8 +39,8 @@
 #include <upo_rrt_planners/ros/ValidityChecker.h>
 
 //Dynamic reconfigure
-//#include <dynamic_reconfigure/server.h>
-//#include <upo_rrt_planners/RRTRosWrapperConfig.h>
+#include <dynamic_reconfigure/server.h>
+#include <upo_rrt_planners/RRTRosWrapperConfig.h>
 
 
 
@@ -102,6 +109,11 @@ namespace upo_RRT_ros {
 
 
 		private:
+
+			boost::recursive_mutex configuration_mutex_;
+			//boost::mutex reconf_mutex_;
+			dynamic_reconfigure::Server<upo_rrt_planners::RRTRosWrapperConfig> *dsrv_;
+			void reconfigureCB(upo_rrt_planners::RRTRosWrapperConfig &config, uint32_t level);
 
 			//ROS
 			costmap_2d::Costmap2DROS* 		global_costmap_ros_; 

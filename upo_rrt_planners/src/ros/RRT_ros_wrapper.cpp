@@ -1,3 +1,12 @@
+/*******************************************************************
+*
+* Software License Agreement (BSD License)
+*
+*  Author: Noé Pérez Higueras
+*********************************************************************/
+
+
+
 #include <upo_rrt_planners/ros/RRT_ros_wrapper.h>
 
 
@@ -12,6 +21,7 @@ upo_RRT_ros::RRT_ros_wrapper::RRT_ros_wrapper(tf::TransformListener* tf, costmap
 	tf_ = tf;
 	global_costmap_ros_ = global_costmap_ros;
 	local_costmap_ros_ = local_costmap_ros;
+	rrt_planner_ = NULL;
 
   	//initialize the copy of the costmaps the RRT will be using
   	if(global_costmap_ros_)
@@ -20,6 +30,12 @@ upo_RRT_ros::RRT_ros_wrapper::RRT_ros_wrapper(tf::TransformListener* tf, costmap
 		global_costmap_ = NULL;
 		
 	local_costmap_ = local_costmap_ros_->getCostmap();
+
+	ros::NodeHandle n("~/RRT_ros_wrapper");
+	//Dynamic reconfigure
+	dsrv_ = new dynamic_reconfigure::Server<upo_rrt_planners::RRTRosWrapperConfig>(n);
+	dynamic_reconfigure::Server<upo_rrt_planners::RRTRosWrapperConfig>::CallbackType cb = boost::bind(&RRT_ros_wrapper::reconfigureCB, this, _1, _2);
+    dsrv_->setCallback(cb);
 
 	setup();
 
@@ -31,6 +47,7 @@ upo_RRT_ros::RRT_ros_wrapper::RRT_ros_wrapper(tf::TransformListener* tf, costmap
 	tf_ = tf;
 	global_costmap_ros_ = global_costmap_ros;
 	local_costmap_ros_ = local_costmap_ros;
+	rrt_planner_ = NULL;
 
   	//initialize the copy of the costmaps the RRT will be using
   	if(global_costmap_ros_)
@@ -40,8 +57,15 @@ upo_RRT_ros::RRT_ros_wrapper::RRT_ros_wrapper(tf::TransformListener* tf, costmap
 		
 	local_costmap_ = local_costmap_ros_->getCostmap();
 
+	ros::NodeHandle n("~/RRT_ros_wrapper");
+	//Dynamic reconfigure
+	dsrv_ = new dynamic_reconfigure::Server<upo_rrt_planners::RRTRosWrapperConfig>(n);
+	dynamic_reconfigure::Server<upo_rrt_planners::RRTRosWrapperConfig>::CallbackType cb = boost::bind(&RRT_ros_wrapper::reconfigureCB, this, _1, _2);
+    dsrv_->setCallback(cb);
+
 	//setup();
 	setup_controller(controller_freq, path_stddev, planner_type);
+
 
 }
 
@@ -82,7 +106,7 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 		private_nh.param<bool>("rrtstar_first_path_biasing", rrtstar_first_path_biasing_, false);
 		private_nh.param<double>("rrtstar_first_path_bias", aux, 0.5);
 		rrtstar_first_path_bias_ = (float)aux;
-		private_nh.param<double>("rrtstar_first_path_stddev_bias", aux, 0.8);
+		private_nh.param<double>("rrtstar_first_path_stddev", aux, 0.8);
 		rrtstar_first_path_stddev_bias_ = (float)aux;
 		private_nh.param<double>("rrtstar_rewire_factor", aux, 1.1);
 		rrtstar_rewire_factor_ = (float)aux;
@@ -197,6 +221,8 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 	//inscribed_radius_ = irad;
 	//circumscribed_radius_ = crad;
 	//------------------------------------------
+
+
 	
 	inscribed_radius_  = (float)robot_radius;
 	circumscribed_radius_ = (float)robot_radius;
@@ -452,6 +478,8 @@ void upo_RRT_ros::RRT_ros_wrapper::setup_controller(float controller_freq, float
 		return;
 	}
 
+
+
 	//This is not working properly-------------
 	//double irad, crad;
 	//costmap_2d::calculateMinAndMaxDistances(footprint_, irad, crad);
@@ -529,6 +557,119 @@ void upo_RRT_ros::RRT_ros_wrapper::setup_controller(float controller_freq, float
 
 
 
+ void upo_RRT_ros::RRT_ros_wrapper::reconfigureCB(upo_rrt_planners::RRTRosWrapperConfig &config, uint32_t level){
+    
+	printf("---IN RECONFIGURE---\n");
+	boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
+	//reconf_mutex_.lock();
+    
+	//Parametes used in this class
+	solve_time_ = config.solve_time;
+
+	if(config.visualize_rrt_tree == true) {
+		ros::NodeHandle n;
+		if(!visualize_tree_) {
+			tree_pub_ = n.advertise<visualization_msgs::Marker>("rrt_tree", 1);
+		}
+	}
+	visualize_tree_ = config.visualize_rrt_tree;
+
+	if(config.visualize_costmap == true) {
+		ros::NodeHandle n;
+		if(!visualize_costmap_) {
+			costmap_pub_ = n.advertise<nav_msgs::OccupancyGrid>("rrt_costmap", 1);
+		}
+	}
+	visualize_costmap_ = config.visualize_costmap;
+
+	show_statistics_ = config.show_statistics;
+
+	//Parameters used in Planner
+	goal_bias_ = config.goal_bias;
+	if(rrt_planner_) {
+		rrt_planner_->setGoalBias(goal_bias_);
+
+		max_range_ = config.max_rrt_insertion_dist;
+		rrtstar_first_path_biasing_ = config.rrtstar_first_path_biasing;
+		rrtstar_first_path_bias_ = config.rrtstar_first_path_bias;
+		rrtstar_first_path_stddev_bias_ = config.rrtstar_first_path_stddev;
+		full_path_biasing_ = config.full_path_biasing;
+		full_path_bias_ = config.full_path_bias;
+		full_path_stddev_ = config.full_path_stddev;
+
+		if(full_path_biasing_ && rrtstar_first_path_biasing_)
+			rrtstar_first_path_biasing_ = false;
+
+		rrt_planner_->setFullBiasing(full_path_biasing_);
+
+		switch(rrt_planner_type_)
+		{
+			// ----- simple RRT --------------------
+			case 1:
+				rrt_planner_->as<upo_RRT::SimpleRRT>()->setMaxRange(max_range_);
+				break;
+			
+			// ----- simple RRT* --------------------
+			case 2:
+				rrt_planner_->as<upo_RRT::SimpleRRTstar>()->setMaxRange(max_range_);
+				rrt_planner_->as<upo_RRT::SimpleRRTstar>()->set_useFirstPathBiasing(rrtstar_first_path_biasing_);
+				if(rrtstar_first_path_biasing_) {
+					rrt_planner_->as<upo_RRT::SimpleRRTstar>()->setPathBias(rrtstar_first_path_bias_);
+					rrt_planner_->as<upo_RRT::SimpleRRTstar>()->setPathBias_stddev(rrtstar_first_path_stddev_bias_);
+				} else {
+					rrt_planner_->as<upo_RRT::SimpleRRTstar>()->setPathBias(full_path_bias_);
+					rrt_planner_->as<upo_RRT::SimpleRRTstar>()->setPathBias_stddev(full_path_stddev_);
+				}
+				
+				break;
+		
+			// ----- kinodynamic RRT --------------------
+			case 3:
+				break;
+			
+			// ----- kinodynamic RRT* --------------------
+			case 4:
+				rrt_planner_->as<upo_RRT::RRTstar>()->setMaxRange(max_range_);
+				rrt_planner_->as<upo_RRT::RRTstar>()->set_useFirstPathBiasing(rrtstar_first_path_biasing_); 
+				if(rrtstar_first_path_biasing_) {
+					rrt_planner_->as<upo_RRT::RRTstar>()->setPathBias(rrtstar_first_path_bias_);
+					rrt_planner_->as<upo_RRT::RRTstar>()->setPathBias_stddev(rrtstar_first_path_stddev_bias_);
+				} else {
+					rrt_planner_->as<upo_RRT::RRTstar>()->setPathBias(full_path_bias_);
+					rrt_planner_->as<upo_RRT::RRTstar>()->setPathBias_stddev(full_path_stddev_);
+				}
+				break;
+			
+			// ----- kinodynamic simplified RRT* --------------------
+			case 5:
+				rrt_planner_->as<upo_RRT::HalfRRTstar>()->setMaxRange(max_range_);
+				rrt_planner_->as<upo_RRT::HalfRRTstar>()->set_useFirstPathBiasing(rrtstar_first_path_biasing_); 
+				if(rrtstar_first_path_biasing_) {
+					rrt_planner_->as<upo_RRT::HalfRRTstar>()->setPathBias(rrtstar_first_path_bias_);
+					rrt_planner_->as<upo_RRT::HalfRRTstar>()->setPathBias_stddev(rrtstar_first_path_stddev_bias_);
+				} else {
+					rrt_planner_->as<upo_RRT::HalfRRTstar>()->setPathBias(full_path_bias_);
+					rrt_planner_->as<upo_RRT::HalfRRTstar>()->setPathBias_stddev(full_path_stddev_);
+				}
+				break;
+			
+			default:
+				rrt_planner_->as<upo_RRT::SimpleRRT>()->setMaxRange(max_range_);
+		}
+
+	}
+	//reconf_mutex_.unlock();
+	printf("---OUT RECONFIGURE---\n");
+
+}
+
+
+
+
+
+
+
+
 
 std::vector<geometry_msgs::PoseStamped> upo_RRT_ros::RRT_ros_wrapper::RRT_plan(geometry_msgs::Pose2D start, geometry_msgs::Pose2D goal, float start_lin_vel, float start_ang_vel)
 {
@@ -596,6 +737,10 @@ std::vector<geometry_msgs::PoseStamped> upo_RRT_ros::RRT_ros_wrapper::RRT_plan(g
 	
 
 	//-------- GET THE RRT PATH ------------------------------
+
+	boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
+	//reconf_mutex_.lock();
+
 	
 	//computations needed before starting planning
 	//In this case, we calculate the gaussian functions over the current people
@@ -748,6 +893,8 @@ std::vector<geometry_msgs::PoseStamped> upo_RRT_ros::RRT_ros_wrapper::RRT_plan(g
 	if(visualize_costmap_) 
 		publish_feature_costmap(time);
 		
+	//reconf_mutex_.unlock();
+
 		
 	if(interpolate_path_distance_ > 0.0)
 	{
@@ -918,7 +1065,12 @@ int upo_RRT_ros::RRT_ros_wrapper::RRT_local_plan(std::vector<geometry_msgs::Pose
 	
 	ros::Time time = ros::Time::now();
 
+	
+	boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
+	//reconf_mutex_.lock();
+
 	//-------- GET THE RRT PATH ------------------------------
+
 	
 	//computations needed before starting planning
 	//In this case, we calculate the gaussian functions over the current people
@@ -1088,7 +1240,9 @@ int upo_RRT_ros::RRT_ros_wrapper::RRT_local_plan(std::vector<geometry_msgs::Pose
 	
 	if(visualize_costmap_) 
 		publish_feature_costmap(time);
-		
+	
+	//reconf_mutex_.unlock();
+
 		
 	if(interpolate_path_distance_ > 0.0)
 	{

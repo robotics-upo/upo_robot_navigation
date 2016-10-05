@@ -5,14 +5,14 @@
 
 # Robot foot print in m (TERESA)
 #footprint: [ [0.32, 0], [0.2263, -0.2263], [0, -0.32], [-0.2263, -0.2263], [-0.32, 0], [-0.2263, 0.2263], [0, 0.32], [0.2263, 0.2263]]
-footprint: [ [0.30, 0], [0.212, -0.212], [0, -0.30], [-0.212, -0.212], [-0.30, 0], [-0.212, 0.212], [0, 0.30], [0.212, 0.212]]
+footprint: [ [0.345, 0], [0.244, -0.244], [0, -0.345], [-0.244, -0.244], [-0.345, 0], [-0.244, 0.244], [0, 0.345], [0.244, 0.244]]
 
 # Inscribed and circunscribed radius in m
-inscribed_radius: 0.32            
-circumscribed_radius: 0.32  
+inscribed_radius: 0.345            
+circumscribed_radius: 0.345  
 
 # Obstacle inflation in m (circumscribed robot radius)
-#inflation_radius: 0.32  
+#inflation_radius: 0.345  
 
 transform_tolerance: 0.5 
 map_type: costmap

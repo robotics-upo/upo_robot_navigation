@@ -15,7 +15,7 @@ find_package(catkin REQUIRED
   		visualization_msgs
   		upo_msgs
 		navigation_features
-		#dynamic_reconfigure
+		dynamic_reconfigure
 )
 
 ## System dependencies are found with CMake's conventions
@@ -41,9 +41,9 @@ add_definitions(${EIGEN_DEFINITIONS})
 
 
 # dynamic reconfigure
-#generate_dynamic_reconfigure_options(
-#    cfg/RRTRosWrapper.cfg
-#)
+generate_dynamic_reconfigure_options(
+    cfg/RRTRosWrapper.cfg
+)
 
 
 ## Generate messages in the 'msg' folder
@@ -84,6 +84,7 @@ catkin_package(
   		visualization_msgs
   		upo_msgs
 		navigation_features
+		dynamic_reconfigure
 	#DEPENDS system_lib
 )
 
