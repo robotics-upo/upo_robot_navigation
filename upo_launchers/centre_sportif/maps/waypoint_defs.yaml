@@ -1,0 +1,24 @@
+home:
+        x: 8.1
+        y: 15.25
+        theta: 0.0
+restarea:
+        x: 10.55
+        y: 7.3
+        theta: -1.57
+corridor:
+        x: 14.9
+        y: 14.8
+        theta: 0.96
+lab1:
+        x: 10.25
+        y: 15.2
+        theta: 0.96
+lab2:
+        x: 13.5
+        y: 17.8
+        theta: 0.96
+office:
+        x: 15.8
+        y: 20.7
+        theta: 0.96
