@@ -84,16 +84,6 @@ Yield::Yield(std::string* yamlFile, std::string* pointsFile)
 	// --- LOAD GLOBAL POINTS OF YIELDING ---
 	loadYieldPoints(pointsFile);
 	
-	 
-
-	//pose_robot.pose.position.x = 0.0;
-	//pose_robot.pose.position.y = 0.0;
-	//pose_robot.pose.position.z = 0.0;
-
-	//ROS subscription to robot pose in the map
-	//ros::NodeHandle n;
-	//amcl_sub = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/amcl_pose", 1, poseReceived);
-
 	
 }
 
@@ -147,6 +137,7 @@ bool Yield::loadYieldPoints(std::string* pointsFile)
 	
 	printf("Loading point file...\n");
 	
+	//Load yield goal points
 	bool ok = true;
 	unsigned int i = 1;
 	while(ok)
@@ -168,6 +159,28 @@ bool Yield::loadYieldPoints(std::string* pointsFile)
 	}
 	if(i==1)
 		return false;
+
+
+	//Load center points of the yield areas
+	ok = true;
+	i = 1;
+	while(ok)
+	{
+		char buf[10];
+		sprintf(buf, "center%u", i);
+		std::string st = std::string(buf);
+		if(node[st.c_str()]) {
+			point p;
+			p.x_ = node[st.c_str()]["x"].as<double>();
+			p.y_ = node[st.c_str()]["y"].as<double>();
+			p.theta_ = node[st.c_str()]["theta"].as<double>();
+			center_points.push_back(p);
+			printf("c%u-> x:%.2f, y:%.2f\n", i, center_points[i-1].x_, center_points[i-1].y_); 
+		}else {
+			ok = false;
+		}
+		i++;
+	}
 		
 	return true;
 }
@@ -189,7 +202,31 @@ void Yield::getClosestPoint(double curr_x, double curr_y, double& goal_x, double
 	goal_x = closest.x_;
 	goal_y = closest.y_;
 	goal_theta = closest.theta_;
-	printf("getClosestPoint. goal_x:%.2f, goal_y:%.2f\n", goal_x, goal_y);
+	//printf("getClosestPoint. goal_x:%.2f, goal_y:%.2f\n", goal_x, goal_y);
+}
+
+
+
+bool Yield::getYieldAreaCenterPoint(double rx, double ry, double& cx, double& cy)
+{
+	point closest;
+	float min_dist = 9999.0;
+	for(unsigned int i=0; i<center_points.size(); i++)
+	{
+		point p = center_points[i];
+		float dist =  sqrt((rx - p.x_)*(rx - p.x_) + (ry - p.y_)*(ry - p.y_));
+		if(dist < min_dist) {
+			min_dist = dist;
+			closest = p;
+		}
+	}
+	if(min_dist == 9999.0)
+		return false;
+
+	cx = closest.x_;
+	cy = closest.y_;
+	//printf("getClosestAreaPoint. goal_x:%.2f, goal_y:%.2f\n", cx, cy);
+	return true;
 }
 
 

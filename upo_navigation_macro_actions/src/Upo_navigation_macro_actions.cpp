@@ -66,6 +66,7 @@ Upo_navigation_macro_actions::Upo_navigation_macro_actions(tf::TransformListener
 
 	ros::NodeHandle nh;
 	people_sub_ = nh.subscribe("/people/navigation", 1, &Upo_navigation_macro_actions::peopleCallback, this); 
+	rrtgoal_sub_ = nh.subscribe("/rrt_goal", 1, &Upo_navigation_macro_actions::rrtGoalCallback, this);
 	amcl_sub_   = nh.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/amcl_pose", 1, &Upo_navigation_macro_actions::poseCallback, this);
 
 
@@ -320,7 +321,7 @@ void Upo_navigation_macro_actions::navigateWaypointCB(const upo_navigation_macro
 		bool r_in = robot_inzone_;
 		rinzone_mutex_.unlock();
 		//printf("robot_inzone: %i, person_inzone: %i\n", r_in, p_in);
-		if(r_in && p_in)
+		if(r_in && p_in && isYieldDirectionCorrect())
 		{
 			ROS_INFO("Setting ABORTED state because of No social path available (yielding)");
 			nwresult_.result = "Aborted. No social Path Available";
@@ -1431,7 +1432,7 @@ void Upo_navigation_macro_actions::yieldCB(const upo_navigation_macro_actions::Y
 	//Get the current robot pose in global coordinates
 	geometry_msgs::PoseStamped robot_pose = UpoNav_->getRobotGlobalPosition();
 	
-	//Get the closest yield point to the current robot position
+	//Get the closest yield goal to the current robot position
 	double goal_x = 0.0, goal_y=0.0, goal_theta = 0.0;
 	yield_->getClosestPoint(robot_pose.pose.position.x, robot_pose.pose.position.y, goal_x, goal_y, goal_theta);
 	geometry_msgs::PoseStamped g;
@@ -1727,7 +1728,11 @@ void Upo_navigation_macro_actions::peopleCallback(const upo_msgs::PersonPoseArra
 
 void Upo_navigation_macro_actions::poseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg)
 {
-	
+	global_pose_mutex_.lock();
+	robot_global_pose_.x = msg->pose.pose.position.x;
+	robot_global_pose_.y = msg->pose.pose.position.y;
+	robot_global_pose_.theta = tf::getYaw(msg->pose.pose.orientation);
+	global_pose_mutex_.unlock();
 	
 	double x = msg->pose.pose.position.x;
 	double y = msg->pose.pose.position.y;
@@ -1753,6 +1758,51 @@ void Upo_navigation_macro_actions::poseCallback(const geometry_msgs::PoseWithCov
 	robot_inzone_ = inside;
 	robot_inzone2_ = inside2;
 	rinzone_mutex_.unlock();
+}
+
+
+void Upo_navigation_macro_actions::rrtGoalCallback(const geometry_msgs::PoseStamped::ConstPtr& msg) {
+
+	geometry_msgs::PoseStamped out;
+	out = transformPoseTo(*msg, "map");
+	geometry_msgs::Pose2D p;
+	p.x = out.pose.position.x;
+	p.y = out.pose.position.y;
+	p.theta = 0.0;
+
+	goal_mutex_.lock();
+	rrtgoal_ = p;
+	goal_mutex_.unlock();
+}
+
+
+bool Upo_navigation_macro_actions::isYieldDirectionCorrect()
+{
+	//get rrt goal
+	goal_mutex_.lock();
+	geometry_msgs::Pose2D goal = rrtgoal_;
+	goal_mutex_.unlock();
+
+	//Get robot position
+	global_pose_mutex_.lock();
+	geometry_msgs::Pose2D robot = robot_global_pose_;
+	global_pose_mutex_.unlock();
+
+	//Get yield center point or the position of the person in yield zone
+	geometry_msgs::Pose2D point;
+	if(!yield_->getYieldAreaCenterPoint(robot.x, robot.y, point.x, point.y))
+		return true;
+
+	//Calculate distances
+	float d1 = sqrt((goal.x-robot.x)*(goal.x-robot.x) + (goal.y-robot.y)*(goal.y-robot.y));
+	float d2 = sqrt((goal.x-point.x)*(goal.x-point.x) + (goal.y-point.y)*(goal.y-point.y));
+
+	//Do not yield if the robot has already crossed the door 
+	if(d2 > d1){
+		//printf("Yield not correct!!! gx:%.2f, gy:%.2f, rx:%.2f, ry:%.2f, point.x:%.2f, point.y:%.2f\n", goal.x, goal.y, robot.x, robot.y, point.x, point.y);
+		return false;
+	}
+	return true;	
 }
 
 

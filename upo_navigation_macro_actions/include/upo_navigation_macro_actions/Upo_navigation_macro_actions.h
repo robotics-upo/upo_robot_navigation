@@ -12,6 +12,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/Twist.h>
+#include <geometry_msgs/Pose2D.h>
 #include <move_base_msgs/MoveBaseAction.h>
 #include <nav_msgs/GetPlan.h>
 #include <actionlib_msgs/GoalStatusArray.h>
@@ -76,6 +77,7 @@
 			void peopleCallback(const upo_msgs::PersonPoseArrayUPO::ConstPtr& msg);
 			void poseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg);
 			void wsbsCallback(const std_msgs::UInt8::ConstPtr& msg);
+			void rrtGoalCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
 
 			void changeParametersNarrowPlaces();
 			void changeParametersNarrowPlaces2();
@@ -170,6 +172,11 @@
 			//bool person_inzone2_;
 			boost::mutex rinzone_mutex_;
 			boost::mutex pinzone_mutex_;
+			geometry_msgs::Pose2D rrtgoal_;
+			boost::mutex goal_mutex_;
+			geometry_msgs::Pose2D robot_global_pose_;
+			boost::mutex global_pose_mutex_;
+			bool isYieldDirectionCorrect();
 			
 			
 			// Walk side-by-side
@@ -192,6 +199,7 @@
 			std::vector<upo_msgs::PersonPoseUPO> people_;
 			boost::mutex people_mutex_;
 			ros::Subscriber amcl_sub_;
+			ros::Subscriber rrtgoal_sub_;
 
 			double initial_stddev_;
 			

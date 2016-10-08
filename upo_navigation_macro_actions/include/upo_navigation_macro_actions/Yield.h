@@ -35,6 +35,8 @@ class Yield {
 		
 		bool loadYieldPoints(std::string* pointsFile);
 
+		bool getYieldAreaCenterPoint(double rx, double ry, double& cx, double& cy); 
+
 
 	private:
 
@@ -49,9 +51,8 @@ class Yield {
 		
 		std::vector<point> yield_points;
 
-		//bool inzone;
-		//ros::Subscriber amcl_sub;
-		//geometry_msgs::PoseWithCovariance pose_robot;
+		std::vector<point> center_points;
+
 
 };
 
