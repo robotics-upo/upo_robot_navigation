@@ -1,44 +1,32 @@
 point1:
-        x: 11.23
-        y: 13.07
-        theta: -1.57
+        x: 0
+        y: 0
+        theta: 0
 point2:
-        x: 10.25
-        y: 12.89
-        theta: -0.79
+        x: 0
+        y: 0
+        theta: 0
 point3:
-        x: 11.88
-        y: 12.24
-        theta: -2.85
+        x: 0
+        y: 0
+        theta: 0
 point4:
-        x: 11.82
-        y: 15.84
-        theta: 0.95
+        x: 0
+        y: 0
+        theta: 0
 point5:
-        x: 10.90
-        y: 16.52
-        theta: 0.17
+        x: 0
+        y: 0
+        theta: 0
 point6:
-        x: 12.09
-        y: 17.53
-        theta: -2.36
+        x: 0
+        y: 0
+        theta: 0
 point7:
-        x: 12.81
-        y: 16.58
-        theta: 2.88
+        x: 0
+        y: 0
+        theta: 0
 point8:
-        x: 16.83
-        y: 17.37
-        theta: 0.79
-point9:
-        x: 17.63
-        y: 18.15
-        theta: 3.13
-point10:
-        x: 17.02
-        y: 18.81
-        theta: -1.50
-point11:
-        x: 15.92
-        y: 18.74
-        theta: -0.79
+        x: 0
+        y: 0
+        theta: 0

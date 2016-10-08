@@ -35,10 +35,6 @@
  	<arg name="use_360" value="false"/>
   </include>
 
-  <node pkg="laser_assembler" type="laser_assembler" name="laser_assembler2" args="/scanfront_filtered /scanback_filtered">
-        <remap from="scan" to="scan360_filtered"/>
-   </node>
-
 
   <!--<node pkg="laser_assembler" type="laser_assembler" name="laser_assembler2" args="/scanfront /scanback">
 	<remap from="scan" to="scan360"/>
