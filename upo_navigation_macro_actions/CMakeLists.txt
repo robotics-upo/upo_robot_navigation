@@ -22,7 +22,7 @@ find_package(catkin REQUIRED COMPONENTS
   upo_navigation
   upo_msgs
   dynamic_reconfigure
-  wsbs
+  teresa_wsbs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -94,9 +94,9 @@ generate_messages(
    	std_msgs
 	geometry_msgs
 	move_base_msgs
-    nav_msgs
+	nav_msgs
 	actionlib_msgs
-    upo_msgs
+	upo_msgs
 )
 
 ################################################
@@ -130,7 +130,7 @@ generate_dynamic_reconfigure_options(
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES upo_navigation_macro_actions
-  CATKIN_DEPENDS actionlib actionlib_msgs cmake_modules geometry_msgs move_base_msgs rosconsole roscpp std_msgs angles tf upo_navigation upo_msgs yaml-cpp dynamic_reconfigure wsbs
+  CATKIN_DEPENDS actionlib actionlib_msgs cmake_modules geometry_msgs move_base_msgs rosconsole roscpp std_msgs angles tf upo_navigation upo_msgs yaml-cpp dynamic_reconfigure teresa_wsbs
   DEPENDS system_lib
 )
 
@@ -173,7 +173,7 @@ add_dependencies(upo_navigation_macro_actions nav_msgs_gencpp)
 add_dependencies(upo_navigation_macro_actions move_base_msgs_gencpp)
 add_dependencies(upo_navigation_macro_actions actionlib_msgs_gencpp)
 add_dependencies(upo_navigation_macro_actions upo_msgs_gencpp)
-add_dependencies(upo_navigation_macro_actions wsbs_gencpp)
+add_dependencies(upo_navigation_macro_actions teresa_wsbs_gencpp)
 add_dependencies(upo_navigation_macro_actions ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against

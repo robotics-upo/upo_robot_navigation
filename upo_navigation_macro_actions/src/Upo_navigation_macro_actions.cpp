@@ -71,8 +71,8 @@ Upo_navigation_macro_actions::Upo_navigation_macro_actions(tf::TransformListener
 
 
 	//Services for walking side by side
-	start_client_ = nh.serviceClient<wsbs::start>("/wsbs/start");
-	stop_client_ = nh.serviceClient<wsbs::stop>("/wsbs/stop");
+	start_client_ = nh.serviceClient<teresa_wsbs::start>("/wsbs/start");
+	stop_client_ = nh.serviceClient<teresa_wsbs::stop>("/wsbs/stop");
 	wsbs_status_sub_ = nh.subscribe<std_msgs::UInt8>("/wsbs/status", 1, &Upo_navigation_macro_actions::wsbsCallback, this);
 	
 
@@ -1240,7 +1240,7 @@ void Upo_navigation_macro_actions::walkSideCB(const upo_navigation_macro_actions
 		STATE_IS_FINISHED           = 8
 
 	*/
-	wsbs::start start_srv;
+	teresa_wsbs::start start_srv;
 	start_srv.request.target_id = p.id;
 	start_srv.request.goal_x = 0;
 	start_srv.request.goal_y = 0;
@@ -1273,7 +1273,7 @@ void Upo_navigation_macro_actions::walkSideCB(const upo_navigation_macro_actions
 				p = new_goal.it;
 
 				//First stop the current wsbs
-				wsbs::stop stop_srv;
+				teresa_wsbs::stop stop_srv;
 				if (!stop_client_.call(stop_srv))
 				{
 					ROS_INFO("Setting ABORTED state. Stop service call failed");

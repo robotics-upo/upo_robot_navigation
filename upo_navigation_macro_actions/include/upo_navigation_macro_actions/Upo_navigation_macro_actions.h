@@ -35,8 +35,8 @@
 
 //For walking side by side
 //#include <upo_navigation_macro_actions/WalkSideBySide.h>
-#include <wsbs/start.h>
-#include <wsbs/stop.h>
+#include <teresa_wsbs/start.h>
+#include <teresa_wsbs/stop.h>
 #include <std_msgs/UInt8.h>
 
 #include <boost/thread/mutex.hpp> //Mutex
