@@ -78,7 +78,7 @@
 
 
 		<!-- Take into account the person orientation or group orientation to perform an approach -->
-		<param name="social_approaching_type" value="2" />
+		<param name="social_approaching_type" value="1" />
 		
 		<!-- frequency of the macro actions -->
 		<param name="control_frequency" value="15.0" />
