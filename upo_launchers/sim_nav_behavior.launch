@@ -69,7 +69,7 @@
    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find upo_launchers)/rrt_navigation.rviz" />
 
      <!-- launch-prefix="xterm -e gdb (doble hyphen)args"-->
-	 <node pkg="upo_navigation_macro_actions" type="upo_navigation_macro_actions" name="upo_navigation_macro_actions" output="screen" launch-prefix="xterm -e gdb --args"  >
+	 <node pkg="upo_navigation_macro_actions" type="upo_navigation_macro_actions" name="upo_navigation_macro_actions" output="screen" >
 
 		<!-- frecuency of checking the block situation (seconds)-->
 		<param name="secs_to_check_block" type="double" value="15.0" /> 
