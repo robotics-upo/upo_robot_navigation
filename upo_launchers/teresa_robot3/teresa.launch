@@ -34,15 +34,15 @@
    <param name="final_dcdc_mask" type="int" value="255"/>  <!--243 lasers off -->
    <param name="height_velocity" type="int" value="20"/>
    <param name="tilt_velocity" type="int" value="3"/>
-   <param name="A_left" type="double" value="87.815"/>
+   <!--<param name="A_left" type="double" value="87.815"/>
    <param name="A_right" type="double" value="87.815"/>
    <param name="B_left" type="double" value="4.565"/>
-   <param name="B_right" type="double" value="4.565"/>
+   <param name="B_right" type="double" value="4.565"/>-->
    <param name="leds_pattern" type="str" value="knight_rider"/>
-   <param name="A_left" type="double" value="80.0" /> 	<!-- 89.4    210.0 upo robot-->
-   <param name="B_left" type="double" value="0.0" /> 	<!-- -0.394  8.35 upo robot-->
-   <param name="A_right" type="double" value="80.0" />	<!-- 88.1    210.0 upo robot-->
-   <param name="B_right" type="double" value="0.0" />	<!--0.343    8.35 upo robot-->
+   <param name="A_left" type="double" value="110.0" /> 	<!-- 89.4    210.0 upo robot-->
+   <param name="B_left" type="double" value="1.47" /> 	<!-- -0.394  8.35 upo robot-->
+   <param name="A_right" type="double" value="92.3" />	<!-- 88.1    210.0 upo robot-->
+   <param name="B_right" type="double" value="0.35" />	<!--0.343    8.35 upo robot-->
    <param name="use_upo_calib" type="bool" value="false" />
    <param name="deadZoneIsActive" type="bool" value="false" />
    <param name="lin_vel_dead_zone" type="double" value="0.15" />
