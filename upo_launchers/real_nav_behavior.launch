@@ -24,6 +24,7 @@
   <!-- Walk side by side -->
   <node pkg="teresa_wsbs" type="wsbs_controller" name="wsbs_controller" output="screen" respawn="false">
 	<param name="cmd_vel_id" value="cmd_vel_fsm"/>
+        <param name="xtion_id" value="/depthcamscan_node/scanXtion"/>
   </node>
 
 
