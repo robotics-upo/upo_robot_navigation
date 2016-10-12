@@ -1,8 +1,8 @@
-KP_v: 1.2
-KP_w: 1.94
-KI_v: 0.4
-KI_w: 6.4
-KD_w: 0.16
+KP_v: 1.0
+KP_w: 1.8
+KI_v: 2.0
+KI_w: 4.2
+KD_w: 0.15
 max_v: 1.0
 max_w: 2.0
 action_rate: 0.1
