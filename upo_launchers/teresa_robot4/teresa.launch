@@ -49,7 +49,6 @@
 
    <!-- joy node -->
    <node respawn="true" pkg="joy" type="joy_node" name="joy_node">
-   <!--<param name="dev" value="/dev/input/js1"/>-->
    </node>
   
     <!-- teresa joystick driver -->
@@ -59,7 +58,9 @@
 		<param name="cmd_vel_id" type="str" value="/cmd_vel_joy"/>
    </node>
 
-
-
+   
+   <node pkg="decision_making_uva" type="manual_control_switch.py" name="switch" output="screen" respawn="true">
+   	<rosparam file="pid.yaml" command="load"/>
+   </node>	
 
 </launch>

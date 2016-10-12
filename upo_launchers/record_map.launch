@@ -1,7 +1,6 @@
+<!-- -->
 <launch>
 
-  <!--turn on the laser and launch them-->
-  <include file="$(find teresa_driver)/launch/lasers.launch" />
 
   <node pkg="rosbag" type="record" name="record_1" args="/tf /imu/data /odom /cmd_vel /scanfront /scanback /scan360 -o /home/teresa/data/teresa_map.bag" />
   

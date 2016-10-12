@@ -53,15 +53,19 @@
 
    <!-- joy node -->
    <node respawn="true" pkg="joy" type="joy_node" name="joy_node">
-   <!--<param name="dev" value="/dev/input/js1"/>-->
    </node>
   
     <!-- teresa joystick driver -->
    <node pkg="teresa_driver" type="teresa_teleop_joy" name="teleop" output="screen" respawn="false"> 
-	<param name="max_linear_velocity" type="double" value="0.6" />	
-	<param name="max_angular_velocity" type="double" value="1.2" />
+		<param name="max_linear_velocity" type="double" value="0.6" />	
+		<param name="max_angular_velocity" type="double" value="1.57" />
+		<param name="cmd_vel_id" type="str" value="/cmd_vel_joy"/>
    </node>
 
+
+   <node pkg="decision_making_uva" type="manual_control_switch.py" name="switch" output="screen" respawn="true">
+   	<rosparam file="pid.yaml" command="load"/>
+   </node>
 
 
 </launch>
