@@ -27,14 +27,14 @@
    <param name="publish_buttons" type="int" value="1"/>
    <param name="publish_volume" type="int" value="1"/>
    <param name="publish_diagnostics" type="int" value="1"/>
-   <param name="number_of_leds" type="int" value="38"/>
+   <param name="number_of_leds" type="int" value="60"/>
    <param name="inverse_left_motor" type="bool" value="false"/>
    <param name="inverse_right_motor" type="bool" value="true"/>	
    <param name="initial_dcdc_mask" type="int" value="255"/> <!--243 lasers off-->  
    <param name="final_dcdc_mask" type="int" value="255"/>  <!--243 lasers off -->
    <param name="height_velocity" type="int" value="20"/>
    <param name="tilt_velocity" type="int" value="3"/>
-   <!--<param name="leds_pattern" type="str" value="knight_rider"/>	-->
+   <param name="leds_pattern" type="str" value="knight_rider"/>
    <param name="A_left" type="double" value ="80" /> <!-- 89.4 -->
    <param name="B_left" type="double" value="0.0" /> <!-- -0.394 -->
    <param name="A_right" type="double" value="80.0" /> <!-- 88.1 -->
