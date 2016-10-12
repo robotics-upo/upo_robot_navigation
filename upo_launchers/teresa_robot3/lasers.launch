@@ -1,0 +1,45 @@
+<!-- -*- mode: XML -*- -->
+
+<launch>
+
+   <!--power the lasers 0x0C  lasers.  1->enable, 2->disable, 0->apply absolute mask --> 
+   <node pkg="rosservice" type="rosservice" name="" args="call --wait /set_teresa_dcdc 1 0x0C"  />
+
+
+   <node pkg="urg_node" type="urg_node" name="urg_node1" output="screen" respawn="true">
+	
+    <param name="ip_address" type="str" value="192.168.2.15" />
+    <param name="calibrate_time" type="bool" value="false"/>
+    <param name="publish_intensity" type="bool" value="false" />
+    <param name="angle_max" type="double" value="1.92"/> 
+    <param name="angle_min" type="double" value="-1.92"/>
+    <param name="frame_id" type="str" value="laserfront"/> 
+     <remap from="scan" to="scanfront"/>
+  </node>
+
+
+ <node pkg="urg_node" type="urg_node" name="urg_node2" output="screen" respawn="true">
+	
+    <param name="ip_address" type="str" value="192.168.2.16" />
+    <param name="calibrate_time" type="bool" value="false"/>
+    <param name="publish_intensity" type="bool" value="false" />
+    <param name="angle_max" type="double" value="1.92"/> 
+    <param name="angle_min" type="double" value="-1.92"/>
+    <param name="frame_id" type="str" value="laserback"/> 
+     <remap from="scan" to="scanback"/>
+  </node>
+
+
+  <node pkg="laser_assembler" type="laser_assembler" name="laser_assembler" args="/scanfront /scanback">
+	<remap from="scan" to="scan360"/>
+  </node>
+
+  <include file="$(find teresa_to_spencer)/launch/laser_filter.launch" >
+    <arg name="use_360" value="false"/>
+  </include>
+
+  <node pkg="laser_assembler" type="laser_assembler" name="laser_assembler2" args="/scanfront_filtered /scanback_filtered">
+        <remap from="scan" to="scan360_filtered"/>
+  </node>
+
+</launch>

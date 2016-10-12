@@ -1,0 +1,65 @@
+<!-- -*- mode: XML -*- -->
+
+<launch>
+   <!-- This launch roscore -->
+   <master auto="start"/>
+
+  <!--static TFs -->
+  <include file="static_tfs.launch" />
+
+  <!-- IMU -->
+  <node pkg="receive_xsens" type="receive_xsens" name="receive_xsens" output="screen" respawn="true" />
+
+
+  <!-- teresa driver -->  
+
+   <node pkg="teresa_driver" type="teresa_node" name="teresa_node" output="screen" respawn="false">
+   <param name="board1" type="str" value="/dev/serial/by-id/usb-FTDI_MM232R_USB_MODULE_board1-if00-port0"/>
+   <param name="board2" type="str" value="/dev/serial/by-id/usb-FTDI_MM232R_USB_MODULE_board2-if00-port0"/>
+   <param name="base_frame_id" type="str" value="/base_link"/>	  
+   <param name="odom_frame_id" type="str" value="/odom"/>  
+   <param name="head_frame_id" type="str" value="/teresa_head"/>
+   <param name="stalk_frame_id" type="str" value="/stalk_head"/>                  
+   <param name="freq" type="double" value="20.0" />               
+   <param name="using_imu" type="int" value="1"/>                   
+   <param name="simulation" type="int" value="0"/>
+   <param name="publish_temperature" type="int" value="1"/>
+   <param name="publish_buttons" type="int" value="1"/>
+   <param name="publish_volume" type="int" value="1"/>
+   <param name="publish_diagnostics" type="int" value="1"/>
+   <param name="number_of_leds" type="int" value="38"/>
+   <param name="inverse_left_motor" type="bool" value="false"/>
+   <param name="inverse_right_motor" type="bool" value="true"/>	
+   <param name="initial_dcdc_mask" type="int" value="255"/> <!--243 lasers off-->  
+   <param name="final_dcdc_mask" type="int" value="255"/>  <!--243 lasers off -->
+   <param name="height_velocity" type="int" value="20"/>
+   <param name="tilt_velocity" type="int" value="3"/>
+   <!--<param name="leds_pattern" type="str" value="knight_rider"/>	-->
+   <param name="A_left" type="double" value ="80" /> <!-- 89.4 -->
+   <param name="B_left" type="double" value="0.0" /> <!-- -0.394 -->
+   <param name="A_right" type="double" value="80.0" /> <!-- 88.1 -->
+   <param name="B_right" type="double" value="0.0" /> <!-- 0.343 -->
+   <param name="use_upo_calib" type="bool" value="false" />
+   <param name="deadZoneIsActive" type="bool" value="false" />
+   <param name="lin_vel_dead_zone" type="double" value="0.15" />
+   <param name="ang_vel_dead_zone" type="double" value="1.0" />
+   <param name="lin_vel_zero_threshold" type="double" value="0.05" />
+   <param name="ang_vel_zero_threshold" type="double" value="0.05" />
+   </node>
+
+   <!-- joy node -->
+   <node respawn="true" pkg="joy" type="joy_node" name="joy_node">
+   <!--<param name="dev" value="/dev/input/js1"/>-->
+   </node>
+  
+    <!-- teresa joystick driver -->
+   <node pkg="teresa_driver" type="teresa_teleop_joy" name="teleop" output="screen" respawn="false"> 
+		<param name="max_linear_velocity" type="double" value="0.6" />	
+		<param name="max_angular_velocity" type="double" value="1.57" />
+		<param name="cmd_vel_id" type="str" value="/cmd_vel_joy"/>
+   </node>
+
+
+
+
+</launch>

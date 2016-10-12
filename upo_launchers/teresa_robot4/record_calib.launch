@@ -1,0 +1,7 @@
+<!-- -->
+
+<launch>
+
+  <node pkg="rosbag" type="record" name="record_calib" args="/odom /cmd_vel /wheel_vels /wheel_motor_units  -o /home/teresa/data/teresa4_calib.bag" />
+
+</launch>

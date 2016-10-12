@@ -1,0 +1,5 @@
+<launch>
+
+  <node pkg="rosbag" type="record" name="record_1" args="/tf /imu/data /odom /cmd_vel  -o /home/teresa/data/teresa_data.bag" />
+
+</launch>
