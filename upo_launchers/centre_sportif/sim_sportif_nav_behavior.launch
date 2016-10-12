@@ -1,0 +1,11 @@
+<!-- -->
+<launch>
+
+ <include file="$(find upo_launchers)/sim_nav_behavior.launch">
+	<arg name = "scenario" value = "centre_sportif"/>
+	<arg name = "x" value = "8.1"/>
+        <arg name = "y" value = "15.25"/>
+        <arg name = "a" value = "0.0"/>
+ </include>
+
+</launch>

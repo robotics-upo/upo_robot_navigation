@@ -1,0 +1,24 @@
+home:
+        x: 0.0
+        y: 0.0
+        theta: 0.0
+restarea:
+        x: 0.0
+        y: 0.0
+        theta: 0.0
+corridor:
+        x: 0.0
+        y: 0.0
+        theta: 0.0
+lab1:
+        x: 0.0
+        y: 0.0
+        theta: 0.0
+lab2:
+        x: 0.0
+        y: 0.0
+        theta: 0.0
+office:
+        x: 0.0
+        y: 0.0
+        theta: 0.0

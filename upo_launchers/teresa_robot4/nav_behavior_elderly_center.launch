@@ -1,0 +1,10 @@
+<!-- -->
+<launch>
+
+ <include file="$(find upo_launchers)/real_nav_behavior.launch">
+	<arg name = "robot" value = "teresa_robot4"/>
+	<arg name = "scenario" value = "elderly_center"/>
+	<arg name = "xtion_nav" value = "true"/>
+ </include>
+
+</launch>
