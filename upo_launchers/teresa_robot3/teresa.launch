@@ -44,7 +44,7 @@
    <param name="A_right" type="double" value="80.0" />	<!-- 88.1    210.0 upo robot-->
    <param name="B_right" type="double" value="0.0" />	<!--0.343    8.35 upo robot-->
    <param name="use_upo_calib" type="bool" value="false" />
-   <param name="deadZoneIsActive" type="bool" value="true" />
+   <param name="deadZoneIsActive" type="bool" value="false" />
    <param name="lin_vel_dead_zone" type="double" value="0.15" />
    <param name="ang_vel_dead_zone" type="double" value="0.5" />
    <param name="lin_vel_zero_threshold" type="double" value="0.05" />
