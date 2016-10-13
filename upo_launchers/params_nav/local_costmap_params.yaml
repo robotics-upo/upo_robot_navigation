@@ -31,6 +31,6 @@ local_costmap:
       
 
   inflation_layer:
-    inflation_radius: 0.66  #0.34*2 = 0.68 #0.34*4=1.36
+    inflation_radius: 0.69  #0.345*2 = 0.68 #0.34*4=1.36
     cost_scaling_factor: 10.0 #10.0=default
 
