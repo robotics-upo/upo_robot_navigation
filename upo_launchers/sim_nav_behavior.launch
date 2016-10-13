@@ -114,8 +114,8 @@
   	<!-- Combine joint values -->
   	<node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher"/>
 
-  <node pkg="decision_making_uva" name="upo_event_manager" type="upo_event_manager.py" output="screen"/>
-  <node pkg="decision_making_uva" name="upo_pilot_interface_bridge" type="upo_pilot_interface_bridge.py" output="screen"/>
+  <node pkg="decision_making_uva" name="upo_event_manager" type="event_manager.py" output="screen"/>
+  <node pkg="decision_making_uva" name="upo_pilot_interface_bridge" type="pilot_interface_bridge.py" output="screen"/>
 
 
   <node pkg="decision_making_uva" name="upo_navigation_behavior_fsm" type="upo_navigation_behavior_fsm.py" output="screen">
