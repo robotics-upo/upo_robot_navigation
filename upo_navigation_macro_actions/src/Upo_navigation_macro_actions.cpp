@@ -1291,6 +1291,8 @@ void Upo_navigation_macro_actions::walkSideCB(const upo_navigation_macro_actions
 			} else {
           		//if we've been preempted explicitly we need to shut things down
           		//UpoNav_->resetState();
+				teresa_wsbs::stop stop_srv;
+				stop_client_.call(stop_srv);
 
           		//notify the ActionServer that we've successfully preempted
           		ROS_DEBUG_NAMED("upo_navigation_macro_actions","upo_navigation preempting the current goal");
