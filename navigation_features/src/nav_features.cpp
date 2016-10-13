@@ -53,6 +53,12 @@ void features::NavFeatures::setParams()
 {
 	//Read the ROS params from the server
 	ros::NodeHandle n("~/Navigation_features");
+
+
+	//Dynamic reconfigure
+	//dsrv_ = new dynamic_reconfigure::Server<navigation_features::nav_featuresConfig>(n); //ros::NodeHandle("~")
+    //dynamic_reconfigure::Server<navigation_features::nav_featuresConfig>::CallbackType cb = boost::bind(&NavFeatures::reconfigureCB, this, _1, _2);
+    //dsrv_->setCallback(cb);
 	
 	
 	//Load weights "w1, w2, ..."

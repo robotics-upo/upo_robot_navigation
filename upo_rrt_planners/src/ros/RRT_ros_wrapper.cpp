@@ -77,7 +77,9 @@ upo_RRT_ros::RRT_ros_wrapper::~RRT_ros_wrapper() {
 
 void upo_RRT_ros::RRT_ros_wrapper::setup()
 {
-	
+	//boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);	
+
+
 	ros::NodeHandle private_nh("~/RRT_ros_wrapper");
 
 
@@ -85,39 +87,52 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 	printf("RRT_ros_wrapper. rrt_planner_type = %i\n",  rrt_planner_type_);
       	
    	private_nh.param<bool>("use_fc_in_costmap", use_fc_costmap_, false); 
+	printf("RRT_ros_wrapper. use_fc_in_costmap = %i\n",  use_fc_costmap_);
 	
 	//RRT 
 	double aux;
  	private_nh.param<double>("rrt_solve_time", aux, 0.8);
  	solve_time_ = (float)aux;
+	printf("RRT_ros_wrapper. rrt_solve_time = %.2f\n",  solve_time_);
  	
 	private_nh.param<double>("rrt_goal_bias", aux, 0.1);
 	goal_bias_ = (float)aux;
+	printf("RRT_ros_wrapper. goal_bias = %.2f\n",  goal_bias_);
 	
 	private_nh.param<double>("rrt_max_insertion_dist", aux, 0.2);
 	max_range_ = (float) aux;
+	printf("RRT_ros_wrapper. max_range_ = %.2f\n",  max_range_);
 	
 	double robot_radius;
 	private_nh.param<double>("robot_radius", robot_radius, 0.3);
+	printf("RRT_ros_wrapper. robot_radius = %.2f\n",  robot_radius);
 	
 	//RRT* 
 	if(rrt_planner_type_ == 2 || rrt_planner_type_ >= 4) {
 		private_nh.param<bool>("rrtstar_use_k_nearest", rrtstar_use_k_nearest_, true);
+		printf("RRT_ros_wrapper. rrtstar_use_k_nearest = %i\n",  rrtstar_use_k_nearest_);
 		private_nh.param<bool>("rrtstar_first_path_biasing", rrtstar_first_path_biasing_, false);
+		printf("RRT_ros_wrapper. rrtstar_first_path_biasing_ = %i\n",  rrtstar_first_path_biasing_);
 		private_nh.param<double>("rrtstar_first_path_bias", aux, 0.5);
 		rrtstar_first_path_bias_ = (float)aux;
+		printf("RRT_ros_wrapper. rrtstar_first_path_bias_ = %.2f\n",  rrtstar_first_path_bias_);
 		private_nh.param<double>("rrtstar_first_path_stddev", aux, 0.8);
 		rrtstar_first_path_stddev_bias_ = (float)aux;
+		printf("RRT_ros_wrapper. rrtstar_first_path_stddev_bias_ = %.2f\n",  rrtstar_first_path_stddev_bias_);
 		private_nh.param<double>("rrtstar_rewire_factor", aux, 1.1);
 		rrtstar_rewire_factor_ = (float)aux;
+		printf("RRT_ros_wrapper. rrtstar_rewire_factor_ = %.2f\n",  rrtstar_rewire_factor_);
 	}
 	
 	//All
 	private_nh.param<bool>("full_path_biasing", full_path_biasing_, false);
+	printf("RRT_ros_wrapper. full_path_biasing_ = %i\n",  full_path_biasing_);
 	private_nh.param<double>("full_path_stddev", aux, 1.2);
 	full_path_stddev_ = (float)aux;
+	printf("RRT_ros_wrapper. full_path_stddev_ = %.2f\n",  full_path_stddev_);
 	private_nh.param<double>("full_path_bias", aux, 0.8);
 	full_path_bias_ = (float)aux;
+	printf("RRT_ros_wrapper. full_path_bias_ = %.2f\n",  full_path_bias_);
 	
 	
 	//if RRT or RRT* are kinodynamics
@@ -142,20 +157,27 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 	//Steering parameters for kinodynamic planning
 	private_nh.param<double>("kino_steer_kp", aux, 0.5);
 	float kino_steer_kp = (float)aux;
+	printf("RRT_ros_wrapper. kino_steer_kp = %.2f\n",  kino_steer_kp);
 	private_nh.param<double>("kino_steer_kv", aux, 3.0);
 	float kino_steer_kv = (float)aux;
+	printf("RRT_ros_wrapper. kino_steer_kv = %.2f\n",  kino_steer_kv);
 	private_nh.param<double>("kino_steer_ka", aux, 2.0);
 	float kino_steer_ka = (float)aux;
+	printf("RRT_ros_wrapper. kino_steer_ka = %.2f\n",  kino_steer_ka);
 	private_nh.param<double>("kino_steer_ko", aux, 0.25);
 	float kino_steer_ko = (float)aux;
+	printf("RRT_ros_wrapper. kino_steer_ko = %.2f\n",  kino_steer_ko);
 	
 
 	//RRT State Space
 	private_nh.param<int>("rrt_dimensions", dimensions_, 2);
+	printf("RRT_ros_wrapper. rrt_dimensions = %i\n",  dimensions_);
   	private_nh.param<double>("rrt_size_x", aux, 5.0);
   	size_x_ = (float)aux;
+	printf("RRT_ros_wrapper. size_x_ = %.2f\n",  size_x_);
 	private_nh.param<double>("rrt_size_y", aux, 5.0);
 	size_y_ = (float)aux;
+	printf("RRT_ros_wrapper. size_y_ = %.2f\n",  size_y_);
 	private_nh.param<double>("rrt_xy_resolution", aux, 0.1);
 	xy_res_ = (float)aux;
 	private_nh.param<double>("rrt_yaw_resolution", aux, 0.02);
@@ -198,9 +220,11 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 		
 	ros::NodeHandle n;
 	if(visualize_costmap_) {
+		printf("Visualize_costmap = true, initializing costmap_pub\n");
 		costmap_pub_ = n.advertise<nav_msgs::OccupancyGrid>("rrt_costmap", 1);
 	}
 	if(visualize_tree_) {
+		printf("Visualize_tree = true, initializing tree_pub\n");
 		tree_pub_ = n.advertise<visualization_msgs::Marker>("rrt_tree", 1);
 	}
 	
@@ -226,8 +250,9 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 	
 	inscribed_radius_  = (float)robot_radius;
 	circumscribed_radius_ = (float)robot_radius;
-
+	printf("Before initializing checker!!\n");
 	checker_ = new ValidityChecker(use_fc_costmap_, tf_, local_costmap_, global_costmap_, &footprint_, inscribed_radius_, size_x_, size_y_, dimensions_, distanceType_);
+	printf("After initializing checker!!\n");
 	
 
 	

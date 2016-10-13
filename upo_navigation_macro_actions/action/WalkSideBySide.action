@@ -1,5 +1,6 @@
 # Goal
-upo_msgs/PersonPoseUPO it
+#upo_msgs/PersonPoseUPO it
+uint32 it
 ---
 # Result
 string result

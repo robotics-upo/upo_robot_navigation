@@ -16,9 +16,10 @@ upo_RRT_ros::ValidityChecker::ValidityChecker(bool use_fc_costmap, tf::Transform
 	else
 		use_global_costmap_ = true;
 	
-	if(!get_cost_from_costmap_)
+	if(!get_cost_from_costmap_) {
+		//printf("Initialization of nav_features\n");
 		navfeatures_ = new features::NavFeatures(tf, loc_costmap, glob_costmap, footprint, insc_radius, size_x, size_y);
-	else {
+	}else {
 		printf("----Using cost function to build a costmap-----\n");
 		loc_costmap_ = loc_costmap;
 		glo_costmap_ = glob_costmap;

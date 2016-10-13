@@ -152,6 +152,7 @@ namespace simple_local_planner {
       //map_viz_.initialize(name, global_frame_, boost::bind(&TrajectoryPlanner::getCellCosts, tc_, _1, _2, _3, _4, _5, _6));
       initialized_ = true;
 
+		//BE CAREFUL, this will load the values of cfg params overwritting the read ones from the yaml file.
       dsrv_ = new dynamic_reconfigure::Server<SimpleLocalPlannerConfig>(private_nh);
       dynamic_reconfigure::Server<SimpleLocalPlannerConfig>::CallbackType cb = boost::bind(&PurePlannerROS::reconfigureCB, this, _1, _2);
       dsrv_->setCallback(cb);

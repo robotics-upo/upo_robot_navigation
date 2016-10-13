@@ -31,13 +31,19 @@ Upo_navigation_macro_actions::Upo_navigation_macro_actions(tf::TransformListener
 	UpoNav_ = nav;
 
 	ros::NodeHandle n("~");
+
+	//Dynamic reconfigure
+	dsrv_ = new dynamic_reconfigure::Server<upo_navigation_macro_actions::NavigationMacroActionsConfig>(n);
+    dynamic_reconfigure::Server<upo_navigation_macro_actions::NavigationMacroActionsConfig>::CallbackType cb = boost::bind(&Upo_navigation_macro_actions::reconfigureCB, this, _1, _2);
+    dsrv_->setCallback(cb);
+
+
+
 	n.param<double>("secs_to_check_block", secs_to_check_block_, 5.0); //seconds
 	n.param<double>("block_dist", block_dist_, 0.4); //meters
 	n.param<double>("secs_to_wait", secs_to_wait_, 8.0);  //seconds
 	n.param<double>("control_frequency", control_frequency_, 15.0);  
 	n.param<int>("social_approaching_type", social_approaching_type_, 1);  
-	n.param<bool>("check_battery_level", check_battery_level_, false);
-	n.param<string>("battery_topic", battery_topic_, std::string("/teresa_diagnostics"));
 	
 	n.param<string>("yield_map", yieldmap_, std::string(""));
 	std::string yieldpoint_file;
@@ -54,14 +60,10 @@ Upo_navigation_macro_actions::Upo_navigation_macro_actions(tf::TransformListener
 	robot_inzone2_ = false;
 	person_inzone_ = false;
 
-	//Assisted driving
-	//as_ = new AssistedSteering(tf_listener_, odomtopic, lasertopic, in_cmd_vel_topic, out_cmd_vel_topic);
-	//as_->pause();
-
 	//Dynamic reconfigure
-	dsrv_ = new dynamic_reconfigure::Server<upo_navigation_macro_actions::NavigationMacroActionsConfig>(n);
-    dynamic_reconfigure::Server<upo_navigation_macro_actions::NavigationMacroActionsConfig>::CallbackType cb = boost::bind(&Upo_navigation_macro_actions::reconfigureCB, this, _1, _2);
-    dsrv_->setCallback(cb);
+	//dsrv_ = new dynamic_reconfigure::Server<upo_navigation_macro_actions::NavigationMacroActionsConfig>(n);
+    //dynamic_reconfigure::Server<upo_navigation_macro_actions::NavigationMacroActionsConfig>::CallbackType cb = boost::bind(&Upo_navigation_macro_actions::reconfigureCB, this, _1, _2);
+    //dsrv_->setCallback(cb);
 
 
 	ros::NodeHandle nh;
@@ -118,10 +120,6 @@ Upo_navigation_macro_actions::~Upo_navigation_macro_actions()
       	
     if(yield_)
 		delete yield_;
-	//if(walk_)
-	//	delete walk_;
-	//if(as_)
-	//	delete as_;
 	if(UpoNav_)
 		delete UpoNav_;
 	if(dsrv_)
@@ -142,7 +140,6 @@ void Upo_navigation_macro_actions::reconfigureCB(upo_navigation_macro_actions::N
 	secs_to_wait_ = config.secs_to_wait;
 	social_approaching_type_ = config.social_approaching_type;
 	secs_to_yield_ = config.secs_to_yield;
-	//check_battery_level_ = config.check_battery_level;
 	
 }
 
@@ -510,7 +507,7 @@ void Upo_navigation_macro_actions::navigateHomeCB(const upo_navigation_macro_act
 		bool r_in = robot_inzone_;
 		rinzone_mutex_.unlock();
 		
-		if(r_in && p_in)
+		if(r_in && p_in && isYieldDirectionCorrect())
 		{
 			ROS_INFO("Setting ABORTED state because of No social path available (yielding)");
 			nhresult_.result = "Aborted. No social path available";
@@ -589,20 +586,16 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 	} 
 	
 
-	upo_msgs::PersonPoseUPO p = goal->person;
-	//printf("Received person with Id: %i and yaw: %.3f\n", p.id, tf::getYaw(p.orientation)); 
-	/*p.header = goal->person_pose.header;
-	p.id = -1;
-	p.vel = -1;
-	p.position = goal->person_pose.pose.position;
-	p.orientation = goal->person_pose.pose.orientation;
-	*/
+	//upo_msgs::PersonPoseUPO p = goal->it;
+	int id_it = goal->it;
+	
 	
 	geometry_msgs::PoseStamped goal_pose;
 	
 	boost::recursive_mutex::scoped_lock l(configuration_mutex_);
 	
-	goal_pose = approachIT(&p);
+	//goal_pose = approachIT(&p);
+	goal_pose = approachIT(id_it);
 	if(goal_pose.header.frame_id == "bad") {
 		ROS_INFO("NavigateToInteractionTarget. Setting ABORTED state. Person not found");
 		nitresult_.result = "Aborted. Navigation error";
@@ -619,14 +612,10 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 		return;
 	}
 	if(social_approaching_type_ != 1) {
-		//char buffer [20]; 
-		//char *intStr = itoa(p.id, buffer, 10);
-		//string str = string(intStr);
-		std::string str = std::to_string(p.id);
+		std::string str = std::to_string(id_it);
 		reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), str, INT_TYPE);
 	}
 
-	//printf("1. Goalpose x:%.2f, y:%.2f, frame_id:%s\n", goal_pose.pose.position.x, goal_pose.pose.position.y, goal_pose.header.frame_id.c_str());
 
 	//Enviar goal 
 	bool ok = UpoNav_->executeNavigation(goal_pose); 
@@ -635,8 +624,9 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 		bool ok2 = false;
 		if(social_approaching_type_ > 1) {
 			social_approaching_type_ = 1;
-			goal_pose = approachIT(&p);
-			if(goal_pose.header.frame_id == "bad") 
+			//goal_pose = approachIT(&p);
+			goal_pose = approachIT(id_it);
+			if(goal_pose.header.frame_id != "bad") 
 				ok2 = UpoNav_->executeNavigation(goal_pose); 
 			social_approaching_type_ = 2;
 		}
@@ -680,8 +670,10 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 				p.position = new_goal.person_pose.pose.position;
 				p.orientation = new_goal.person_pose.pose.orientation;
 				*/
-				p = new_goal.person;
-				goal_pose = approachIT(&p);
+				//p = new_goal.it;
+				//goal_pose = approachIT(&p);
+				id_it = new_goal.it;
+				goal_pose = approachIT(id_it);
 				if(goal_pose.header.frame_id == "bad") {
 					ROS_INFO("NavigateToInteractionTarget. Setting ABORTED state. Person not found");
 					nitresult_.result = "Aborted. Navigation error";
@@ -700,7 +692,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 					//char buffer [20]; 
 					//char *intStr = itoa(p.id, buffer, 10);
 					//string str = string(intStr);
-					std::string str = std::to_string(p.id);
+					std::string str = std::to_string(id_it);
 					reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), str, INT_TYPE);
 				}
 				//Enviar a new goal 
@@ -710,8 +702,9 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 					bool ok2 = false;
 					if(social_approaching_type_ > 1) {
 						social_approaching_type_ = 1;
-						goal_pose = approachIT(&p);
-						if(goal_pose.header.frame_id == "bad") 
+						//goal_pose = approachIT(&p);
+						goal_pose = approachIT(id_it);
+						if(goal_pose.header.frame_id != "bad") 
 							ok2 = UpoNav_->executeNavigation(goal_pose); 
 						social_approaching_type_ = 2;
 					}
@@ -754,9 +747,8 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
       	}
 
 		geometry_msgs::PoseStamped new_g;
-		//printf("1. Person p id:%i, ", p.id);
-		new_g = approachIT(&p);
-		//printf(" found id:%i\n", p.id);
+		//new_g = approachIT(&p);
+		new_g = approachIT(id_it);
 		if(new_g.header.frame_id == "bad") {
 			ROS_INFO("NavigateToInteractionTarget. Setting ABORTED state. Person not found");
 			nitresult_.result = "Aborted. Navigation error";
@@ -779,7 +771,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 			//Send new goal
 			goal_pose = new_g; 
 			if(social_approaching_type_ != 1){
-				std::string str = std::to_string(p.id);
+				std::string str = std::to_string(id_it);
 				reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), str, INT_TYPE);
 			}
 			
@@ -789,8 +781,9 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 				bool ok2 = false;
 				if(social_approaching_type_ > 1) {
 					social_approaching_type_ = 1;
-					goal_pose = approachIT(&p);
-					if(p.id != -100)
+					//goal_pose = approachIT(&p);
+					goal_pose = approachIT(id_it);
+					if(goal_pose.header.frame_id != "bad") 
 						ok2 = UpoNav_->executeNavigation(goal_pose); 
 					social_approaching_type_ = 2;
 				}
@@ -901,7 +894,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 		bool r_in = robot_inzone_;
 		rinzone_mutex_.unlock();
 		
-		if(r_in && p_in)
+		if(r_in && p_in && isYieldDirectionCorrect())
 		{
 			ROS_INFO("Setting ABORTED state because of No social path available (yielding)");
 			nitresult_.result = "Aborted. No social path available";
@@ -972,7 +965,8 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 }
 
 
-geometry_msgs::PoseStamped Upo_navigation_macro_actions::approachIT(upo_msgs::PersonPoseUPO* p)
+//geometry_msgs::PoseStamped Upo_navigation_macro_actions::approachIT(upo_msgs::PersonPoseUPO* p)
+geometry_msgs::PoseStamped Upo_navigation_macro_actions::approachIT(int id)
 {
 	
 	double safe_dist = 1.3;
@@ -994,8 +988,8 @@ geometry_msgs::PoseStamped Upo_navigation_macro_actions::approachIT(upo_msgs::Pe
 	if(people.size() == 0) {
 		printf("approachIT. people array is empty!\n");
 		//p->id = -100;
-		//return goal_pose;
-	} else {
+		return goal_pose;
+	} /*else {
 	
 		//printf("Person frame: %s, people vector frame: %s\n", p->header.frame_id.c_str(), people.at(0).header.frame_id.c_str());
 		if(p->header.frame_id != people.at(0).header.frame_id) {
@@ -1013,10 +1007,10 @@ geometry_msgs::PoseStamped Upo_navigation_macro_actions::approachIT(upo_msgs::Pe
 			newp.position = out.pose.position;
 			newp.orientation = out.pose.orientation;
 		}
-	}
+	}*/
 	
 	
-	float min_dist = 1.5; //1.5 meter
+	/*float min_dist = 1.5; //1.5 meter
 	for(unsigned int i=0; i<people.size(); i++)
 	{
 		//Firstly look for the ID
@@ -1036,6 +1030,22 @@ geometry_msgs::PoseStamped Upo_navigation_macro_actions::approachIT(upo_msgs::Pe
 			}
 			
 		}
+	}*/
+
+	for(unsigned int i=0; i<people.size(); i++)
+	{
+		//Firstly look for the ID
+		if(id != -1 && id == people.at(i).id) {
+			//printf("Person with ID %i found!\n", p->id);
+			newp = people.at(i);
+			break;
+		}
+	}
+
+	//No person found
+	if(newp.id == -100) {
+		printf("Person not found!\n");
+		return goal_pose;
 	}
 	
 	
@@ -1043,24 +1053,9 @@ geometry_msgs::PoseStamped Upo_navigation_macro_actions::approachIT(upo_msgs::Pe
 	{
 		geometry_msgs::PoseStamped in;
 		
-		//No person found
-		if(newp.id == -100) {
-			printf("Person not found!\n");
-			//p->id = -100;
-			//return goal_pose;
-			in.header = p->header;
-			in.pose.position = p->position;
-			in.pose.orientation = p->orientation; 
-		} else {
-			in.header = newp.header;
-			in.pose.position = newp.position;
-			in.pose.orientation = newp.orientation; 
-			p->header = newp.header;
-			p->id = newp.id;
-			p->orientation = newp.orientation;
-			p->vel = newp.vel;
-			p->position = newp.position;
-		}
+		in.header = newp.header;
+		in.pose.position = newp.position;
+		in.pose.orientation = newp.orientation; 
 		in.header.stamp = ros::Time();
 		
 		geometry_msgs::PoseStamped out;
@@ -1100,28 +1095,13 @@ geometry_msgs::PoseStamped Upo_navigation_macro_actions::approachIT(upo_msgs::Pe
 		
 		//1. Calculate goal in front of the person
 		float yaw = 0.0;
-		//No person found
-		if(newp.id == -100) {
-			printf("Person not found!\n");
-			//p->id = -100;
-			//return goal_pose;
-			goal_pose.header.frame_id = p->header.frame_id;
-			goal_pose.pose.position = p->position; 
-			goal_pose.pose.orientation = p->orientation; 
-			yaw = tf::getYaw(p->orientation);  
-		} else {
-			goal_pose.header.frame_id = newp.header.frame_id;
-			goal_pose.pose.position = newp.position; 
-			goal_pose.pose.orientation = newp.orientation; 
-			yaw = tf::getYaw(newp.orientation); 
-			p->header = newp.header;
-			p->id = newp.id;
-			p->orientation = newp.orientation;
-			p->vel = newp.vel;
-			p->position = newp.position;
-		}
-		goal_pose.header.stamp = ros::Time::now();
 		
+		goal_pose.header.frame_id = newp.header.frame_id;
+		goal_pose.pose.position = newp.position; 
+		goal_pose.pose.orientation = newp.orientation; 
+		yaw = tf::getYaw(newp.orientation); 
+		
+		goal_pose.header.stamp = ros::Time::now();
 		goal_pose.pose.position.x = goal_pose.pose.position.x + safe_dist*cos(yaw);
 		goal_pose.pose.position.y = goal_pose.pose.position.y + safe_dist*sin(yaw);
 		yaw = normalizeAngle((yaw+M_PI), -M_PI, M_PI);
@@ -1214,12 +1194,13 @@ void Upo_navigation_macro_actions::walkSideCB(const upo_navigation_macro_actions
 
 	printf("¡¡¡¡¡¡¡MacroAction  Walk side-by-side  -->  started!!!!!!\n");
 	ros::Time time_init = ros::Time::now(); 
-	upo_msgs::PersonPoseUPO p = goal->it;
+	//upo_msgs::PersonPoseUPO p = goal->it;
+	int id = goal->it;
 	
 	bool exit = false;
 	
 	char buf[40];
-	sprintf(buf, "Walking with target id %i", p.id);
+	sprintf(buf, "Walking with target id %i", id);
 	std::string st = std::string(buf);
 
 	/*
@@ -1241,7 +1222,7 @@ void Upo_navigation_macro_actions::walkSideCB(const upo_navigation_macro_actions
 
 	*/
 	teresa_wsbs::start start_srv;
-	start_srv.request.target_id = p.id;
+	start_srv.request.target_id = id;
 	start_srv.request.goal_x = 0;
 	start_srv.request.goal_y = 0;
 	start_srv.request.goal_radius = -1;
@@ -1270,7 +1251,7 @@ void Upo_navigation_macro_actions::walkSideCB(const upo_navigation_macro_actions
         	if(WSActionServer_->isNewGoalAvailable()){
 				
 				upo_navigation_macro_actions::WalkSideBySideGoal new_goal = *WSActionServer_->acceptNewGoal();
-				p = new_goal.it;
+				id = new_goal.it;
 
 				//First stop the current wsbs
 				teresa_wsbs::stop stop_srv;
@@ -1289,7 +1270,7 @@ void Upo_navigation_macro_actions::walkSideCB(const upo_navigation_macro_actions
 				}
 
 				//Now, start!
-				start_srv.request.target_id = p.id;
+				start_srv.request.target_id = id;
 				start_srv.request.goal_x = 0;
 				start_srv.request.goal_y = 0;
 				start_srv.request.goal_radius = -1;

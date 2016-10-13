@@ -20,6 +20,11 @@ void AssistedSteering::setup() {
 	
 	ros::NodeHandle n("~");
 
+	//Dynamic reconfigure
+	dsrv_ = new dynamic_reconfigure::Server<assisted_steering::AssistedSteeringConfig>(n); //ros::NodeHandle("~")
+    dynamic_reconfigure::Server<assisted_steering::AssistedSteeringConfig>::CallbackType cb = boost::bind(&AssistedSteering::reconfigureCB, this, _1, _2);
+    dsrv_->setCallback(cb);
+
 	n.param<std::string>("laser_topic", laser_topic_, std::string("scan360"));
 	n.param<std::string>("odom_topic", odom_topic_, std::string("odom"));
 	n.param<std::string>("cmdvel_topic", cmdvel_topic_, std::string("teresa/cmd_vel"));
@@ -47,9 +52,9 @@ void AssistedSteering::setup() {
 	cmdvel_sub_ = nh.subscribe<geometry_msgs::Twist>(cmdvel_topic_.c_str(), 1, &AssistedSteering::cmdvelCallback, this);
 
 	//Dynamic reconfigure
-	dsrv_ = new dynamic_reconfigure::Server<assisted_steering::AssistedSteeringConfig>(n); //ros::NodeHandle("~")
-    dynamic_reconfigure::Server<assisted_steering::AssistedSteeringConfig>::CallbackType cb = boost::bind(&AssistedSteering::reconfigureCB, this, _1, _2);
-    dsrv_->setCallback(cb);
+	//dsrv_ = new dynamic_reconfigure::Server<assisted_steering::AssistedSteeringConfig>(n); //ros::NodeHandle("~")
+    //dynamic_reconfigure::Server<assisted_steering::AssistedSteeringConfig>::CallbackType cb = boost::bind(&AssistedSteering::reconfigureCB, this, _1, _2);
+    //dsrv_->setCallback(cb);
 
 }
 

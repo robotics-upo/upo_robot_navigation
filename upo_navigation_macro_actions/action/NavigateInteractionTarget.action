@@ -1,6 +1,6 @@
 # Goal
-#geometry_msgs/PoseStamped person_pose
-upo_msgs/PersonPoseUPO person
+#upo_msgs/PersonPoseUPO it
+uint32  it
 ---
 # Result
 string result

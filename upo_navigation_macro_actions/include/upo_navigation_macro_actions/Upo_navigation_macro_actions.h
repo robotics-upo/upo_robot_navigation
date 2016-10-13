@@ -38,6 +38,7 @@
 #include <teresa_wsbs/start.h>
 #include <teresa_wsbs/stop.h>
 #include <std_msgs/UInt8.h>
+#include <std_msgs/UInt16.h>
 
 #include <boost/thread/mutex.hpp> //Mutex
 
@@ -97,7 +98,8 @@
 			void fixFrame(std::string& cad);
 			float normalizeAngle(float val, float min, float max);
 			geometry_msgs::PoseStamped transformPoseTo(geometry_msgs::PoseStamped pose_in, std::string frame_out);
-			geometry_msgs::PoseStamped approachIT(upo_msgs::PersonPoseUPO* person);
+			//geometry_msgs::PoseStamped approachIT(upo_msgs::PersonPoseUPO* person);
+			geometry_msgs::PoseStamped approachIT(int id);
 			
 
 			tf::TransformListener* tf_listener_;
@@ -180,19 +182,12 @@
 			
 			
 			// Walk side-by-side
-			//WalkSideBySide* walk_;
 			ros::ServiceClient start_client_;
 			ros::ServiceClient stop_client_;
 			ros::Subscriber wsbs_status_sub_;
 			boost::mutex wsbs_mutex_;
 			int wsbs_status_;
 			
-			//Assisted steering
-			//AssistedSteering* as_;
-			
-			// Low battery
-			bool check_battery_level_;
-			std::string battery_topic_;
 			
 			
 			ros::Subscriber people_sub_;
