@@ -1,9 +1,0 @@
-KP_v: 1.0
-KP_w: 1.8
-KI_v: 2.0
-KI_w: 4.2
-KD_w: 0.15
-max_v: 1.0
-max_w: 2.0
-action_rate: 0.1
-filter_length: 4
