@@ -57,6 +57,7 @@
   <build_depend>yaml-cpp</build_depend>
   <build_depend>dynamic_reconfigure</build_depend>
   <build_depend>teresa_wsbs</build_depend>
+  <build_depend>teresa_driver</build_depend>
 
   <run_depend>actionlib</run_depend>
   <run_depend>actionlib_msgs</run_depend>
@@ -75,6 +76,7 @@
   <run_depend>common_rosdeps</run_depend>
   <run_depend>dynamic_reconfigure</run_depend>
   <run_depend>teresa_wsbs</run_depend>
+  <run_depend>teresa_driver</run_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

@@ -44,6 +44,9 @@ Upo_navigation_macro_actions::Upo_navigation_macro_actions(tf::TransformListener
 	n.param<double>("secs_to_wait", secs_to_wait_, 8.0);  //seconds
 	n.param<double>("control_frequency", control_frequency_, 15.0);  
 	n.param<int>("social_approaching_type", social_approaching_type_, 1);  
+
+	n.param<bool>("use_leds", use_leds_, false);
+	n.param<int>("leds_number", leds_number_, 60);
 	
 	n.param<string>("yield_map", yieldmap_, std::string(""));
 	std::string yieldpoint_file;
@@ -76,6 +79,11 @@ Upo_navigation_macro_actions::Upo_navigation_macro_actions(tf::TransformListener
 	start_client_ = nh.serviceClient<teresa_wsbs::start>("/wsbs/start");
 	stop_client_ = nh.serviceClient<teresa_wsbs::stop>("/wsbs/stop");
 	wsbs_status_sub_ = nh.subscribe<std_msgs::UInt8>("/wsbs/status", 1, &Upo_navigation_macro_actions::wsbsCallback, this);
+
+
+	//Service for leds control
+	//if(use_leds_)
+	leds_client_ = nh.serviceClient<teresa_driver::Teresa_leds>("teresa_leds"); 
 	
 
 	//Initialize action servers
@@ -140,6 +148,8 @@ void Upo_navigation_macro_actions::reconfigureCB(upo_navigation_macro_actions::N
 	secs_to_wait_ = config.secs_to_wait;
 	social_approaching_type_ = config.social_approaching_type;
 	secs_to_yield_ = config.secs_to_yield;
+	//use_leds_ = config.use_leds;
+	//leds_number_ = config.leds_number;
 	
 }
 
@@ -193,6 +203,9 @@ void Upo_navigation_macro_actions::navigateWaypointCB(const upo_navigation_macro
 {
 
 	printf("¡¡¡¡¡¡¡MacroAction navigatetoWaypoint  -->  started!!!!!!\n");
+
+	if(use_leds_) 
+		setLedColor(GREEN);
 	
 
 	bool ok = UpoNav_->executeNavigation(goal->target_pose); 
@@ -202,6 +215,8 @@ void Upo_navigation_macro_actions::navigateWaypointCB(const upo_navigation_macro
 		nwresult_.result = "Aborted. Navigation error";
 		nwresult_.value = 2;
 		NWActionServer_->setAborted(nwresult_, "Navigation aborted");
+		if(use_leds_) 
+			setLedColor(WHITE);
 		return;
 	}
 
@@ -228,6 +243,8 @@ void Upo_navigation_macro_actions::navigateWaypointCB(const upo_navigation_macro
 					nwresult_.result = "Aborted. Navigation error";
 					nwresult_.value = 2;
 					NWActionServer_->setAborted(nwresult_, "Navigation aborted");
+					if(use_leds_) 
+						setLedColor(WHITE);
 					return;
 				}
 				first = true;
@@ -242,6 +259,8 @@ void Upo_navigation_macro_actions::navigateWaypointCB(const upo_navigation_macro
 				nwresult_.value = 1;
           		ROS_DEBUG_NAMED("upo_navigation_macro_actions","upo_navigation preempting the current goal");
 				NWActionServer_->setPreempted(nwresult_, "Navigation preempted");
+				if(use_leds_) 
+						setLedColor(WHITE);
           		//we'll actually return from execute after preempting
           		return;
           		
@@ -299,8 +318,11 @@ void Upo_navigation_macro_actions::navigateWaypointCB(const upo_navigation_macro
 		nwfeedback_.base_position = new_pose;
 		NWActionServer_->publishFeedback(nwfeedback_);
 
-		if(exit)
+		if(exit) {
+			if(use_leds_) 
+				setLedColor(WHITE);
 			return;
+		}
 			
 		
 		//changeParametersNarrowPlaces();
@@ -327,6 +349,8 @@ void Upo_navigation_macro_actions::navigateWaypointCB(const upo_navigation_macro
 			nwfeedback_.text = "No social path available";
 			NWActionServer_->publishFeedback(nwfeedback_);
 			UpoNav_->stopRRTPlanning();
+			if(use_leds_) 
+				setLedColor(WHITE);
 			return;
 
 		} else {
@@ -351,6 +375,8 @@ void Upo_navigation_macro_actions::navigateWaypointCB(const upo_navigation_macro
 					nwfeedback_.text = "Blocked";
 					NWActionServer_->publishFeedback(nwfeedback_);
 					UpoNav_->stopRRTPlanning();
+					if(use_leds_) 
+						setLedColor(WHITE);
 					return;
 				} else {
 					pose_init = new_pose;
@@ -381,8 +407,11 @@ void Upo_navigation_macro_actions::navigateHomeCB(const upo_navigation_macro_act
 {
 
 	printf("¡¡¡¡¡¡¡MacroAction NavigateHome  -->  started!!!!!!\n");
+	if(use_leds_) 
+		setLedColor(RED);
 	
 	boost::recursive_mutex::scoped_lock l(configuration_mutex_);
+
 
 	bool ok = UpoNav_->executeNavigation(goal->home_pose); 
 	if(!ok)
@@ -391,6 +420,8 @@ void Upo_navigation_macro_actions::navigateHomeCB(const upo_navigation_macro_act
 		nhresult_.result = "Aborted. Navigation error";
 		nhresult_.value = 2;
 		NHActionServer_->setAborted(nhresult_, "Navigation aborted");
+		if(use_leds_) 
+			setLedColor(WHITE);
 		return;
 	}
 
@@ -417,6 +448,8 @@ void Upo_navigation_macro_actions::navigateHomeCB(const upo_navigation_macro_act
 					nhresult_.result = "Aborted. Navigation error";
 					nhresult_.value = 2;
 					NHActionServer_->setAborted(nhresult_, "Navigation aborted");
+					if(use_leds_) 
+						setLedColor(WHITE);
 					return;
 				}
 				first = true;
@@ -430,7 +463,8 @@ void Upo_navigation_macro_actions::navigateHomeCB(const upo_navigation_macro_act
           		nhresult_.result = "Preempted";
 				nhresult_.value = 1;
 				NHActionServer_->setPreempted(nhresult_, "Navigation preempted");
-
+				if(use_leds_) 
+					setLedColor(WHITE);
           		//we'll actually return from execute after preempting
           		return;
           		
@@ -488,8 +522,11 @@ void Upo_navigation_macro_actions::navigateHomeCB(const upo_navigation_macro_act
 		nhfeedback_.base_position = new_pose;
 		NHActionServer_->publishFeedback(nhfeedback_);
 
-		if(exit)
+		if(exit) {
+			if(use_leds_) 
+				setLedColor(WHITE);
 			return;
+		}
 		
 		
 		//changeParametersNarrowPlaces();
@@ -516,6 +553,8 @@ void Upo_navigation_macro_actions::navigateHomeCB(const upo_navigation_macro_act
 			nhfeedback_.text = "No social path available";
 			NHActionServer_->publishFeedback(nhfeedback_);
 			UpoNav_->stopRRTPlanning();
+			if(use_leds_) 
+				setLedColor(WHITE);
 			return;
 
 		} else {
@@ -540,6 +579,8 @@ void Upo_navigation_macro_actions::navigateHomeCB(const upo_navigation_macro_act
 					nhfeedback_.text = "Blocked";
 					NHActionServer_->publishFeedback(nhfeedback_);
 					UpoNav_->stopRRTPlanning();
+					if(use_leds_) 
+						setLedColor(WHITE);
 					return;
 				
 				} else {
@@ -571,6 +612,9 @@ void Upo_navigation_macro_actions::navigateHomeCB(const upo_navigation_macro_act
 void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigation_macro_actions::NavigateInteractionTargetGoal::ConstPtr& goal)
 {
 	printf("¡¡¡¡¡¡¡MacroAction NavigateToInteractionTarget  -->  started!!!!!!\n");
+
+	if(use_leds_) 
+		setLedColor(BLUE);
 	
 	//Disable uva_features if it is active
 	ros::NodeHandle n("/upo_navigation_macro_actions/Navigation_features");
@@ -609,6 +653,8 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 		} 
 		//system("rosrun dynamic_reconfigure dynparam set_from_parameters /upo_navigation_macro_actions/Navigation_features _interaction_target_id:=-1");
 		reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
+		if(use_leds_) 
+			setLedColor(WHITE);
 		return;
 	}
 	if(social_approaching_type_ != 1) {
@@ -642,6 +688,8 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 			}
 			//system("rosrun dynamic_reconfigure dynparam set_from_parameters /upo_navigation_macro_actions/Navigation_features _interaction_target_id:=-1");
 			reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
+			if(use_leds_) 
+				setLedColor(WHITE);
 			return;
 		}
 	}
@@ -686,6 +734,8 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 					}
 					//system("rosrun dynamic_reconfigure dynparam set_from_parameters /upo_navigation_macro_actions/Navigation_features _interaction_target_id:=-1");
 					reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
+					if(use_leds_) 
+						setLedColor(WHITE);
 					return;
 				}
 				if(social_approaching_type_ != 1){
@@ -720,6 +770,8 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 						}
 						//system("rosrun dynamic_reconfigure dynparam set_from_parameters /upo_navigation_macro_actions/Navigation_features _interaction_target_id:=-1");
 						reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
+						if(use_leds_) 
+							setLedColor(WHITE);
 						return;
 					}
 				}
@@ -741,6 +793,8 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 				}
 				//system("rosrun dynamic_reconfigure dynparam set_from_parameters /upo_navigation_macro_actions/Navigation_features _interaction_target_id:=-1");
 				reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
+				if(use_leds_) 
+					setLedColor(WHITE);
           		//we'll actually return from execute after preempting
           		return;
         	}
@@ -761,6 +815,8 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 			}
 			//system("rosrun dynamic_reconfigure dynparam set_from_parameters /upo_navigation_macro_actions/Navigation_features _interaction_target_id:=-1");
 			reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
+			if(use_leds_) 
+				setLedColor(WHITE);
 			return;
 		}
 		
@@ -799,6 +855,8 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 					}
 					//system("rosrun dynamic_reconfigure dynparam set_from_parameters /upo_navigation_macro_actions/Navigation_features _interaction_target_id:=-1");
 					reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
+					if(use_leds_) 
+						setLedColor(WHITE);
 					return;
 				}
 			}			
@@ -878,8 +936,11 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 		nitfeedback_.base_position = new_pose;
 		NITActionServer_->publishFeedback(nitfeedback_);
 
-		if(exit) 
+		if(exit)  {
+			if(use_leds_) 
+				setLedColor(WHITE);
 			return;
+		}
 	
 		//changeParametersNarrowPlaces();
 		changeParametersNarrowPlaces2();
@@ -910,6 +971,8 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 			nitfeedback_.text = "No social path available";
 			NITActionServer_->publishFeedback(nitfeedback_);
 			UpoNav_->stopRRTPlanning();
+			if(use_leds_) 
+				setLedColor(WHITE);
 			return;
 
 		} else {
@@ -942,6 +1005,8 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 					nitfeedback_.text = "Blocked";
 					NITActionServer_->publishFeedback(nitfeedback_);
 					UpoNav_->stopRRTPlanning();
+					if(use_leds_) 
+						setLedColor(WHITE);
 					return;
 				} else {
 					pose_init = new_pose;
@@ -1193,6 +1258,11 @@ void Upo_navigation_macro_actions::walkSideCB(const upo_navigation_macro_actions
 {
 
 	printf("¡¡¡¡¡¡¡MacroAction  Walk side-by-side  -->  started!!!!!!\n");
+
+	if(use_leds_) 
+		setLedColor(BLUE);
+
+
 	ros::Time time_init = ros::Time::now(); 
 	//upo_msgs::PersonPoseUPO p = goal->it;
 	int id = goal->it;
@@ -1299,7 +1369,8 @@ void Upo_navigation_macro_actions::walkSideCB(const upo_navigation_macro_actions
           		wsresult_.result = "Preempted";
 				wsresult_.value = 1;
 				WSActionServer_->setPreempted(wsresult_, "Walking sbs preempted");
-
+				if(use_leds_) 
+					setLedColor(WHITE);
           		//we'll actually return from execute after preempting
           		return;
         	}
@@ -1342,8 +1413,11 @@ void Upo_navigation_macro_actions::walkSideCB(const upo_navigation_macro_actions
 		
 		WSActionServer_->publishFeedback(wsfeedback_);
 		
-		if(exit)
+		if(exit) {
+			if(use_leds_) 
+				setLedColor(WHITE);
 			return;
+		}
 			
 		r.sleep();
 	}
@@ -1361,6 +1435,9 @@ void Upo_navigation_macro_actions::waitCB(const upo_navigation_macro_actions::Wa
 {
 	
 	printf("¡¡¡¡¡¡¡MacroAction Wait  -->  started!!!!!!\n");
+
+	if(use_leds_) 
+			setLedColor(ORANGE);
 	
 	ros::Time time_init;
 	time_init = ros::Time::now();
@@ -1381,6 +1458,8 @@ void Upo_navigation_macro_actions::waitCB(const upo_navigation_macro_actions::Wa
 				
 			} else {
 				WActionServer_->setPreempted(wresult_, "Waiting preempted");
+				if(use_leds_) 
+					setLedColor(WHITE);
 				return;
 			}
 		}
@@ -1401,8 +1480,11 @@ void Upo_navigation_macro_actions::waitCB(const upo_navigation_macro_actions::Wa
 
 		WActionServer_->publishFeedback(wfeedback_);
 		
-		if(exit)
+		if(exit) {
+			if(use_leds_) 
+				setLedColor(WHITE);
 			return;
+		}
 		
 		r.sleep();
 
@@ -1421,6 +1503,8 @@ void Upo_navigation_macro_actions::yieldCB(const upo_navigation_macro_actions::Y
 	
 	printf("¡¡¡¡¡¡¡MacroAction Yield  -->  started!!!!!!\n");
 	
+	if(use_leds_) 
+			setLedColor(ORANGE);
 	
 	//Get the current robot pose in global coordinates
 	geometry_msgs::PoseStamped robot_pose = UpoNav_->getRobotGlobalPosition();
@@ -1442,6 +1526,8 @@ void Upo_navigation_macro_actions::yieldCB(const upo_navigation_macro_actions::Y
 	{
 		ROS_INFO("Yield. Setting ABORTED state 1");
 		YActionServer_->setAborted(yresult_, "Navigation aborted");
+		if(use_leds_) 
+			setLedColor(WHITE);
 		return;
 	}
 	
@@ -1476,6 +1562,8 @@ void Upo_navigation_macro_actions::yieldCB(const upo_navigation_macro_actions::Y
 				{
 					ROS_INFO("Yield. Setting ABORTED state 1");
 					YActionServer_->setAborted(yresult_, "Navigation aborted");
+					if(use_leds_) 
+						setLedColor(WHITE);
 					return;
 				}
 				
@@ -1488,6 +1576,8 @@ void Upo_navigation_macro_actions::yieldCB(const upo_navigation_macro_actions::Y
 				yresult_.value = 1;
           		ROS_DEBUG_NAMED("upo_navigation_macro_actions","upo_navigation preempting the current goal");
 				YActionServer_->setPreempted(yresult_, "Navigation preempted");
+				if(use_leds_) 
+					setLedColor(WHITE);
           		//we'll actually return from execute after preempting
           		return;
 			}
@@ -1540,8 +1630,11 @@ void Upo_navigation_macro_actions::yieldCB(const upo_navigation_macro_actions::Y
 				exit = true;
 		}
 		
-		if(exit)
+		if(exit) {
+			if(use_leds_) 
+				setLedColor(WHITE);
 			return;
+		}
 
 		boost::recursive_mutex::scoped_lock l(configuration_mutex_);
 
@@ -1566,8 +1659,11 @@ void Upo_navigation_macro_actions::yieldCB(const upo_navigation_macro_actions::Y
 
 		YActionServer_->publishFeedback(yfeedback_);
 		
-		if(exit)
+		if(exit) {
+			if(use_leds_) 
+				setLedColor(WHITE);
 			return;
+		}
 		
 		r.sleep();
 
@@ -1588,6 +1684,9 @@ void Upo_navigation_macro_actions::assistedSteeringCB(const upo_navigation_macro
 {
 	
 	//printf("¡¡¡¡¡¡¡MacroAction AssistedSteering  -->  started!!!!!!\n");
+
+	if(use_leds_) 
+		setLedColor(PURPLE);
 	
 	UpoNav_->stopRRTPlanning();
 	
@@ -1618,6 +1717,8 @@ void Upo_navigation_macro_actions::assistedSteeringCB(const upo_navigation_macro
 				
 			} else {
 				ASActionServer_->setPreempted(asresult_, "AssistedSteering preempted");
+				if(use_leds_) 
+					setLedColor(WHITE);
 				return;
 			}
 		}
@@ -1641,8 +1742,11 @@ void Upo_navigation_macro_actions::assistedSteeringCB(const upo_navigation_macro
 		
 		ASActionServer_->publishFeedback(asfeedback_);
 		
-		if(exit)
+		if(exit) {
+			if(use_leds_) 
+				setLedColor(WHITE);
 			return;
+		}
 		
 		r.sleep();
 
@@ -1650,6 +1754,78 @@ void Upo_navigation_macro_actions::assistedSteeringCB(const upo_navigation_macro
 	
 	ROS_INFO("Setting ABORTED state");
 	ASActionServer_->setAborted(asresult_, "Assisted Steering aborted because the node has been killed");
+}
+
+
+
+
+void Upo_navigation_macro_actions:: setLedColor(color c)
+{
+
+	rgb_colours_.clear();
+	teresa_driver::Teresa_leds led_srv;
+
+	switch(c)
+    {
+		case WHITE:
+			for(unsigned int i=0; i<leds_number_; i++) {
+				rgb_colours_.push_back(255);
+				rgb_colours_.push_back(255);
+				rgb_colours_.push_back(255);
+			}
+		break;
+
+		case RED:
+			for(unsigned int i=0; i<leds_number_; i++) {
+				rgb_colours_.push_back(255);
+				rgb_colours_.push_back(0);
+				rgb_colours_.push_back(0);
+			}
+		break;
+
+		case GREEN:
+			for(unsigned int i=0; i<leds_number_; i++) {
+				rgb_colours_.push_back(0);
+				rgb_colours_.push_back(255);
+				rgb_colours_.push_back(0);
+			}
+		break;
+
+		case BLUE:
+			for(unsigned int i=0; i<leds_number_; i++) {
+				rgb_colours_.push_back(0);
+				rgb_colours_.push_back(0);
+				rgb_colours_.push_back(255);
+			}
+		break;
+
+		case ORANGE:
+			for(unsigned int i=0; i<leds_number_; i++) {
+				rgb_colours_.push_back(255);
+				rgb_colours_.push_back(128);
+				rgb_colours_.push_back(20);
+			}
+		break;
+
+		case PURPLE:
+			for(unsigned int i=0; i<leds_number_; i++) {
+				rgb_colours_.push_back(204);
+				rgb_colours_.push_back(0);
+				rgb_colours_.push_back(204);
+			}
+		break;
+
+		default:
+			for(unsigned int i=0; i<leds_number_; i++) {
+				rgb_colours_.push_back(255);
+				rgb_colours_.push_back(255);
+				rgb_colours_.push_back(255);
+			}
+	}
+
+	led_srv.request.rgb_values = rgb_colours_;
+	leds_client_.call(led_srv);
+
 }
 
 

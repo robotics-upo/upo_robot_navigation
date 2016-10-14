@@ -130,7 +130,7 @@ generate_dynamic_reconfigure_options(
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES upo_navigation_macro_actions
-  CATKIN_DEPENDS actionlib actionlib_msgs cmake_modules geometry_msgs move_base_msgs rosconsole roscpp std_msgs angles tf upo_navigation upo_msgs yaml-cpp dynamic_reconfigure teresa_wsbs
+  CATKIN_DEPENDS actionlib actionlib_msgs cmake_modules geometry_msgs move_base_msgs rosconsole roscpp std_msgs angles tf upo_navigation upo_msgs yaml-cpp dynamic_reconfigure teresa_wsbs teresa_driver
   DEPENDS system_lib
 )
 
@@ -174,6 +174,7 @@ add_dependencies(upo_navigation_macro_actions move_base_msgs_gencpp)
 add_dependencies(upo_navigation_macro_actions actionlib_msgs_gencpp)
 add_dependencies(upo_navigation_macro_actions upo_msgs_gencpp)
 add_dependencies(upo_navigation_macro_actions teresa_wsbs_gencpp)
+add_dependencies(upo_navigation_macro_actions teresa_driver_gencpp)
 add_dependencies(upo_navigation_macro_actions ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against

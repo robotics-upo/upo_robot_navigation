@@ -40,6 +40,9 @@
 #include <std_msgs/UInt8.h>
 #include <std_msgs/UInt16.h>
 
+//Led array service
+#include <teresa_driver/Teresa_leds.h>
+
 #include <boost/thread/mutex.hpp> //Mutex
 
 //Dynamic reconfigure
@@ -63,6 +66,8 @@
 		public:
 		
 			enum datatype{INT_TYPE=1, DOUBLE_TYPE=2, BOOL_TYPE=3, STRING_TYPE=4, GROUP_TYPE=5};
+
+			enum color{WHITE=1, RED=2, GREEN=3, BLUE=4, ORANGE=5, PURPLE=6};
 		
 			Upo_navigation_macro_actions(tf::TransformListener& tf, upo_nav::UpoNavigation* nav);
 			~Upo_navigation_macro_actions();
@@ -83,6 +88,7 @@
 			void changeParametersNarrowPlaces();
 			void changeParametersNarrowPlaces2();
 			bool reconfigureParameters(std::string node, std::string param_name, std::string value, const datatype type);
+			void setLedColor(color c);
 
 		private:
 
@@ -187,7 +193,13 @@
 			ros::Subscriber wsbs_status_sub_;
 			boost::mutex wsbs_mutex_;
 			int wsbs_status_;
-			
+
+
+			//Leds service
+			ros::ServiceClient leds_client_;
+			bool use_leds_;
+			int leds_number_;
+			std::vector<uint8_t> rgb_colours_;
 			
 			
 			ros::Subscriber people_sub_;
