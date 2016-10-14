@@ -114,12 +114,11 @@
 
 	</node>
 
+  <param name="upo_navigation_behavior_fsm/waypoint_defs" value="$(find upo_launchers)/$(arg scenario)/maps/waypoint_defs.yaml"/>
 
-  <node pkg="decision_making_uva" name="upo_event_manager" type="upo_event_manager.py" output="screen"/>
-  <node pkg="decision_making_uva" name="upo_pilot_interface_bridge" type="upo_pilot_interface_bridge.py" output="screen"/>
+  <node pkg="decision_making_uva" name="upo_event_manager" type="event_manager.py" output="screen"/>
+  <node pkg="decision_making_uva" name="upo_pilot_interface_bridge" type="pilot_interface_bridge.py" output="screen"/>
  
-  <node pkg="decision_making_uva" name="upo_navigation_behavior_fsm" type="upo_navigation_behavior_fsm.py" output="screen">
-    <param name="waypoint_defs" value="$(find upo_launchers)/$(arg scenario)/maps/waypoint_defs.yaml"/>
-  </node>
+  <node pkg="decision_making_uva" name="upo_navigation_behavior_fsm" type="upo_navigation_behavior_fsm.py" output="screen" />
 
 </launch>
