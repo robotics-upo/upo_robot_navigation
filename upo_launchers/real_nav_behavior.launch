@@ -91,6 +91,8 @@
 		<!--Time (seconds) for waiting action until checking if path cleared or not -->
 		<param name="secs_to_wait" type="double" value="8.0" />
 
+		<param name="use_leds" type="bool" value="false" />
+		<param name="leds_number" type="int" value="60" />
 
 		<!-- Take into account the person orientation or group orientation to perform an approach -->
 		<param name="social_approaching_type" value="1" />
