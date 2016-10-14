@@ -196,20 +196,20 @@ bool AssistedSteering::findValidCmd(geometry_msgs::Twist* twist)
 				twist->linear.x = aux_lv;
 				twist->angular.z = aux_av;
 				if(checkCommand(twist)) {
-					printf("Correct velocities found!!! lv:%.3f, av:%.3f\n", twist->linear.x, twist->angular.z);
+					//printf("Correct velocities found!!! lv:%.3f, av:%.3f\n", twist->linear.x, twist->angular.z);
 					return true;
 				}
-				printf("Velocities lv:%.3f, av:%.3f not valid\n", twist->linear.x, twist->angular.z);
+				//printf("Velocities lv:%.3f, av:%.3f not valid\n", twist->linear.x, twist->angular.z);
 
 				
 				aux_av = av - (ang_vel_inc_*j);
 				twist->linear.x = aux_lv;
 				twist->angular.z = aux_av;
 				if(checkCommand(twist)) {
-					printf("Correct velocities found!!! lv:%.3f, av:%.3f\n", twist->linear.x, twist->angular.z);
+					//printf("Correct velocities found!!! lv:%.3f, av:%.3f\n", twist->linear.x, twist->angular.z);
 					return true;
 				}
-				printf("Velocities lv:%.3f, av:%.3f not valid\n", twist->linear.x, twist->angular.z);
+				//printf("Velocities lv:%.3f, av:%.3f not valid\n", twist->linear.x, twist->angular.z);
 				
 			}
 		}
