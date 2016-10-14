@@ -78,6 +78,7 @@ namespace assisted_steering {
 
 			sensor_msgs::LaserScan			laser_scan_;
 			boost::mutex 					laser_mutex_;
+			ros::Time						scan_time_;		
 			geometry_msgs::Twist			twist_;
 			boost::mutex 					twist_mutex_;
 

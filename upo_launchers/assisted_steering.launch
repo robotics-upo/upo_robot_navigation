@@ -2,17 +2,17 @@
 
 <launch>
 
-   <node pkg="teleop_twist_keyboard" name="teleop_twist_keyboard" type="teleop_twist_keyboard.py" output="screen">
+   <!--node pkg="teleop_twist_keyboard" name="teleop_twist_keyboard" type="teleop_twist_keyboard.py" output="screen">
     <remap from="cmd_vel" to="teresa/cmd_vel"/>
-   </node>
+   </node-->
 
    <node pkg="assisted_steering" name="assisted_steering" type="assisted_steering" output="screen">
 	<param name="laser_topic" type="string" value="scan360" />
 	<param name="odom_topic" type="string" value="odom" />
-	<param name="cmdvel_topic" type="string" value="teresa/cmd_vel" />
-	<param name="new_cmdvel_topic" type="string" value="cmd_vel" />
+	<param name="cmdvel_topic" type="string" value="cmd_vel_itf" />
+	<param name="new_cmdvel_topic" type="string" value="cmd_vel_ast" />
 	<param name="max_lin_vel" type="double" value="0.32" />
-	<param name="max_ang_vel" type="double" value="0.8" />
+	<param name="max_ang_vel" type="double" value="0.7" />
 	<param name="max_lin_acc" type="double" value="1.0" />
 	<param name="max_ang_acc" type="double" value="1.0" />
 	<param name="time_step" type="double" value="1.0" />

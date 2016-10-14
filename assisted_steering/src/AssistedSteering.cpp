@@ -17,8 +17,10 @@ AssistedSteering::~AssistedSteering() {
 
 
 void AssistedSteering::setup() {
-	
+
 	ros::NodeHandle n("~");
+
+	scan_time_ = ros::Time::now();
 
 	//Dynamic reconfigure
 	dsrv_ = new dynamic_reconfigure::Server<assisted_steering::AssistedSteeringConfig>(n); //ros::NodeHandle("~")
@@ -87,6 +89,7 @@ void AssistedSteering::laserCallback(const sensor_msgs::LaserScan::ConstPtr& msg
 	//Otherwise we should include a shift to the center in the calculations.
 	laser_mutex_.lock();
 	laser_scan_ = *msg;
+	scan_time_ = ros::Time::now();
 	laser_mutex_.unlock();
 }
 
@@ -98,10 +101,14 @@ void AssistedSteering::cmdvelCallback(const geometry_msgs::Twist::ConstPtr& msg)
 	twist_ = *msg;
 	twist_mutex_.unlock();
 
+	laser_mutex_.lock();
+	ros::Time laser_time = scan_time_;
+	laser_mutex_.unlock();
 
 	boost::recursive_mutex::scoped_lock l(configuration_mutex_);
 
-	if(isActive_) {
+	double secs = (ros::Time::now() - laser_time).toSec();
+	if(isActive_ && secs < 1.5) {
 		//Get current robot velocity
 		odom_helper_->getRobotVel(robot_vel_);
 		//Check if the command is valid
@@ -196,20 +203,20 @@ bool AssistedSteering::findValidCmd(geometry_msgs::Twist* twist)
 				twist->linear.x = aux_lv;
 				twist->angular.z = aux_av;
 				if(checkCommand(twist)) {
-					//printf("Correct velocities found!!! lv:%.3f, av:%.3f\n", twist->linear.x, twist->angular.z);
+					printf("Correct velocities found!!! lv:%.3f, av:%.3f\n", twist->linear.x, twist->angular.z);
 					return true;
 				}
-				//printf("Velocities lv:%.3f, av:%.3f not valid\n", twist->linear.x, twist->angular.z);
+				printf("Velocities lv:%.3f, av:%.3f not valid\n", twist->linear.x, twist->angular.z);
 
 				
 				aux_av = av - (ang_vel_inc_*j);
 				twist->linear.x = aux_lv;
 				twist->angular.z = aux_av;
 				if(checkCommand(twist)) {
-					//printf("Correct velocities found!!! lv:%.3f, av:%.3f\n", twist->linear.x, twist->angular.z);
+					printf("Correct velocities found!!! lv:%.3f, av:%.3f\n", twist->linear.x, twist->angular.z);
 					return true;
 				}
-				//printf("Velocities lv:%.3f, av:%.3f not valid\n", twist->linear.x, twist->angular.z);
+				printf("Velocities lv:%.3f, av:%.3f not valid\n", twist->linear.x, twist->angular.z);
 				
 			}
 		}
