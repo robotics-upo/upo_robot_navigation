@@ -168,9 +168,9 @@ Navigation_features:
   # 1 -> 5 features
   upo_featureset:             0
   # Weights for function costs (featureset 0)
-  w1:                         0.1   #goal dist
-  w2:                         0.5  #obstacle dist
-  w3:                         0.4  #proxemics
+  w1:                         0.15   #goal dist
+  w2:                         0.475  #obstacle dist
+  w3:                         0.375  #proxemics
   # Weights for function costs (featureset 1)
   #w1:                         0.1   #goal dist
   #w2:                         0.2  #obstacle dist
@@ -196,7 +196,7 @@ PurePlanner:
 
 # Goal Tolerance Parameters
   yaw_goal_tolerance:         0.1
-  xy_goal_tolerance:          0.10
+  xy_goal_tolerance:          0.15
   wp_tolerance:               0.5
   
 # Forward Simulation Parameters
