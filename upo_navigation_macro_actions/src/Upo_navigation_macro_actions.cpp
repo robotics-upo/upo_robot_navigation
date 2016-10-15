@@ -82,8 +82,8 @@ Upo_navigation_macro_actions::Upo_navigation_macro_actions(tf::TransformListener
 
 
 	//Service for leds control
-	//if(use_leds_)
-	leds_client_ = nh.serviceClient<teresa_driver::Teresa_leds>("teresa_leds"); 
+	if(use_leds_)
+		leds_client_ = nh.serviceClient<teresa_driver::Teresa_leds>("teresa_leds"); 
 	
 
 	//Initialize action servers
