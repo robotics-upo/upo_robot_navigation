@@ -107,7 +107,7 @@
 
 
 	<param name="robot_description"
-    command="$(find xacro)/xacro.py '$(find teresa_gazebo)/urdf/teresa_robot.urdf.xacro'" />
+    command="$(find xacro)/xacro.py '$(find teresa_gazebo)/urdf/teresa_idmind.urdf.xacro'" />
 
   	<!-- send fake joint values -->
   	<node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
@@ -117,7 +117,9 @@
   	<!-- Combine joint values -->
   	<node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher"/>
 
-  <param name="upo_navigation_behavior_fsm/waypoint_defs" value="$(find upo_launchers)/$(arg scenario)/maps/waypoint_defs.yaml"/>
+  <!-- <param name="waypoint_defs" value="$(find upo_launchers)/$(arg scenario)/maps/waypoint_defs.yaml"/>-->
+
+  <param name="/waypoint_defs" value="cfg/$(arg scenario)_waypoint_defs.yaml"/>
 
   <node pkg="decision_making_uva" name="upo_event_manager" type="event_manager.py" output="screen"/>
   <node pkg="decision_making_uva" name="upo_pilot_interface_bridge" type="pilot_interface_bridge.py" output="screen"/>
