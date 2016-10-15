@@ -34,7 +34,7 @@
    <param name="final_dcdc_mask" type="int" value="255"/>  <!--243 lasers off -->
    <param name="height_velocity" type="int" value="20"/>
    <param name="tilt_velocity" type="int" value="3"/>
-   <param name="leds_pattern" type="str" value="knight_rider"/>
+   <!--param name="leds_pattern" type="str" value="knight_rider"/-->
    <param name="A_left" type="double" value ="89.4" /> 
    <param name="B_left" type="double" value="-0.394" /> 
    <param name="A_right" type="double" value="88.1" /> 
