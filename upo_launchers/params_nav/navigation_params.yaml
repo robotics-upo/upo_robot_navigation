@@ -195,8 +195,8 @@ PurePlanner:
   min_in_place_rot_vel:       0.5
 
 # Goal Tolerance Parameters
-  yaw_goal_tolerance:         0.1
-  xy_goal_tolerance:          0.15
+  yaw_goal_tolerance:         0.12
+  xy_goal_tolerance:          0.20
   wp_tolerance:               0.5
   
 # Forward Simulation Parameters
