@@ -551,7 +551,7 @@ namespace simple_local_planner{
 	double incr = 1/controller_freq_;
 
 	// Check if we need rotation in place before moving the robot to reach the way-point
-	if(fabs(dt) > 0.75) //0.7~41º  0.79~45º
+	if(fabs(dt) > 1.3) // 0.87 0.7~41º  0.79~45º
 	{
 		vx = rvx-incr;  
 		if(vx < 0.0)
@@ -652,7 +652,8 @@ namespace simple_local_planner{
 			cmd_vel.angular.x = 0.0;
 			cmd_vel.angular.y = 0.0;
 			cmd_vel.angular.z = 0.0;
-			return false;
+			//return false;
+			return true;
 		}
 		
 		//option 2
