@@ -791,6 +791,9 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 				reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string			("interaction_target_id"), std::string("-1"), INT_TYPE);	
 
 				UpoNav_->stopRRTPlanning();
+				if(use_leds_) 
+					setLedColor(WHITE);
+				return;
 			}
 		}
 		
