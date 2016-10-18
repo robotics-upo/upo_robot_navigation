@@ -781,14 +781,17 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 		{
 			//If the distance from the base link to the goal is short enough
 			//We can stopt the action
-			float d = sqrt((new_g.pose.position.x*new_g.pose.position.x) + (new_g.pose.position.y*new_g.pose.position.y));
-			if(d < 0.55) {
+			geometry_msgs::PoseStamped pose = transformPoseTo(new_g, "base_link");
+			float d = sqrt((pose.pose.position.x*pose.pose.position.x) + (pose.pose.position.y*pose.pose.position.y));
+			//printf("\nFrame: %s. Distance: %.2f\n", pose.header.frame_id.c_str(), d);
+			if(d < 0.60) {
+				//ROS_WARN("STOPPING NAVIGATION, GOAL POSE CLOSE FROM ROBOT");
 				ROS_INFO("NavigateToInteractionTarget. Setting SUCCEEDED state");
 				nitresult_.result = "Succeeded";
 				nitresult_.value = 0;
 				NITActionServer_->setSucceeded(nitresult_, "IT Reached");
 				nitfeedback_.text = "Succeeded";
-				reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string			("interaction_target_id"), std::string("-1"), INT_TYPE);	
+				reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);	
 
 				UpoNav_->stopRRTPlanning();
 				if(use_leds_) 
@@ -1972,11 +1975,12 @@ void Upo_navigation_macro_actions::changeParametersNarrowPlaces2()
 geometry_msgs::PoseStamped Upo_navigation_macro_actions::transformPoseTo(geometry_msgs::PoseStamped pose_in, std::string frame_out)
 {
 	geometry_msgs::PoseStamped in = pose_in;
+	in.header.stamp = ros::Time();
 	geometry_msgs::PoseStamped pose_out;
 	try {
 		tf_listener_->transformPose(frame_out.c_str(), in, pose_out);
 	}catch (tf::TransformException ex){
-		ROS_WARN("TransformException in method transformPoseTo: %s",ex.what());
+		ROS_WARN("Macro-Action class. TransformException in method transformPoseTo: %s",ex.what());
 		pose_out.header = in.header;
 		pose_out.header.stamp = ros::Time::now();
 		pose_out.pose.position.x = 0.0;
