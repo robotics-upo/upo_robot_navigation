@@ -57,7 +57,7 @@ RRT_ros_wrapper:
   # 4 -> Kinodynamic RRTstar 
   # 5 -> Kinodynamic simplified RRTstar
   rrt_planner_type:           2 
-  rrt_solve_time:             0.9 
+  rrt_solve_time:             1.0 
   rrt_goal_bias:              0.05 
   rrt_max_insertion_dist:     0.25 #0.25<-2  0.50 o 1.0<-4
   rrt_goal_xy_tol:            0.12
