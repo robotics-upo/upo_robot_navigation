@@ -63,6 +63,9 @@ Upo_navigation_macro_actions::Upo_navigation_macro_actions(tf::TransformListener
 	robot_inzone2_ = false;
 	person_inzone_ = false;
 
+
+	manual_control_ = false;
+
 	//Dynamic reconfigure
 	//dsrv_ = new dynamic_reconfigure::Server<upo_navigation_macro_actions::NavigationMacroActionsConfig>(n);
     //dynamic_reconfigure::Server<upo_navigation_macro_actions::NavigationMacroActionsConfig>::CallbackType cb = boost::bind(&Upo_navigation_macro_actions::reconfigureCB, this, _1, _2);
@@ -621,15 +624,6 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 	bool uva_feat;
 	n.param<bool>("use_uva_features", uva_feat, false);
 	
-	
-	//Disable uva_features in order to use the upo gaussians for approaching
-	if(uva_feat) {
-		printf("Disabling uva_features_set\n");
-		//system("rosrun dynamic_reconfigure dynparam set_from_parameters /upo_navigation_macro_actions/Navigation_features _use_uva_features:=False");
-		reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("use_uva_features"), std::string("0"), BOOL_TYPE);
-	} 
-	
-
 	//upo_msgs::PersonPoseUPO p = goal->it;
 	int id_it = goal->it;
 	
@@ -638,25 +632,18 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 	
 	boost::recursive_mutex::scoped_lock l(configuration_mutex_);
 	
-	//goal_pose = approachIT(&p);
 	goal_pose = approachIT(id_it);
 	if(goal_pose.header.frame_id == "bad") {
 		ROS_INFO("NavigateToInteractionTarget. Setting ABORTED state. Person not found");
 		nitresult_.result = "Aborted. Navigation error";
 		nitresult_.value = 2;
 		NITActionServer_->setAborted(nitresult_, "Navigation aborted because of IT was lost");
-		
-		if(uva_feat) {
-			printf("Enabling uva_features_set\n");
-			//system("rosrun dynamic_reconfigure dynparam set_from_parameters /upo_navigation_macro_actions/Navigation_features _use_uva_features:=True");
-			reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("use_uva_features"), std::string("1"), BOOL_TYPE);
-		} 
-		//system("rosrun dynamic_reconfigure dynparam set_from_parameters /upo_navigation_macro_actions/Navigation_features _interaction_target_id:=-1");
 		reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
 		if(use_leds_) 
 			setLedColor(WHITE);
 		return;
 	}
+	//If we take into account the orientation, adapt the gaussian of the IT
 	if(social_approaching_type_ != 1) {
 		std::string str = std::to_string(id_it);
 		reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), str, INT_TYPE);
@@ -669,6 +656,8 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 	{
 		bool ok2 = false;
 		if(social_approaching_type_ > 1) {
+			//If the social approach taking into account orientation fails,
+			//Try the approach without orientation
 			social_approaching_type_ = 1;
 			//goal_pose = approachIT(&p);
 			goal_pose = approachIT(id_it);
@@ -681,12 +670,6 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 			nitresult_.result = "Aborted. Navigation error";
 			nitresult_.value = 2;
 			NITActionServer_->setAborted(nitresult_, "Navigation aborted");
-			if(uva_feat) {
-				printf("Enabling uva_features_set\n");
-				//system("rosrun dynamic_reconfigure dynparam set_from_parameters /upo_navigation_macro_actions/Navigation_features _use_uva_features:=True");
-				reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("use_uva_features"), std::string("1"), BOOL_TYPE);
-			}
-			//system("rosrun dynamic_reconfigure dynparam set_from_parameters /upo_navigation_macro_actions/Navigation_features _interaction_target_id:=-1");
 			reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
 			if(use_leds_) 
 				setLedColor(WHITE);
@@ -727,21 +710,12 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 					nitresult_.result = "Aborted. Navigation error";
 					nitresult_.value = 2;
 					NITActionServer_->setAborted(nitresult_, "Navigation aborted because of IT was lost");
-					if(uva_feat) {
-						printf("Enabling uva_features_set\n");
-						//system("rosrun dynamic_reconfigure dynparam set_from_parameters /upo_navigation_macro_actions/Navigation_features _use_uva_features:=True");
-						reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("use_uva_features"), std::string("1"), BOOL_TYPE);
-					}
-					//system("rosrun dynamic_reconfigure dynparam set_from_parameters /upo_navigation_macro_actions/Navigation_features _interaction_target_id:=-1");
 					reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
 					if(use_leds_) 
 						setLedColor(WHITE);
 					return;
 				}
 				if(social_approaching_type_ != 1){
-					//char buffer [20]; 
-					//char *intStr = itoa(p.id, buffer, 10);
-					//string str = string(intStr);
 					std::string str = std::to_string(id_it);
 					reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), str, INT_TYPE);
 				}
@@ -763,12 +737,6 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 						nitresult_.result = "Aborted. Navigation error";
 						nitresult_.value = 2;
 						NITActionServer_->setAborted(nitresult_, "Navigation aborted");
-						if(uva_feat) {
-							printf("Enabling uva_features_set\n");
-							//system("rosrun dynamic_reconfigure dynparam set_from_parameters /upo_navigation_macro_actions/Navigation_features _use_uva_features:=True");
-							reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("use_uva_features"), std::string("1"), BOOL_TYPE);
-						}
-						//system("rosrun dynamic_reconfigure dynparam set_from_parameters /upo_navigation_macro_actions/Navigation_features _interaction_target_id:=-1");
 						reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
 						if(use_leds_) 
 							setLedColor(WHITE);
@@ -786,12 +754,6 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
           		nitresult_.result = "Preempted";
 				nitresult_.value = 1;
 				NITActionServer_->setPreempted(nitresult_, "Navigation preempted");
-				if(uva_feat) {
-					printf("Enabling uva_features_set\n");
-					//system("rosrun dynamic_reconfigure dynparam set_from_parameters /upo_navigation_macro_actions/Navigation_features _use_uva_features:=True");
-					reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("use_uva_features"), std::string("1"), BOOL_TYPE);
-				}
-				//system("rosrun dynamic_reconfigure dynparam set_from_parameters /upo_navigation_macro_actions/Navigation_features _interaction_target_id:=-1");
 				reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
 				if(use_leds_) 
 					setLedColor(WHITE);
@@ -808,16 +770,28 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 			nitresult_.result = "Aborted. Navigation error";
 			nitresult_.value = 2;
 			NITActionServer_->setAborted(nitresult_, "Navigation aborted because of IT was lost");
-			if(uva_feat) {
-				printf("Enabling uva_features_set\n");
-				//system("rosrun dynamic_reconfigure dynparam set_from_parameters /upo_navigation_macro_actions/Navigation_features _use_uva_features:=True");
-				reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("use_uva_features"), std::string("1"), BOOL_TYPE);
-			}
-			//system("rosrun dynamic_reconfigure dynparam set_from_parameters /upo_navigation_macro_actions/Navigation_features _interaction_target_id:=-1");
 			reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
 			if(use_leds_) 
 				setLedColor(WHITE);
 			return;
+		}
+
+		//This has been included for a quicker transition to conversation mode
+		if(social_approaching_type_ == 1)
+		{
+			//If the distance from the base link to the goal is short enough
+			//We can stopt the action
+			float d = sqrt((new_g.pose.position.x*new_g.pose.position.x) + (new_g.pose.position.y*new_g.pose.position.y));
+			if(d < 0.55) {
+				ROS_INFO("NavigateToInteractionTarget. Setting SUCCEEDED state");
+				nitresult_.result = "Succeeded";
+				nitresult_.value = 0;
+				NITActionServer_->setSucceeded(nitresult_, "IT Reached");
+				nitfeedback_.text = "Succeeded";
+				reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string			("interaction_target_id"), std::string("-1"), INT_TYPE);	
+
+				UpoNav_->stopRRTPlanning();
+			}
 		}
 		
 		float min_dist = 0.60;
@@ -848,12 +822,6 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 					nitresult_.result = "Aborted. Navigation error";
 					nitresult_.value = 2;
 					NITActionServer_->setAborted(nitresult_, "Navigation aborted");
-					if(uva_feat) {
-						printf("Enabling uva_features_set\n");
-						//system("rosrun dynamic_reconfigure dynparam set_from_parameters /upo_navigation_macro_actions/Navigation_features _use_uva_features:=True");
-						reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("use_uva_features"), std::string("1"), BOOL_TYPE);
-					}
-					//system("rosrun dynamic_reconfigure dynparam set_from_parameters /upo_navigation_macro_actions/Navigation_features _interaction_target_id:=-1");
 					reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
 					if(use_leds_) 
 						setLedColor(WHITE);
@@ -880,12 +848,6 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 				nitresult_.result = "Aborted. Navigation error 2";
 				nitresult_.value = 3;
 				NITActionServer_->setAborted(nitresult_, "Approaching aborted");
-				if(uva_feat) {
-					printf("Enabling uva_features_set\n");
-					//system("rosrun dynamic_reconfigure dynparam set_from_parameters /upo_navigation_macro_actions/Navigation_features _use_uva_features:=True");
-					reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("use_uva_features"), std::string("1"), BOOL_TYPE);
-				}
-				//system("rosrun dynamic_reconfigure dynparam set_from_parameters /upo_navigation_macro_actions/Navigation_features _interaction_target_id:=-1");
 				reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
 				exit = true;
 				break;
@@ -904,12 +866,6 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 				nitresult_.value = 0;
 				NITActionServer_->setSucceeded(nitresult_, "IT Reached");
 				nitfeedback_.text = "Succeeded";
-				if(uva_feat) {
-					printf("Enabling uva_features_set\n");
-					//system("rosrun dynamic_reconfigure dynparam set_from_parameters /upo_navigation_macro_actions/Navigation_features _use_uva_features:=True");
-					reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("use_uva_features"), std::string("1"), BOOL_TYPE);
-				}
-				//system("rosrun dynamic_reconfigure dynparam set_from_parameters /upo_navigation_macro_actions/Navigation_features _interaction_target_id:=-1");
 				reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
 				exit = true;
 				break;
@@ -921,12 +877,6 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 				nitresult_.result = "Aborted. Navigation error 2";
 				nitresult_.value = 3;
 				NITActionServer_->setAborted(nitresult_, "Navigation aborted because an unexpected pursue value was received");
-				if(uva_feat) {
-					printf("Enabling uva_features_set\n");
-					//system("rosrun dynamic_reconfigure dynparam set_from_parameters /upo_navigation_macro_actions/Navigation_features _use_uva_features:=True");
-					reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("use_uva_features"), std::string("1"), BOOL_TYPE);
-				}
-				//system("rosrun dynamic_reconfigure dynparam set_from_parameters /upo_navigation_macro_actions/Navigation_features _interaction_target_id:=-1");
 				reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
 				exit = true;
 				break;
@@ -961,12 +911,6 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 			nitresult_.result = "Aborted. No social path available";
 			nitresult_.value = 4;
 			NITActionServer_->setAborted(nitresult_, "Navigation aborted. No social path available. Yield");
-			if(uva_feat) {
-				printf("Enabling uva_features_set\n");
-				//system("rosrun dynamic_reconfigure dynparam set_from_parameters /upo_navigation_macro_actions/Navigation_features _use_uva_features:=True");
-				reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("use_uva_features"), std::string("1"), BOOL_TYPE);
-			}
-			//system("rosrun dynamic_reconfigure dynparam set_from_parameters /upo_navigation_macro_actions/Navigation_features _interaction_target_id:=-1");
 			reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
 			nitfeedback_.text = "No social path available";
 			NITActionServer_->publishFeedback(nitfeedback_);
@@ -995,12 +939,6 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 					nitresult_.result = "Aborted. blocked situation";
 					nitresult_.value = 5;
 					NITActionServer_->setAborted(nitresult_, "Navigation aborted. blocked");
-					if(uva_feat) {
-						printf("Enabling uva_features_set\n");
-						//system("rosrun dynamic_reconfigure dynparam set_from_parameters /upo_navigation_macro_actions/Navigation_features _use_uva_features:=True");
-						reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("use_uva_features"), std::string("1"), BOOL_TYPE);
-					}
-					//system("rosrun dynamic_reconfigure dynparam set_from_parameters /upo_navigation_macro_actions/Navigation_features _interaction_target_id:=-1");
 					reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
 					nitfeedback_.text = "Blocked";
 					NITActionServer_->publishFeedback(nitfeedback_);
@@ -1113,6 +1051,9 @@ geometry_msgs::PoseStamped Upo_navigation_macro_actions::approachIT(int id)
 		return goal_pose;
 	}
 	
+
+	
+
 	
 	if(social_approaching_type_ == 1)  //Person orientation is NOT taken into account
 	{
@@ -1171,7 +1112,6 @@ geometry_msgs::PoseStamped Upo_navigation_macro_actions::approachIT(int id)
 		goal_pose.pose.position.y = goal_pose.pose.position.y + safe_dist*sin(yaw);
 		yaw = normalizeAngle((yaw+M_PI), -M_PI, M_PI);
 		goal_pose.pose.orientation = tf::createQuaternionMsgFromYaw(yaw);
-		
 		
 		//2. Activate the id of the target to adapt the gaussian
 		/*char buf[10];
@@ -1682,26 +1622,25 @@ void Upo_navigation_macro_actions::yieldCB(const upo_navigation_macro_actions::Y
 
 void Upo_navigation_macro_actions::assistedSteeringCB(const upo_navigation_macro_actions::AssistedSteeringGoal::ConstPtr& goal)
 {
-	
-	//printf("¡¡¡¡¡¡¡MacroAction AssistedSteering  -->  started!!!!!!\n");
+
+	if(!manual_control_) {
+		printf("¡¡¡¡¡¡¡MacroAction AssistedSteering  -->  started!!!!!!\n");
+		manual_control_ = true;
+		UpoNav_->stopRRTPlanning();
+	} 
 
 	if(use_leds_) 
 		setLedColor(PURPLE);
 	
-	UpoNav_->stopRRTPlanning();
 	
 	ros::Time time_init;
 	time_init = ros::Time::now();
 	bool exit = false;
 	
 	
-	//as_->resume();
-	
-	
 	//boost::recursive_mutex::scoped_lock l(configuration_mutex_);
 
-	//Monitorize the navigation action
-	//ros::Rate r(control_frequency_);	
+		
 	ros::Rate r(30.0);
 	while(nh7_.ok())
 	{
@@ -1712,8 +1651,6 @@ void Upo_navigation_macro_actions::assistedSteeringCB(const upo_navigation_macro
 				//ROS_INFO("Accepting new goal");
           		upo_navigation_macro_actions::AssistedSteeringGoal new_goal = *ASActionServer_->acceptNewGoal();
 				time_init = ros::Time::now();
-				//if(as_->isPaused())
-					//as_->resume();
 				
 			} else {
 				ASActionServer_->setPreempted(asresult_, "AssistedSteering preempted");
@@ -1725,24 +1662,22 @@ void Upo_navigation_macro_actions::assistedSteeringCB(const upo_navigation_macro
 		
 		asfeedback_.text = "Robot manually controlled";
 
-		//if(as_->isReceivingCdms())
-		//	time_init = ros::Time::now();
-		//else{
-			//Check the time without receiving commands from the interface
-			double time = (ros::Time::now() - time_init).toSec();
-			if(time > 7.0)
-			{
-				asfeedback_.text = "Manual control finished";
-				asresult_.result = "Assisted Steering Succeeded";
-				asresult_.value = 0;
-				ASActionServer_->setSucceeded(asresult_, "Assisted Steering succeeded");
-				exit = true;
-			}
-		//}
+	
+		//Check the time without receiving commands from the interface
+		double time = (ros::Time::now() - time_init).toSec();
+		if(time > 2.0)
+		{
+			asfeedback_.text = "Manual control finished";
+			asresult_.result = "Assisted Steering Succeeded";
+			asresult_.value = 0;
+			ASActionServer_->setSucceeded(asresult_, "Assisted Steering succeeded");
+			exit = true;
+		}
 		
 		ASActionServer_->publishFeedback(asfeedback_);
 		
 		if(exit) {
+			manual_control_ = false;
 			if(use_leds_) 
 				setLedColor(WHITE);
 			return;
@@ -1751,7 +1686,7 @@ void Upo_navigation_macro_actions::assistedSteeringCB(const upo_navigation_macro
 		r.sleep();
 
 	}
-	
+	manual_control_ = false;
 	ROS_INFO("Setting ABORTED state");
 	ASActionServer_->setAborted(asresult_, "Assisted Steering aborted because the node has been killed");
 }

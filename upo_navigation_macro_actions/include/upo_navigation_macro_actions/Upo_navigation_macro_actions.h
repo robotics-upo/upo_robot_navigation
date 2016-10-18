@@ -194,6 +194,9 @@
 			boost::mutex wsbs_mutex_;
 			int wsbs_status_;
 
+			//Assisted steering
+			bool manual_control_;
+
 
 			//Leds service
 			ros::ServiceClient leds_client_;
