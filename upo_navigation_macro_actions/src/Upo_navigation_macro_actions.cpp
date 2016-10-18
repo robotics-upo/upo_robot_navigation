@@ -62,7 +62,7 @@ Upo_navigation_macro_actions::Upo_navigation_macro_actions(tf::TransformListener
 	robot_inzone_ = false;
 	robot_inzone2_ = false;
 	person_inzone_ = false;
-
+	people_counter_ = 0;
 
 	manual_control_ = false;
 
@@ -656,8 +656,8 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 	{
 		bool ok2 = false;
 		if(social_approaching_type_ > 1) {
-			//If the social approach taking into account orientation fails,
-			//Try the approach without orientation
+			//If the social approaching taking into account orientation fails,
+			//try the approaching without orientation
 			social_approaching_type_ = 1;
 			//goal_pose = approachIT(&p);
 			goal_pose = approachIT(id_it);
@@ -1814,6 +1814,7 @@ void Upo_navigation_macro_actions::peopleCallback(const upo_msgs::PersonPoseArra
 		std::vector<upo_msgs::PersonPoseUPO> ps = msg->personPoses;
 		geometry_msgs::PoseStamped p;
 		geometry_msgs::PoseStamped out;
+		bool at_least_one = false;
 		for(unsigned int i=0; i<ps.size(); i++)
 		{
 			p.header = ps[i].header;
@@ -1822,13 +1823,21 @@ void Upo_navigation_macro_actions::peopleCallback(const upo_msgs::PersonPoseArra
 			out = transformPoseTo(p, std::string("/map"));
 			bool ok;
 			if(yield_->getType(out.pose.position.x, out.pose.position.y, ok) == SUPERNARROW) {
-				if(ok) {
+				++people_counter_;
+				at_least_one = true;
+				if(ok && people_counter_ > 5) {
 					inside = true;
 					//printf("PERSON inside supernarrow zone!!!\n");
 				}
 			}
 		}
+		if(!at_least_one) {
+			--people_counter_;
+		}
+	} else {
+		people_counter_ = 0;
 	}
+
 	pinzone_mutex_.lock();
 	person_inzone_ = inside;
 	//person_inzone2_ = inside2;
