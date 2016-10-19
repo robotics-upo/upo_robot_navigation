@@ -133,6 +133,8 @@ bool Yield::loadYieldPoints(std::string* pointsFile)
 		printf("Yield. No points file found!!!\n");
 		return false;
 	}
+	
+	printf("Opening yield points File %s\n", pointsFile->c_str());
 	YAML::Node node = YAML::LoadFile(pointsFile->c_str());
 	
 	printf("Loading point file...\n");

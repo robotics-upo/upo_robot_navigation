@@ -185,6 +185,7 @@
 			geometry_msgs::Pose2D robot_global_pose_;
 			boost::mutex global_pose_mutex_;
 			bool isYieldDirectionCorrect();
+			int people_counter_;
 			
 			
 			// Walk side-by-side
