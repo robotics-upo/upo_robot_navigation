@@ -1826,6 +1826,7 @@ void Upo_navigation_macro_actions::peopleCallback(const upo_msgs::PersonPoseArra
 				++people_counter_;
 				at_least_one = true;
 				if(ok && people_counter_ > 5) {
+					--people_counter_;
 					inside = true;
 					//printf("PERSON inside supernarrow zone!!!\n");
 				}
