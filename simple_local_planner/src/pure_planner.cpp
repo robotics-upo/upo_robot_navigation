@@ -652,8 +652,8 @@ namespace simple_local_planner{
 			cmd_vel.angular.x = 0.0;
 			cmd_vel.angular.y = 0.0;
 			cmd_vel.angular.z = 0.0;
-			//return false;
-			return true;
+			return false;
+			//return true;
 		}
 		
 		//option 2

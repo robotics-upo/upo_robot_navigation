@@ -206,6 +206,8 @@ void Upo_navigation_macro_actions::navigateWaypointCB(const upo_navigation_macro
 {
 
 	printf("¡¡¡¡¡¡¡MacroAction navigatetoWaypoint  -->  started!!!!!!\n");
+	//printf("Goal  x: %.2f, y: %.2f frame: %s\n", goal->target_pose.pose.position.x, goal->target_pose.pose.position.y, goal->target_pose.header.frame_id.c_str());
+	UpoNav_->stopRRTPlanning();
 
 	if(use_leds_) 
 		setLedColor(GREEN);
@@ -218,6 +220,7 @@ void Upo_navigation_macro_actions::navigateWaypointCB(const upo_navigation_macro
 		nwresult_.result = "Aborted. Navigation error";
 		nwresult_.value = 2;
 		NWActionServer_->setAborted(nwresult_, "Navigation aborted");
+		UpoNav_->stopRRTPlanning();
 		if(use_leds_) 
 			setLedColor(WHITE);
 		return;
@@ -246,6 +249,7 @@ void Upo_navigation_macro_actions::navigateWaypointCB(const upo_navigation_macro
 					nwresult_.result = "Aborted. Navigation error";
 					nwresult_.value = 2;
 					NWActionServer_->setAborted(nwresult_, "Navigation aborted");
+					UpoNav_->stopRRTPlanning();
 					if(use_leds_) 
 						setLedColor(WHITE);
 					return;
@@ -322,6 +326,7 @@ void Upo_navigation_macro_actions::navigateWaypointCB(const upo_navigation_macro
 		NWActionServer_->publishFeedback(nwfeedback_);
 
 		if(exit) {
+			UpoNav_->stopRRTPlanning();
 			if(use_leds_) 
 				setLedColor(WHITE);
 			return;
@@ -410,6 +415,9 @@ void Upo_navigation_macro_actions::navigateHomeCB(const upo_navigation_macro_act
 {
 
 	printf("¡¡¡¡¡¡¡MacroAction NavigateHome  -->  started!!!!!!\n");
+	//printf("Goal  x: %.2f, y: %.2f frame: %s\n", goal->home_pose.pose.position.x, goal->home_pose.pose.position.y, goal->home_pose.header.frame_id.c_str());
+	UpoNav_->stopRRTPlanning();
+
 	if(use_leds_) 
 		setLedColor(RED);
 	
@@ -423,6 +431,7 @@ void Upo_navigation_macro_actions::navigateHomeCB(const upo_navigation_macro_act
 		nhresult_.result = "Aborted. Navigation error";
 		nhresult_.value = 2;
 		NHActionServer_->setAborted(nhresult_, "Navigation aborted");
+		UpoNav_->stopRRTPlanning();
 		if(use_leds_) 
 			setLedColor(WHITE);
 		return;
@@ -451,6 +460,7 @@ void Upo_navigation_macro_actions::navigateHomeCB(const upo_navigation_macro_act
 					nhresult_.result = "Aborted. Navigation error";
 					nhresult_.value = 2;
 					NHActionServer_->setAborted(nhresult_, "Navigation aborted");
+					UpoNav_->stopRRTPlanning();
 					if(use_leds_) 
 						setLedColor(WHITE);
 					return;
@@ -526,6 +536,7 @@ void Upo_navigation_macro_actions::navigateHomeCB(const upo_navigation_macro_act
 		NHActionServer_->publishFeedback(nhfeedback_);
 
 		if(exit) {
+			UpoNav_->stopRRTPlanning();
 			if(use_leds_) 
 				setLedColor(WHITE);
 			return;
@@ -615,6 +626,7 @@ void Upo_navigation_macro_actions::navigateHomeCB(const upo_navigation_macro_act
 void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigation_macro_actions::NavigateInteractionTargetGoal::ConstPtr& goal)
 {
 	printf("¡¡¡¡¡¡¡MacroAction NavigateToInteractionTarget  -->  started!!!!!!\n");
+	UpoNav_->stopRRTPlanning();
 
 	if(use_leds_) 
 		setLedColor(BLUE);
@@ -670,6 +682,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 			nitresult_.result = "Aborted. Navigation error";
 			nitresult_.value = 2;
 			NITActionServer_->setAborted(nitresult_, "Navigation aborted");
+			UpoNav_->stopRRTPlanning();
 			reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
 			if(use_leds_) 
 				setLedColor(WHITE);
@@ -710,6 +723,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 					nitresult_.result = "Aborted. Navigation error";
 					nitresult_.value = 2;
 					NITActionServer_->setAborted(nitresult_, "Navigation aborted because of IT was lost");
+					UpoNav_->stopRRTPlanning();
 					reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
 					if(use_leds_) 
 						setLedColor(WHITE);
@@ -737,6 +751,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 						nitresult_.result = "Aborted. Navigation error";
 						nitresult_.value = 2;
 						NITActionServer_->setAborted(nitresult_, "Navigation aborted");
+						UpoNav_->stopRRTPlanning();
 						reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
 						if(use_leds_) 
 							setLedColor(WHITE);
@@ -770,6 +785,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 			nitresult_.result = "Aborted. Navigation error";
 			nitresult_.value = 2;
 			NITActionServer_->setAborted(nitresult_, "Navigation aborted because of IT was lost");
+			UpoNav_->stopRRTPlanning();
 			reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
 			if(use_leds_) 
 				setLedColor(WHITE);
@@ -780,7 +796,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 		if(social_approaching_type_ == 1)
 		{
 			//If the distance from the base link to the goal is short enough
-			//We can stopt the action
+			//We can stopt the action in order to transition to conversation
 			geometry_msgs::PoseStamped pose = transformPoseTo(new_g, "base_link");
 			float d = sqrt((pose.pose.position.x*pose.pose.position.x) + (pose.pose.position.y*pose.pose.position.y));
 			//printf("\nFrame: %s. Distance: %.2f\n", pose.header.frame_id.c_str(), d);
@@ -828,6 +844,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 					nitresult_.result = "Aborted. Navigation error";
 					nitresult_.value = 2;
 					NITActionServer_->setAborted(nitresult_, "Navigation aborted");
+					UpoNav_->stopRRTPlanning();
 					reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
 					if(use_leds_) 
 						setLedColor(WHITE);
@@ -893,6 +910,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 		NITActionServer_->publishFeedback(nitfeedback_);
 
 		if(exit)  {
+			UpoNav_->stopRRTPlanning();
 			if(use_leds_) 
 				setLedColor(WHITE);
 			return;
@@ -1204,7 +1222,7 @@ void Upo_navigation_macro_actions::walkSideCB(const upo_navigation_macro_actions
 {
 
 	printf("¡¡¡¡¡¡¡MacroAction  Walk side-by-side  -->  started!!!!!!\n");
-
+	UpoNav_->stopRRTPlanning();
 	if(use_leds_) 
 		setLedColor(BLUE);
 
@@ -1595,6 +1613,7 @@ void Upo_navigation_macro_actions::yieldCB(const upo_navigation_macro_actions::Y
 				yresult_.result = "Succeeded";
 				yresult_.value = 0;
 				YActionServer_->setSucceeded(yresult_, "Yield succeeded. Social Path Available");
+				UpoNav_->stopRRTPlanning(); //-----NEW
 				exit = true;
 			} else {
 				//yfeedback_.text = "No Social Path Available. Waiting in yield position";
@@ -1828,7 +1847,7 @@ void Upo_navigation_macro_actions::peopleCallback(const upo_msgs::PersonPoseArra
 
 				++people_counter_;
 				
-				if(ok && people_counter_ > 10) {
+				if(ok && people_counter_ > 8) {
 					people_counter_--;
 					inside = true;
 					//printf("PERSON inside supernarrow zone!!!\n");
