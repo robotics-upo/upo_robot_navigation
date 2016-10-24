@@ -168,6 +168,7 @@
 		
 			// NavigateInteractionTarget
 			int social_approaching_type_;
+			int target_counter_;
 			
 			
 			// Yield

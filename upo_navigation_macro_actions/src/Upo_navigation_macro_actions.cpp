@@ -66,6 +66,8 @@ Upo_navigation_macro_actions::Upo_navigation_macro_actions(tf::TransformListener
 
 	manual_control_ = false;
 
+	target_counter_ = 0;
+
 	//Dynamic reconfigure
 	//dsrv_ = new dynamic_reconfigure::Server<upo_navigation_macro_actions::NavigationMacroActionsConfig>(n);
     //dynamic_reconfigure::Server<upo_navigation_macro_actions::NavigationMacroActionsConfig>::CallbackType cb = boost::bind(&Upo_navigation_macro_actions::reconfigureCB, this, _1, _2);
@@ -627,6 +629,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 {
 	printf("¡¡¡¡¡¡¡MacroAction NavigateToInteractionTarget  -->  started!!!!!!\n");
 	UpoNav_->stopRRTPlanning();
+	target_counter_ = 0;
 
 	if(use_leds_) 
 		setLedColor(BLUE);
@@ -666,7 +669,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 	bool ok = UpoNav_->executeNavigation(goal_pose); 
 	if(!ok)
 	{
-		bool ok2 = false;
+		/*bool ok2 = false;
 		if(social_approaching_type_ > 1) {
 			//If the social approaching taking into account orientation fails,
 			//try the approaching without orientation
@@ -677,7 +680,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 				ok2 = UpoNav_->executeNavigation(goal_pose); 
 			social_approaching_type_ = 2;
 		}
-		else if(!ok2)  {
+		else if(!ok2)  {*/
 			ROS_INFO("NavigateToInteractionTarget. Setting ABORTED state 1");
 			nitresult_.result = "Aborted. Navigation error";
 			nitresult_.value = 2;
@@ -687,7 +690,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 			if(use_leds_) 
 				setLedColor(WHITE);
 			return;
-		}
+		//}
 	}
 
 
@@ -707,15 +710,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
         	if(NITActionServer_->isNewGoalAvailable()){
 				
 				upo_navigation_macro_actions::NavigateInteractionTargetGoal new_goal = *NITActionServer_->acceptNewGoal();
-
-				/*p.header = new_goal.person_pose.header;
-				p.id = -1;
-				p.vel = -1;
-				p.position = new_goal.person_pose.pose.position;
-				p.orientation = new_goal.person_pose.pose.orientation;
-				*/
-				//p = new_goal.it;
-				//goal_pose = approachIT(&p);
+				target_counter_ = 0;
 				id_it = new_goal.it;
 				goal_pose = approachIT(id_it);
 				if(goal_pose.header.frame_id == "bad") {
@@ -737,7 +732,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 				bool ok = UpoNav_->executeNavigation(goal_pose); 
 				if(!ok)
 				{
-					bool ok2 = false;
+					/*bool ok2 = false;
 					if(social_approaching_type_ > 1) {
 						social_approaching_type_ = 1;
 						//goal_pose = approachIT(&p);
@@ -746,7 +741,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 							ok2 = UpoNav_->executeNavigation(goal_pose); 
 						social_approaching_type_ = 2;
 					}
-					else if(!ok2)  {
+					else if(!ok2)  {*/
 						ROS_INFO("NavigateToInteractionTarget. Setting ABORTED state 1");
 						nitresult_.result = "Aborted. Navigation error";
 						nitresult_.value = 2;
@@ -756,7 +751,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 						if(use_leds_) 
 							setLedColor(WHITE);
 						return;
-					}
+					//}
 				}
 				first = true;
           		
@@ -792,6 +787,9 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 			return;
 		}
 
+		if(new_g.header.frame_id == "continue")
+			new_g = goal_pose;
+
 		//This has been included for a quicker transition to conversation mode
 		if(social_approaching_type_ == 1)
 		{
@@ -808,7 +806,6 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 				NITActionServer_->setSucceeded(nitresult_, "IT Reached");
 				nitfeedback_.text = "Succeeded";
 				reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);	
-
 				UpoNav_->stopRRTPlanning();
 				if(use_leds_) 
 					setLedColor(WHITE);
@@ -816,41 +813,45 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 			}
 		}
 		
-		float min_dist = 0.60;
-		float dist = sqrt((goal_pose.pose.position.x-new_g.pose.position.x)*(goal_pose.pose.position.x-new_g.pose.position.x) 
-				+ (goal_pose.pose.position.y-new_g.pose.position.y)*(goal_pose.pose.position.y-new_g.pose.position.y));
-		if(dist >= min_dist){
-			//Send new goal
-			goal_pose = new_g; 
-			if(social_approaching_type_ != 1){
-				std::string str = std::to_string(id_it);
-				reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), str, INT_TYPE);
-			}
+
+		if(new_g.header.frame_id != "continue") {
+
+			float min_dist = 0.60;
+			float dist = sqrt((goal_pose.pose.position.x-new_g.pose.position.x)*(goal_pose.pose.position.x-new_g.pose.position.x) 
+					+ (goal_pose.pose.position.y-new_g.pose.position.y)*(goal_pose.pose.position.y-new_g.pose.position.y));
+			if(dist >= min_dist){
+				//Send new goal
+				goal_pose = new_g; 
+				if(social_approaching_type_ != 1){
+					std::string str = std::to_string(id_it);
+					reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), str, INT_TYPE);
+				}
 			
-			bool ok = UpoNav_->executeNavigation(goal_pose); 
-			if(!ok)
-			{
-				bool ok2 = false;
-				if(social_approaching_type_ > 1) {
-					social_approaching_type_ = 1;
-					//goal_pose = approachIT(&p);
-					goal_pose = approachIT(id_it);
-					if(goal_pose.header.frame_id != "bad") 
-						ok2 = UpoNav_->executeNavigation(goal_pose); 
-					social_approaching_type_ = 2;
-				}
-				else if(!ok2)  {
-					ROS_INFO("NavigateToInteractionTarget. Setting ABORTED state 1");
-					nitresult_.result = "Aborted. Navigation error";
-					nitresult_.value = 2;
-					NITActionServer_->setAborted(nitresult_, "Navigation aborted");
-					UpoNav_->stopRRTPlanning();
-					reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
-					if(use_leds_) 
-						setLedColor(WHITE);
-					return;
-				}
-			}			
+				bool ok = UpoNav_->executeNavigation(goal_pose); 
+				if(!ok)
+				{
+					/*bool ok2 = false;
+					if(social_approaching_type_ > 1) {
+						social_approaching_type_ = 1;
+						//goal_pose = approachIT(&p);
+						goal_pose = approachIT(id_it);
+						if(goal_pose.header.frame_id != "bad") 
+							ok2 = UpoNav_->executeNavigation(goal_pose); 
+						social_approaching_type_ = 2;
+					}
+					else if(!ok2)  {*/
+						ROS_INFO("NavigateToInteractionTarget. Setting ABORTED state 1");
+						nitresult_.result = "Aborted. Navigation error";
+						nitresult_.value = 2;
+						NITActionServer_->setAborted(nitresult_, "Navigation aborted");
+						UpoNav_->stopRRTPlanning();
+						reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
+						if(use_leds_) 
+							setLedColor(WHITE);
+						return;
+					//}
+				}			
+			}
 		}
 		
 
@@ -1015,7 +1016,13 @@ geometry_msgs::PoseStamped Upo_navigation_macro_actions::approachIT(int id)
 	if(people.size() == 0) {
 		printf("approachIT. people array is empty!\n");
 		//p->id = -100;
-		return goal_pose;
+		--target_counter_;
+		if(target_counter_ < 0)
+			return goal_pose;
+		else {
+			goal_pose.header.frame_id = "continue";
+			return goal_pose;
+		}
 	} /*else {
 	
 		//printf("Person frame: %s, people vector frame: %s\n", p->header.frame_id.c_str(), people.at(0).header.frame_id.c_str());
@@ -1065,14 +1072,23 @@ geometry_msgs::PoseStamped Upo_navigation_macro_actions::approachIT(int id)
 		if(id != -1 && id == people.at(i).id) {
 			//printf("Person with ID %i found!\n", p->id);
 			newp = people.at(i);
+			++target_counter_;
+			if(target_counter_ > 10)
+				target_counter_ = 10;
 			break;
 		}
 	}
 
 	//No person found
 	if(newp.id == -100) {
-		printf("Person not found!\n");
-		return goal_pose;
+		--target_counter_;
+		if(target_counter_ < 0) {
+			printf("Person not found!\n");
+			return goal_pose;
+		} else {
+			goal_pose.header.frame_id = "continue";
+			return goal_pose;
+		}
 	}
 	
 
