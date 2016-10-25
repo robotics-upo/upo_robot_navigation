@@ -1878,6 +1878,8 @@ void Upo_navigation_macro_actions::peopleCallback(const upo_msgs::PersonPoseArra
 			if(people_counter_ < 0)
 				people_counter_ = 0;
 		}
+		if(people_counter_ > 0)
+			inside = true;
 
 		//printf("Counter: %i, inside: %i\n", people_counter_, inside);
 
