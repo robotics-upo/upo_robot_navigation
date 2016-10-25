@@ -267,7 +267,7 @@ namespace upo_nav {
 
 	  //set up the RRT* planner thread
 	  bool run_rrt_;
-	  bool rrt_sleep_;
+	  //bool rrt_sleep_;
 	  boost::thread rrt_thread_;
       bool thread_active_;
 	  int thread_sleep_msecs_;

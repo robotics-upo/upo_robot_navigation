@@ -1506,6 +1506,7 @@ void Upo_navigation_macro_actions::yieldCB(const upo_navigation_macro_actions::Y
 	{
 		ROS_INFO("Yield. Setting ABORTED state 1");
 		YActionServer_->setAborted(yresult_, "Navigation aborted");
+		UpoNav_->stopRRTPlanning();
 		if(use_leds_) 
 			setLedColor(WHITE);
 		return;
@@ -1565,7 +1566,8 @@ void Upo_navigation_macro_actions::yieldCB(const upo_navigation_macro_actions::Y
 		
 		
 		geometry_msgs::PoseStamped new_pose;
-		pursue_status = UpoNav_->pathFollow(new_pose);
+		if(pursue_status != 1)
+			pursue_status = UpoNav_->pathFollow(new_pose);
 		/*if(first){
 			pose_init = new_pose;
 			time_init = ros::Time::now();
@@ -1611,6 +1613,7 @@ void Upo_navigation_macro_actions::yieldCB(const upo_navigation_macro_actions::Y
 		}
 		
 		if(exit) {
+			UpoNav_->stopRRTPlanning();
 			if(use_leds_) 
 				setLedColor(WHITE);
 			return;
@@ -1629,7 +1632,6 @@ void Upo_navigation_macro_actions::yieldCB(const upo_navigation_macro_actions::Y
 				yresult_.result = "Succeeded";
 				yresult_.value = 0;
 				YActionServer_->setSucceeded(yresult_, "Yield succeeded. Social Path Available");
-				UpoNav_->stopRRTPlanning(); //-----NEW
 				exit = true;
 			} else {
 				//yfeedback_.text = "No Social Path Available. Waiting in yield position";
@@ -1641,6 +1643,7 @@ void Upo_navigation_macro_actions::yieldCB(const upo_navigation_macro_actions::Y
 		YActionServer_->publishFeedback(yfeedback_);
 		
 		if(exit) {
+			UpoNav_->stopRRTPlanning(); //-----NEW
 			if(use_leds_) 
 				setLedColor(WHITE);
 			return;

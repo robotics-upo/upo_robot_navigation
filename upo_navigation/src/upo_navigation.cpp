@@ -133,7 +133,7 @@ namespace upo_nav {
 	rrt_planner_ = new upo_RRT_ros::RRT_ros_wrapper(&tf_, planner_costmap_ros_, controller_costmap_ros_);
 	//set up the rrt planner's thread
 	run_rrt_ = false;
-	rrt_sleep_ = true;
+	//rrt_sleep_ = true;
 	thread_active_ = true;
     rrt_thread_ = boost::thread(&UpoNavigation::rrt_thread, this);
 						
@@ -1020,7 +1020,7 @@ namespace upo_nav {
  {
 	std::vector<geometry_msgs::PoseStamped> rrt_plan;
 	bool run_rrt;
-	bool rrt_sleep;
+	//bool rrt_sleep;
 	geometry_msgs::PoseStamped rrt_goal;
 	//double rrt_plan_cost = -1;
 	bool got_plan = false;
@@ -1029,47 +1029,44 @@ namespace upo_nav {
 	 {
 		rrt_mutex_.lock();
 		run_rrt = run_rrt_;
-		rrt_sleep = rrt_sleep_;
+		//rrt_sleep = rrt_sleep_; //--
 		//rrt_plan.clear();
-		rrt_plan = *local_plan_; //local_plan in odom coordinates
+		//rrt_plan = *local_plan_; //local_plan in odom coordinates
+		rrt_goal = rrt_goal_;
 		rrt_mutex_.unlock();
 
 		
-		if(!rrt_sleep /*&& (run_rrt || !(rrt_planner_->check_rrt_path(rrt_plan)))*/)
+		if(run_rrt /*!rrt_sleep && (run_rrt || !(rrt_planner_->check_rrt_path(rrt_plan)))*/)
 		{
-			//printf("RRT thread is going to plan ·$&()?¿* \n");
-			//geometry_msgs::PoseStamped rrt_goal = goalToLocalFrame(rrt_goal_odom);
-
-			rrt_mutex_.lock();
-			rrt_goal = rrt_goal_; 
-			run_rrt_ = false;
-			rrt_mutex_.unlock();
+			//---------
+			//rrt_mutex_.lock();
+			//rrt_goal = rrt_goal_; 
+			//run_rrt_ = false; 
+			//rrt_mutex_.unlock();
+			//-----------
 			ros::WallTime startRRT = ros::WallTime::now();
 			rrt_plan.clear();
-			//printf("\n\nRRT_goal_. x: %.2f, y: %.2f\n\n", rrt_goal.pose.position.x, rrt_goal.pose.position.y);
-			//try{
-				//rrt_goal_ is in map coordinates but makeRRTPlan transform it to base_link
-				if(makeRRTPlan(rrt_goal, rrt_plan)) {
-					got_plan = true;
-				} else
-					got_plan = false;
-				ros::WallDuration rrt_time = ros::WallTime::now() - startRRT;
-				//printf("RRT:%.4f  ", rrt_time.toSec());	
-			//} catch(...) {
-				//ROS_ERROR("ERROR. No new RRT path obtained!!!");
-				//got_plan = false;
-				
-			//}
+			
+			//rrt_goal_ is in map coordinates but makeRRTPlan transform it to base_link
+			if(makeRRTPlan(rrt_goal, rrt_plan)) {
+				got_plan = true;
+			} else
+				got_plan = false;
+			ros::WallDuration rrt_time = ros::WallTime::now() - startRRT;
+			
 		} /*else if(!(rrt_planner_->check_rrt_path(rrt_plan)))
 		{
 
 		}*/
 
-		if(got_plan)
+		rrt_mutex_.lock();
+		run_rrt = run_rrt_;
+		rrt_mutex_.unlock();
+		if(got_plan && run_rrt)
 		{
 			rrt_mutex_.lock();
 			new_rrt_plan_ = true;
-			run_rrt_ = false;
+			//run_rrt_ = false; //---
 			local_plan_ = &rrt_plan; //odom coordinates
 			printf("RRT thread. Local plan of size:%u\n", (unsigned int)local_plan_->size());
 			rrt_mutex_.unlock();
@@ -1193,7 +1190,7 @@ namespace upo_nav {
 	//Tell the rrt thread to plan
 	rrt_mutex_.lock();
 	rrt_goal_ = intermediate_goal;
-	rrt_sleep_ = false;
+	//rrt_sleep_ = false;
 	run_rrt_ = true;
 	rrt_mutex_.unlock();
 
@@ -1306,7 +1303,7 @@ namespace upo_nav {
 				//Tell the rrt thread to plan
 				rrt_mutex_.lock();
 				rrt_goal_ = intermediate_goal;
-				rrt_sleep_ = false;
+				//rrt_sleep_ = false; //---
 				run_rrt_ = true;
 				rrt_mutex_.unlock();
 				
@@ -1360,7 +1357,7 @@ namespace upo_nav {
 			rrt_mutex_.lock();
 			new_rrt_plan_ = false;
 			rrt_goal_ = global_goal_;
-			rrt_sleep_ = true;
+			//rrt_sleep_ = true; //--
 			run_rrt_ = false;
 			rrt_mutex_.unlock();
 			geometry_msgs::PoseStamped p = goalToLocalFrame(global_goal_);
@@ -1445,7 +1442,7 @@ namespace upo_nav {
 			//Tell the rrt thread to plan
 			rrt_mutex_.lock();
 			rrt_goal_ = intermediate_goal;
-			rrt_sleep_ = false;
+			//rrt_sleep_ = false;
 			run_rrt_ = true;
 			rrt_mutex_.unlock();
 				
@@ -1485,7 +1482,7 @@ namespace upo_nav {
 			
 			ROS_INFO("*******GOAL REACHED******");
 			rrt_mutex_.lock();
-			rrt_sleep_ = true;
+			//rrt_sleep_ = true;
 			run_rrt_ = false;
 			rrt_mutex_.unlock();
 			return;
@@ -1623,7 +1620,7 @@ namespace upo_nav {
 	//Tell the rrt thread to plan
 	rrt_mutex_.lock();
 	rrt_goal_ = intermediate_goal;
-	rrt_sleep_ = false;
+	//rrt_sleep_ = false;
 	run_rrt_ = true;
 	rrt_mutex_.unlock();
 
@@ -1678,7 +1675,7 @@ namespace upo_nav {
 		rrt_mutex_.lock();
 		new_rrt_plan_ = false;
 		rrt_goal_ = global_goal_;
-		rrt_sleep_ = true;
+		//rrt_sleep_ = true;
 		run_rrt_ = false;
 		rrt_mutex_.unlock();
 		geometry_msgs::PoseStamped p = goalToLocalFrame(global_goal_);
@@ -1691,88 +1688,73 @@ namespace upo_nav {
 	} else {
 		
 		geometry_msgs::PoseStamped intermediate_goal;
-		//if(dist > rrt_radius)
-		//{
-			//Now take the point of the global path inside
-			//the local area --> goal for the RRT*
-			unsigned int path_i = 0;
-			unsigned int closest = 0;
-			float max_dist = 100.0;
-			for(unsigned int i = 0; i < planner_plan_->size(); ++i) {
-				double gx = planner_plan_->at(i).pose.position.x;
-				double gy = planner_plan_->at(i).pose.position.y;
-				unsigned int map_x, map_y;
-				float dist_x = fabs(gx - robot_pose.pose.position.x);
-				float dist_y = fabs(gy - robot_pose.pose.position.y);
-				float dist = sqrt((dist_x*dist_x)+(dist_y*dist_y));
-				if(dist < max_dist) {
-					closest = i;
-					max_dist = dist;
-				}
+		
+		//Now take the point of the global path inside
+		//the local area --> goal for the RRT*
+		unsigned int path_i = 0;
+		unsigned int closest = 0;
+		float max_dist = 100.0;
+		for(unsigned int i = 0; i < planner_plan_->size(); ++i) {
+			double gx = planner_plan_->at(i).pose.position.x;
+			double gy = planner_plan_->at(i).pose.position.y;
+			unsigned int map_x, map_y;
+			float dist_x = fabs(gx - robot_pose.pose.position.x);
+			float dist_y = fabs(gy - robot_pose.pose.position.y);
+			float dist = sqrt((dist_x*dist_x)+(dist_y*dist_y));
+			if(dist < max_dist) {
+				closest = i;
+				max_dist = dist;
 			}
+		}
 			
-			std::vector<geometry_msgs::PoseStamped> path_to_follow;
-			for(unsigned int i = closest; i < planner_plan_->size(); ++i) {
+		std::vector<geometry_msgs::PoseStamped> path_to_follow;
+		for(unsigned int i = closest; i < planner_plan_->size(); ++i) {
 				
-				geometry_msgs::PoseStamped out = goalToLocalFrame(planner_plan_->at(i));
-				path_to_follow.push_back(out);
+			geometry_msgs::PoseStamped out = goalToLocalFrame(planner_plan_->at(i));
+			path_to_follow.push_back(out);
 				
-				double gx = planner_plan_->at(i).pose.position.x;
-				double gy = planner_plan_->at(i).pose.position.y;
-				unsigned int map_x, map_y;
-				float dist_x = fabs(gx - robot_pose.pose.position.x);
-				float dist_y = fabs(gy - robot_pose.pose.position.y);
-				float dist = sqrt((dist_x*dist_x)+(dist_y*dist_y));
-				if (dist_x <= (rrt_radius) && dist_y <= (rrt_radius)) {
-					path_i = i;
-				} else
-					break;
-			}
+			double gx = planner_plan_->at(i).pose.position.x;
+			double gy = planner_plan_->at(i).pose.position.y;
+			unsigned int map_x, map_y;
+			float dist_x = fabs(gx - robot_pose.pose.position.x);
+			float dist_y = fabs(gy - robot_pose.pose.position.y);
+			float dist = sqrt((dist_x*dist_x)+(dist_y*dist_y));
+			if (dist_x <= (rrt_radius) && dist_y <= (rrt_radius)) {
+				path_i = i;
+			} else
+				break;
+		}
 			
-			setPathToBias(path_to_follow);
-			
-			
-			//add orientation to the point
-			if(path_i < (planner_plan_->size()-1)) {
-				intermediate_goal = planner_plan_->at(path_i);
-				intermediate_goal.header.stamp = ros::Time::now();
-				intermediate_goal.header.frame_id = planner_plan_->at(path_i).header.frame_id;
-				geometry_msgs::PoseStamped p1 = planner_plan_->at(path_i);
-				geometry_msgs::PoseStamped p2 = planner_plan_->at(path_i+1);
-				float x_diff = p2.pose.position.x - p1.pose.position.x;
-				float y_diff = p2.pose.position.y - p1.pose.position.y;
-				float yaw = atan2(y_diff, x_diff);
-				intermediate_goal.pose.orientation = tf::createQuaternionMsgFromYaw(yaw);
-			} else {
-				intermediate_goal = global_goal_;
-			}
+		setPathToBias(path_to_follow);
 			
 			
-	
+		//add orientation to the point
+		if(path_i < (planner_plan_->size()-1)) {
+			intermediate_goal = planner_plan_->at(path_i);
+			intermediate_goal.header.stamp = ros::Time::now();
+			intermediate_goal.header.frame_id = planner_plan_->at(path_i).header.frame_id;
+			geometry_msgs::PoseStamped p1 = planner_plan_->at(path_i);
+			geometry_msgs::PoseStamped p2 = planner_plan_->at(path_i+1);
+			float x_diff = p2.pose.position.x - p1.pose.position.x;
+			float y_diff = p2.pose.position.y - p1.pose.position.y;
+			float yaw = atan2(y_diff, x_diff);
+			intermediate_goal.pose.orientation = tf::createQuaternionMsgFromYaw(yaw);
+		} else {
+			intermediate_goal = global_goal_;
+		}
 			
-				
-		//} else {
-		//	intermediate_goal = global_goal_;
-		//}		
 			
-		//We update the local plan to an empty plan in order to stop the robot
-		//until get a new plan
-		//local_plan_->clear();
-		//pure_pursuit_->updatePlan(*local_plan_, true);
 			
 		current_goal_pub_.publish(intermediate_goal);
 		//printf("------RRT* is going to plan---------\n");
 		//Tell the rrt thread to plan
 		rrt_mutex_.lock();
 		rrt_goal_ = intermediate_goal;
-		rrt_sleep_ = false;
+		//rrt_sleep_ = false;
 		run_rrt_ = true;
 		rrt_mutex_.unlock();
 			
 	} 
-	
-	//-------------------------------------------------------------------
-	//std::vector<geometry_msgs::PoseStamped> lplan;
 		
 	//if RRT obtained a new local plan
 	rrt_mutex_.lock();
@@ -1781,31 +1763,22 @@ namespace upo_nav {
 		//disable flag
 		new_rrt_plan_ = false;
 		//update the path
-		//printf("\nPathFollow. Setting local plan of size: %u\n", (unsigned int)local_plan_->size()); 
-		//lplan = *local_plan_;
-		//if(dist > 0.10)
-			tc_->setPlan(*local_plan_);
+		tc_->setPlan(*local_plan_);
 	} 
 	rrt_mutex_.unlock();
 
-	//ros::WallDuration t9 = ros::WallTime::now() - startt;
-	//printf("Test 9: %.4f secs\n", t9.toSec());
-		
+	
+	
 	//the real work on pursuing a goal is done here
 	int pursue_status = executeControllerCycle();
-	//ros::WallDuration t10 = ros::WallTime::now() - startt;
-	//printf("Test 10: %.4f secs\n", t10.toSec());
-	//}
-
-	//ros::WallDuration t11 = ros::WallTime::now() - startt;
-	//printf("Test 11: %.4f secs\n", t11.toSec());
+	
 			
 	//if we're done, then we'll return from execute
 	if(pursue_status == 1) {
 			
 		ROS_INFO("*******GOAL REACHED******");
 		rrt_mutex_.lock();
-		rrt_sleep_ = true;
+		//rrt_sleep_ = true;
 		run_rrt_ = false;
 		local_plan_->clear();
 		tc_->setPlan(*local_plan_);
@@ -1826,7 +1799,8 @@ namespace upo_nav {
 		rrt_mutex_.unlock();
 	}
 
-	//map_viz_.publishCostCloud(controller_costmap_ros_->getCostmap());
+	
+
 		
 	//update feedback to correspond to our curent position
 	if(!planner_costmap_ros_->getRobotPose(global_pose)) {
@@ -1855,11 +1829,11 @@ namespace upo_nav {
 		g.pose.orientation = tf::createQuaternionMsgFromYaw(0.0);
 		rrt_mutex_.lock();
 		rrt_goal_ = g;
-		rrt_sleep_ = true;
+		//rrt_sleep_ = true;
 		run_rrt_ = false;
 		rrt_mutex_.unlock();
 		
-		printf("¡¡¡¡Stopping RRT planning!!!!\n");
+		//printf("¡¡¡¡Stopping RRT planning!!!!\n");
 		//publishZeroVelocity();
 		local_plan_->clear();
 		tc_->setPlan(*local_plan_);
@@ -2008,6 +1982,10 @@ namespace upo_nav {
       return 0;
     }
 
+
+	//if(local_plan_->empty())
+	//	return 0;
+
 	
 	//check to see if we've reached our goal
  	if(tc_->isGoalReached()){
@@ -2026,9 +2004,9 @@ namespace upo_nav {
 		lock.unlock();
 
 		//disable rrt thread
-		//rrt_mutex_.lock();
-		//run_rrt_ = false;
-		//rrt_mutex_.unlock();
+		rrt_mutex_.lock(); //-------
+		run_rrt_ = false;
+		rrt_mutex_.unlock();
 
 		//ROS_INFO("*******GOAL REACHED******");
 		//as_->setSucceeded(move_base_msgs::MoveBaseResult(), "Goal reached.");
@@ -2062,10 +2040,8 @@ namespace upo_nav {
 	if(tc_->computeVelocityCommands(cmd_vel))
 	{
           vel_pub_.publish(cmd_vel);
-          //printf("publishing vel: %.2f\n", cmd_vel.linear.x);
 		  return 0;
 	} else {
-		//Habilitar el clearing o planear de nuevo porque el robot se queda bloqueado!!!!!!!
 		ROS_ERROR("Controller could not find a valid control!!!");
 		return -1;
 	}
