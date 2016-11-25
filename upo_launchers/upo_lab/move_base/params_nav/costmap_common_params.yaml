@@ -1,0 +1,18 @@
+# 2D Costmap parameters 
+# http://www.ros.org/wiki/costmap_2d
+
+### Robot description parameters ###
+
+# Robot foot print in m (TERESA)
+footprint: [ [0.32, 0], [0.2263, -0.2263], [0, -0.32], [-0.2263, -0.2263], [-0.32, 0], [-0.2263, 0.2263], [0, 0.32], [0.2263, 0.2263]]
+
+# Inscribed and circunscribed radius in m
+inscribed_radius: 0.32            
+circumscribed_radius: 0.32  
+
+# Obstacle inflation in m (circumscribed robot radius)
+#inflation_radius: 0.32  
+
+transform_tolerance: 0.5 
+map_type: costmap
+
