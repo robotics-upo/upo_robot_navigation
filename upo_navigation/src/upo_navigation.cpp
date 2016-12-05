@@ -72,7 +72,7 @@ namespace upo_nav {
 
     //for comanding the base
     vel_pub_ = nh.advertise<geometry_msgs::Twist>("cmd_vel", 1);
-    current_goal_pub_ = private_nh.advertise<geometry_msgs::PoseStamped>("current_goal", 0 );
+    current_goal_pub_ = private_nh.advertise<geometry_msgs::PoseStamped>("current_goal", 5);
 
     ros::NodeHandle action_nh("upo_navigation");
     action_goal_pub_ = action_nh.advertise<move_base_msgs::MoveBaseActionGoal>("goal", 1);
@@ -445,6 +445,9 @@ namespace upo_nav {
 
 
   bool UpoNavigation::planService(nav_msgs::GetPlan::Request &req, nav_msgs::GetPlan::Response &resp){
+
+	boost::unique_lock<costmap_2d::Costmap2D::mutex_t> lock(*(planner_costmap_ros_->getCostmap()->getMutex()));
+
     if(as_->isActive()){
       ROS_ERROR("move_base must be in an inactive state to make a plan for an external user");
       return false;
@@ -544,20 +547,6 @@ namespace upo_nav {
       
       double tolerance = req.tolerance;
       
-      /*
-		//Transform goal into odom frame
-		geometry_msgs::PoseStamped p_in;
-		p_in = goal;
-		p_in.header.stamp = ros::Time(); 
-		geometry_msgs::PoseStamped p_out;
-		try {
-				tf_.transformPose("odom", p_in, p_out); //¿odom o map?
-		}catch (tf::TransformException ex){
-				ROS_ERROR("executeCb. TransformException: %s",ex.what());
-		}
-		
-		rrt_planner_->setGoalOdom((double)p_out.pose.position.x, (double)p_out.pose.position.y);
-		*/
 
 		if(!isQuaternionValid(goal.pose.orientation)){
 		  ROS_WARN("Aborting plan because of goal quaternion invalid");
@@ -572,57 +561,18 @@ namespace upo_nav {
 		global_goal_ = goalToGlobalFrame(goal);
 
 		//Intermediate point in the A* path which we use as the RRT goal 
-		geometry_msgs::PoseStamped intermediate_goal = global_goal_;
+		//geometry_msgs::PoseStamped intermediate_goal = global_goal_;
 
-		double rrt_radius = rrt_planner_->get_rrt_planning_radius();
+		//double rrt_radius = rrt_planner_->get_rrt_planning_radius();
 		
 		std::vector<geometry_msgs::PoseStamped> rrt_path;
 
-		//if the goal is outside the local area, we use the A* and RRT*; if not, we use just the RRT* 
-		//double max_x_from_robot = ((controller_costmap_ros_->getCostmap()->getSizeInMetersX())/2);
-		//double max_y_from_robot = ((controller_costmap_ros_->getCostmap()->getSizeInMetersY())/2);
-		if(fabs(local_goal.pose.position.x) > rrt_radius ||
-			fabs(local_goal.pose.position.y) > rrt_radius)
-		{
-			planner_plan_->clear();
-			//Plan with A*
-			if(makePlan(global_goal_, *planner_plan_)) //planner_plan is in map coordinates
-				new_global_plan_ = true;
-			else {
-				new_global_plan_ = false;
-				ROS_ERROR("ERROR. No global A* plan created!!!");
-				return false;
-			}
-
-			//get the pose of the robot
-			tf::Stamped<tf::Pose> global_pose;
-			if(!planner_costmap_ros_->getRobotPose(global_pose)) {
-				ROS_WARN("Unable to get pose of robot!!!");
-				return false;
-			}
-			geometry_msgs::PoseStamped robot_pose;
-			tf::poseStampedTFToMsg(global_pose, robot_pose);
-
-			//Now take the last point of the global path inside
-			//the local area --> goal for the RRT*
-			for(unsigned int i = 0; i < planner_plan_->size(); ++i) {
-				double gx = planner_plan_->at(i).pose.position.x;
-				double gy = planner_plan_->at(i).pose.position.y;
-				unsigned int map_x, map_y;
-				double dist_x = fabs(gx - robot_pose.pose.position.x);
-				double dist_y = fabs(gy - robot_pose.pose.position.y);
-				if (dist_x <= rrt_radius && dist_y <= rrt_radius) {
-					intermediate_goal = planner_plan_->at(i);
-					intermediate_goal.header.stamp = ros::Time::now();
-					//intermediate_goal.header.frame_id = move_base_goal->target_pose.header.frame_id;
-				}
-			}
-			//printf("!!!!map goal x:%.2f, y:%.2f\n", intermediate_goal.pose.position.x, intermediate_goal.pose.position.y);
-			makeRRTPlan(intermediate_goal, rrt_path);
-			
-		} else {
-			makeRRTPlan(local_goal, rrt_path);
+		bool ok = makeRRTPlan(goal, rrt_path);
+		if(!ok) {
+			ROS_FATAL("ERROR obtaining RRT path");
+			return false;
 		}
+		
       
 		//copy the plan into a message to send out
 		resp.plan.header.stamp = ros::Time::now();
@@ -635,6 +585,8 @@ namespace upo_nav {
 		return true;
   }
   
+
+
 
 
   UpoNavigation::~UpoNavigation(){

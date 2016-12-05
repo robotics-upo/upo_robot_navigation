@@ -88,6 +88,8 @@ namespace features {
 			std::vector<float> getFeatures(geometry_msgs::PoseStamped* s);
 			
 			void goalCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
+			
+			//void goalAstarCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
 
 			void peopleCallback(const upo_msgs::PersonPoseArrayUPO::ConstPtr& msg);
 			
@@ -124,16 +126,13 @@ namespace features {
 			bool isQuaternionValid(const geometry_msgs::Quaternion q);
 			
 			float normalizeAngle(float val, float min, float max);
-		
-			void setWeights(std::vector<float> we) {
-				printf("NavFeatures. Setting weights: \n");
-				w_.clear();
-				w_ = we;
-				for(unsigned int i=0; i<w_.size(); i++)
-				{
-					printf("w %u: %.3f\n", (i+1), w_[i]);
-				}
+			
+			void setUpoFeatureSet(int s) {
+				upo_featureset_ = s;
+				use_uva_features_ = false;
 			}
+		
+			void setWeights(std::vector<float> we);
 
 			void setGoal(geometry_msgs::PoseStamped g); 
 			
@@ -197,6 +196,7 @@ namespace features {
 			std::vector<geometry_msgs::Point>* 	myfootprint_;
 			float 								insc_radius_robot_;
 			geometry_msgs::PoseStamped 			goal_;
+			int 								goal_type_;
 			float 								max_planning_dist_;
 			float 								size_x_;
 			float 								size_y_;

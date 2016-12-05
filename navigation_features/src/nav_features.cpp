@@ -87,7 +87,7 @@ void features::NavFeatures::setParams()
 	
 	
 	
-	n.param<bool>("use_laser_projection", use_laser_projection_, false);
+	n.param<bool>("use_laser_projection", use_laser_projection_, true);
 	std::string pc_topic;
 	n.param<std::string>("pc_topic", pc_topic, std::string("/scan360/point_cloud")); 
 	int pc_type;
@@ -142,11 +142,16 @@ void features::NavFeatures::setParams()
 	approaching_angle_ = (float)aux;
 	
 	
+	//n.param<int>("goal_type", goal_type_, 1); //1->RRT, 2->A*
+	//if(goal_type_ == 1)
+		goal_sub_ = nh_.subscribe("/rrt_goal", 1, &NavFeatures::goalCallback, this);
+	//else
+		//goal_sub_ = nh_.subscribe("/move_base/current_goal", 1, &NavFeatures::goalAstarCallback, this);
+	
 	sub_people_ = nh_.subscribe("/people/navigation", 1, &NavFeatures::peopleCallback, this); 
 	
-	goal_sub_ = nh_.subscribe("/rrt_goal", 1, &NavFeatures::goalCallback, this);
 	
-	pub_gaussian_markers_ = n.advertise<visualization_msgs::MarkerArray>("gaussian_markers", 1);
+	pub_gaussian_markers_ = n.advertise<visualization_msgs::MarkerArray>("gaussian_markers", 5);
 	
 	//ros::ServiceServer service = nh_.advertiseService("setApproachingIT", setApproachingIT);
 
@@ -233,6 +238,11 @@ void features::NavFeatures::goalCallback(const geometry_msgs::PoseStamped::Const
 	//printf("NavFeatures. RRT Goal received\n");
 	setGoal(*msg);
 }
+
+/*void features::NavFeatures::goalAstarCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
+{
+	setGoal(*msg);
+}*/
 
 void features::NavFeatures::peopleCallback(const upo_msgs::PersonPoseArrayUPO::ConstPtr& msg) 
 {
@@ -352,10 +362,10 @@ void features::NavFeatures::updateDistTransform(){
 	for (int i =0;i<temp_pt_cloud.points.size();i++){
 		std::vector<int> pix = worldToMap(&(temp_pt_cloud.points[i]),&map_metadata_);
 	
-		if(pix[0] < 0.0 || pix[0] > map_metadata_.width || pix[1] < 0.0 || pix[1] > map_metadata_.height) 
-			ROS_ERROR("\n\nNAV FEATURES. UPDATEDT. pix out of range!!!!!\n");
-
-		map_copy.at<unsigned char>(pix[1],pix[0]) = 0;
+		if(pix[0] < 0.0 || pix[0] > map_metadata_.width || pix[1] < 0.0 || pix[1] > map_metadata_.height) {
+			//ROS_WARN("\n\nNAV FEATURES. UPDATEDT. pixel out of range!\n");
+		} else
+			map_copy.at<unsigned char>(pix[1],pix[0]) = 0;
 	}
 	
 	//Add the people detected to the map
@@ -367,13 +377,17 @@ void features::NavFeatures::updateDistTransform(){
 		temp_point.x = per[i].position.x;
 		temp_point.y = per[i].position.y;
 		std::vector<int> pix = worldToMap(&temp_point,&map_metadata_);
-		for (int j = -floor(people_paint_area_/2);j<ceil(people_paint_area_/2);j++){
-			for (int k = -floor(people_paint_area_/2);k<ceil(people_paint_area_/2);k++){
-				if (pix[1]+k>=0 && pix[0]+j>=0){
-					map_copy.at<unsigned char>(pix[1]+k,pix[0]+j) =255;
+		if(pix[0] < 0.0 || pix[0] > map_metadata_.width || pix[1] < 0.0 || pix[1] > map_metadata_.height) {
+			//ROS_WARN("\n\nNAV FEATURES. UPDATEDT. person pixels out of range.\n");
+		} else {
+			for (int j = -floor(people_paint_area_/2);j<ceil(people_paint_area_/2);j++){
+				for (int k = -floor(people_paint_area_/2);k<ceil(people_paint_area_/2);k++){
+					if (pix[1]+k>=0 && pix[0]+j>=0){
+						map_copy.at<unsigned char>(pix[1]+k,pix[0]+j) =255;
+					}
 				}
-			}
 
+			}
 		}
 	}
 	
@@ -418,11 +432,40 @@ void features::NavFeatures::setGoal(geometry_msgs::PoseStamped g) {
 
 	boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
 
+	printf("NavFeatures. Setting new goal for feature calculation\n");
 	if(use_uva_features_)
 		uva_features_->setGoal(g);
 	else
 		goal_ = g;
 }
+
+
+
+void features::NavFeatures::setWeights(std::vector<float> we) {
+	printf("NavFeatures. Setting weights: \n");
+	w_.clear();
+	for(unsigned int i=0; i<we.size(); i++) 
+	{
+		//if(we[i] != 0.0) {
+			w_.push_back(we[i]);
+			//printf("we%u: %.3f, w_%u: %.3f\n", (i+1), we[i], (i+1), w_[i]);
+		//}
+	}
+	
+	for(unsigned int i=0; i<w_.size(); i++) 
+	{
+		printf("w_%u: %.3f\n", (i+1), w_[i]);
+	}
+	
+	/*if(w_.size() == 3)
+		upo_featureset_ = 0;
+	else if(w_.size() == 4)
+		upo_featureset_ = 2;
+	else
+		upo_featureset_ = 1;
+	*/
+}
+
 
 
 
@@ -637,17 +680,19 @@ float features::NavFeatures::getCost(geometry_msgs::PoseStamped* s)
 	
 	std::vector<float> features;
 
-	//Goal distance cost
-	float dist_cost = goalDistFeature(s);
-	if(dist_cost > 1.0) {
-		//printf("GetCost. Dist_cost out of range > 1. returning 1!!!\n");
-		dist_cost = 1.0;
+	if(upo_featureset_ != 2) { 
+		//Goal distance cost
+		float dist_cost = goalDistFeature(s);
+		if(dist_cost > 1.0) {
+			//printf("GetCost. Dist_cost out of range > 1. returning 1!!!\n");
+			dist_cost = 1.0;
+		}
+		if(dist_cost < 0.0){
+			printf("GetCost. Dist_cost out of range < 0. Returning 0!!!\n");
+			dist_cost = 0.0;
+		}	
+		features.push_back(dist_cost);
 	}
-	if(dist_cost < 0.0){
-		printf("GetCost. Dist_cost out of range < 0. Returning 0!!!\n");
-		dist_cost = 0.0;
-	}	
-	features.push_back(dist_cost);
 	
 	//Obstacle distance cost
 	float obs_cost = obstacleDistFeature(s);
@@ -666,13 +711,14 @@ float features::NavFeatures::getCost(geometry_msgs::PoseStamped* s)
 		}
 		features.push_back(prox_cost);
 		
+		//printf("GoalCost: %.3f, ObsCost: %.3f, ProxCost: %.3f\n", dist_cost, obs_cost, prox_cost); 
 		if(obs_cost == 1.0)
 			return 1.0;
 
-		if(prox_cost == 0.0 && obs_cost != 0.0)
-			return (0.5*dist_cost + 0.5*obs_cost);	
+		//if(prox_cost == 0.0 && obs_cost != 0.0)
+		//	return (0.5*dist_cost + 0.5*obs_cost);	
 		
-	} else {  //split the proxemics cost
+	} else {  //split the proxemics cost (featureset 1 and 2)
 		
 		std::vector<float> prox_costs = gaussianFeatures(s);
 		for(unsigned int i=0; i<prox_costs.size(); i++)
@@ -711,10 +757,12 @@ std::vector<float> features::NavFeatures::getFeatures(geometry_msgs::PoseStamped
 		return uva_features_->getFeatures(s);
 
 	std::vector<float> features;
-	//Goal distance cost
-	float dist_cost = goalDistFeature(s);
-	features.push_back(dist_cost);
-			
+	
+	if(upo_featureset_ != 2) { //featureset 2 is for A*, so we don't need this feature
+		//Goal distance cost
+		float dist_cost = goalDistFeature(s);
+		features.push_back(dist_cost);
+	}	
 	//Obstacle distance cost
 	float obs_cost = obstacleDistFeature(s);
 	features.push_back(obs_cost);
@@ -726,7 +774,7 @@ std::vector<float> features::NavFeatures::getFeatures(geometry_msgs::PoseStamped
 		
 		return features;
 		
-	} else {
+	} else { //split the proxemics cost (featureset 1 and 2)
 		std::vector<float> prox_costs = gaussianFeatures(s);
 		for(unsigned int i=0; i<prox_costs.size(); i++)
 			features.push_back(prox_costs[i]);
@@ -739,9 +787,17 @@ std::vector<float> features::NavFeatures::getFeatures(geometry_msgs::PoseStamped
 
 
 float features::NavFeatures::goalDistFeature(geometry_msgs::PoseStamped* s)  {
-	float dx = goal_.pose.position.x - s->pose.position.x;
-	float dy = goal_.pose.position.y - s->pose.position.y;
-	return (float)(sqrt(dx*dx + dy*dy)/max_planning_dist_);
+	
+	//if we don't have a goal yet
+	if(goal_.header.frame_id.empty())
+			return (float) 0.5;
+	
+	//if the frame_id are different, transform s to goal frame
+	geometry_msgs::PoseStamped p = transformPoseTo(*s, goal_.header.frame_id, false);
+	float dx = goal_.pose.position.x - p.pose.position.x;
+	float dy = goal_.pose.position.y - p.pose.position.y;
+	return (float)(sqrt(dx*dx + dy*dy)/max_planning_dist_); 
+	
 }
 
 
@@ -1043,7 +1099,7 @@ void features::NavFeatures::calculateGaussians()
 			gauss_aux.push_back(b);
 			
 			
-			if(upo_featureset_ == 1) {
+			if(upo_featureset_ == 1 || upo_featureset_ == 2) {
 				
 				gaussian r;
 				r.type = RIGHT;

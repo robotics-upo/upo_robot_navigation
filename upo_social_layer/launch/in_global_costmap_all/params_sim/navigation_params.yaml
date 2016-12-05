@@ -1,0 +1,115 @@
+#-----GENERAL PARAMS FOR UPO_NAVIGATION -------------------------
+base_global_planner: navfn/NavfnROS
+base_local_planner: simple_local_planner/PurePlannerROS
+recovery_behaviors: [{
+    name: conservative_reset, 
+    type: clear_costmap_recovery/ClearCostmapRecovery
+  }, {
+    name: aggressive_reset,
+    type: clear_costmap_recovery/ClearCostmapRecovery
+#  }, {
+#    name: rotate_recovery1,
+#    type: rotate_recovery/RotateRecovery
+#  }, {
+#    name: rotate_recovery2,
+#    type: rotate_recovery/RotateRecovery
+  }]
+planner_frequency:          5 #def:0
+controller_frequency:       15.0
+planner_patience:           15.0
+controller_patience:        10.0
+conservative_reset_dist:    4.0
+recovery_behavior_enabled:  true
+clearing_rotation_allowed:  false
+shutdown_costmaps:          false
+oscillation_timeout:        0.0
+oscillation_distance:       0.5
+
+
+#------ GLOBAL PLANNER PARAMS -------------------------------------
+# http://www.ros.org/wiki/navfn
+NavfnROS:
+
+  allow_unknown:                      false
+  planner_window_x:                   0.0
+  planner_window_y:                   0.0
+  default_tolerance:                  0.05
+  visualize_potential:                true  
+  planner_costmap_publish_frequency:  1.0
+  use_dijkstra:                       false 
+  old_navfn_behavior:                 false
+
+
+
+
+#---- PARAMS FOR FEATURES CALCULATION-------------------------
+Navigation_features:
+
+  # param to use UvA social cost library
+  use_uva_features:           false
+  
+  #Use the laser projection or the ros costmap
+  # to calculate the obstacle distance cost
+  use_laser_projection:       true
+  pc_topic:                   /scan360/point_cloud
+  pc_type:                    2
+
+  # Gaussian functions
+  stddev_person_front:        1.2
+  stddev_person_aside:        0.8
+  stddev_person_right:        0.8
+
+  enable_grouping:            false  
+  stddev_group:               0.8
+  grouping_distance:          1.5
+
+  #goal coordinates to take:
+  # 1 -> RRT goal
+  # 2 -> A* goal
+  #goal_type:                  2
+
+  # 0 -> 3 features
+  # 1 -> 5 features
+  upo_featureset:             1
+  # Weights for function costs (featureset 0)
+  #w1:                         0.1   #goal dist
+  #w2:                         0.5  #obstacle dist
+  #w3:                         0.4  #proxemics
+  # Weights for function costs (featureset 1)
+  w1:                         0.1   #goal dist
+  w2:                         0.2  #obstacle dist
+  w3:                         0.25  #person front
+  w4:                         0.15 # person back 
+  w5:                         0.3 # person right side
+
+
+
+
+
+#------------------------------------------------------------
+# Parameters for the PATH FOLLOWING CONTROLLER
+PurePlanner:
+
+# Robot Configuration Parameters
+  max_trans_acc:              1.0
+  max_rot_acc:                1.0
+  max_trans_vel:              0.4 
+  min_trans_vel:              0.1
+  max_rot_vel:                0.5
+  min_rot_vel:                0.1
+  min_in_place_rot_vel:       0.4
+
+# Goal Tolerance Parameters
+  yaw_goal_tolerance:         0.1
+  xy_goal_tolerance:          0.10
+  wp_tolerance:               0.5
+  
+# Forward Simulation Parameters
+  sim_time:                   0.5 
+  sim_granularity:            0.025
+  angular_sim_granularity:    0.025
+
+  controller_freq:            15.0
+
+
+  
