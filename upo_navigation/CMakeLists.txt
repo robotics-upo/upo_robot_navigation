@@ -57,20 +57,21 @@ add_definitions(${EIGEN_DEFINITIONS})
 #add_message_files(
 #    DIRECTORY msg
 #    FILES
-#    Position2DInt.msg
-
- #)
+# )
 
 
-#add_service_files(
-#   FILES
-#   PointCosts.srv
-#)
+add_service_files(
+   FILES
+   #PointCosts.srv
+   FeatureCounts.srv
+   SetWeights.srv
+)
 
-#generate_messages(
-#   DEPENDENCIES
-#   std_msgs
-#)
+generate_messages(
+   DEPENDENCIES
+   std_msgs	
+   upo_msgs
+)
 
 catkin_package(
 	INCLUDE_DIRS include

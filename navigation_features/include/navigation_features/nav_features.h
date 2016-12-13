@@ -45,7 +45,7 @@
 #include <navigation_features/uva_features.h>
 
 //Service msg
-//#include <navigation_features/ApproachIT.h>
+//#include <navigation_features/SetWeights.h>
 
 //Dynamic reconfigure
 #include <dynamic_reconfigure/server.h>
@@ -135,6 +135,9 @@ namespace features {
 			void setWeights(std::vector<float> we);
 
 			void setGoal(geometry_msgs::PoseStamped g); 
+
+			//Service
+			//bool setWeightsService(navigation_features::SetWeights::Request  &req, navigation_features::SetWeights::Response &res);
 			
 			
 			//For laser projection
@@ -227,6 +230,9 @@ namespace features {
 		
 			//Weights to balance the costs
 			std::vector<float> 					w_;
+
+			//service
+			//ros::ServiceServer 					weights_srv_;
 			
 			//upo feature set to be used
 			int 								upo_featureset_;

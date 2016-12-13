@@ -16,6 +16,11 @@ features::NavFeatures::NavFeatures(tf::TransformListener* tf, float size_x, floa
 	max_planning_dist_ = sqrt((size_x_*2*size_x_*2)+(size_y_*2*size_y_*2));
 	insc_radius_robot_ = 0.34;
 	
+
+	//Advertise service
+	//ros::NodeHandle n("navigation_features");
+	//weights_srv_ = n.advertiseService("setWeights", &features::NavFeatures::setWeightsService, this);
+
 	setParams();
 
 }
@@ -42,9 +47,14 @@ features::NavFeatures::NavFeatures(tf::TransformListener* tf, const costmap_2d::
 		use_global_costmap_ = false;
 	}
 	myfootprint_ = footprint;
+
+	//Advertise service
+	//ros::NodeHandle n("navigation_features");
+	//weights_srv_ = n.advertiseService("setWeights", &features::NavFeatures::setWeightsService, this);
 	
 	
 	setParams();
+
  	
 }
 
@@ -190,6 +200,17 @@ features::NavFeatures::~NavFeatures() {
 	it_id_ = config.interaction_target_id;
 	//printf("upo_featureset. it_id:%i\n", it_id_);
 }
+
+
+/*
+bool features::NavFeatures::setWeightsService(navigation_features::SetWeights::Request  &req, navigation_features::SetWeights::Response &res)
+{
+	setWeights(req.weights);
+
+	return true;
+}
+*/
+
 
 
 void features::NavFeatures::setupProjection(std::string topic, int pc_type)
@@ -432,12 +453,14 @@ void features::NavFeatures::setGoal(geometry_msgs::PoseStamped g) {
 
 	boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
 
-	printf("NavFeatures. Setting new goal for feature calculation\n");
+	//printf("NavFeatures. Setting new goal for feature calculation\n");
 	if(use_uva_features_)
 		uva_features_->setGoal(g);
 	else
 		goal_ = g;
 }
+
+
 
 
 
@@ -776,9 +799,9 @@ std::vector<float> features::NavFeatures::getFeatures(geometry_msgs::PoseStamped
 		
 	} else { //split the proxemics cost (featureset 1 and 2)
 		std::vector<float> prox_costs = gaussianFeatures(s);
-		for(unsigned int i=0; i<prox_costs.size(); i++)
+		for(unsigned int i=0; i<prox_costs.size(); i++) {
 			features.push_back(prox_costs[i]);
-			
+		}
 		return features;
 	}
 }
@@ -796,8 +819,12 @@ float features::NavFeatures::goalDistFeature(geometry_msgs::PoseStamped* s)  {
 	geometry_msgs::PoseStamped p = transformPoseTo(*s, goal_.header.frame_id, false);
 	float dx = goal_.pose.position.x - p.pose.position.x;
 	float dy = goal_.pose.position.y - p.pose.position.y;
-	return (float)(sqrt(dx*dx + dy*dy)/max_planning_dist_); 
-	
+	float dist = (float)(sqrt(dx*dx + dy*dy)/max_planning_dist_);
+	if(dist > 1.0) {
+		//printf("NavFeatures. goal dist feature %.2f > 1.0. d: %.2f, max_dist: %.2f\n", dist, (float)sqrt(dx*dx + dy*dy), max_planning_dist_);
+		dist = 1.0;
+	}
+	return dist;
 }
 
 
@@ -843,12 +870,22 @@ float features::NavFeatures::obstacleDistFeature(geometry_msgs::PoseStamped* s) 
 		float d = distance_functions(distance, INVERSE_DEC); //EXP_DEC //INVERSE_DEC
 		//Normalize
 		//printf("Distance: %.4f, Obs cost: %.4f, norm: %.4f\n", distance, d, (d/max_cost_obs_));
-		return d/max_cost_obs_;
+		d = d/max_cost_obs_;
+		if(d > 1.0) {
+			printf("NavFeatures. obstacle dist feature %.2f > 1.0\n", d);
+			d = 1.0;
+		}
+		return d;
 		
 	} else {
 		
 		float obs_cost = costmapPointCost((float)s->pose.position.x, (float)s->pose.position.y);
-		return obs_cost/255.0; //Normalize
+		obs_cost = obs_cost/255.0; //Normalize
+		if(obs_cost > 1.0) {
+			printf("NavFeatures. obstacle dist feature %.2f > 1.0\n", obs_cost);
+			obs_cost = 1.0;
+		}
+		return obs_cost;
 	}
 }
 
@@ -1416,7 +1453,12 @@ float features::NavFeatures::proxemicsFeature(geometry_msgs::PoseStamped* s)  {
 
 float features::NavFeatures::gaussian_function(float x, float y, float sx, float sy) 
 {
-	return (amp_*exp(-( (x*x)/(2*(sx*sx)) + (y*y)/(2*(sy*sy))))) / amp_;
+	float g = (amp_*exp(-( (x*x)/(2*(sx*sx)) + (y*y)/(2*(sy*sy))))) / amp_;
+	if(g > 1.0) {
+		printf("NavFeatures. gaussian value %.2f > 1.0\n", g);
+		g = 1.0;
+	}
+	return g;
 }
 
 

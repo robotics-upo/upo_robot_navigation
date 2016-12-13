@@ -42,6 +42,9 @@
 #include <geometry_msgs/Point.h>
 #include <visualization_msgs/MarkerArray.h>
 
+//Service 
+#include <upo_navigation/FeatureCounts.h>
+#include <upo_navigation/SetWeights.h>
 
 //****New RRT package
 #include <upo_rrt_planners/ros/RRT_ros_wrapper.h>
@@ -101,7 +104,6 @@ namespace upo_nav {
 	  bool clearLocalCostmap();
 	  void updateLocalCostmap();
 	  
-	  bool planRRTService(nav_msgs::GetPlan::Request &req, nav_msgs::GetPlan::Response &resp);
 	  bool makeRRTPlan(const geometry_msgs::PoseStamped& goal, std::vector<geometry_msgs::PoseStamped>& plan);
 	  
 
@@ -144,6 +146,32 @@ namespace upo_nav {
        * @return True if planning succeeded, false otherwise
        */
       bool planService(nav_msgs::GetPlan::Request &req, nav_msgs::GetPlan::Response &resp);
+      
+      
+      /**
+       * @brief  A service call that can be made when the action is inactive that will return a plan
+       * @param  req The goal request
+       * @param  resp The plan request
+       * @return True if planning succeeded, false otherwise
+       */
+      bool planRRTService(nav_msgs::GetPlan::Request &req, nav_msgs::GetPlan::Response &resp);
+
+
+	  /**
+	   * @brief A service call that return the feature counts of a path
+       * @param req the path request
+	   * @param res the feature counts response
+ 	   * @return True if feature counts calculation succeeded, false otherwise
+	   */
+	  bool getPathFeatures(upo_navigation::FeatureCounts::Request  &req, upo_navigation::FeatureCounts::Response &res);
+      
+      /**
+	   * @brief A service call that return the set the values of the weights for path cost function calculation
+       * @param req the weights array to set
+	   * @param res empty
+ 	   * @return True if weight set succeeded, false otherwise
+	   */
+	  bool setWeightsRRT(upo_navigation::SetWeights::Request  &req, upo_navigation::SetWeights::Response &res);
 
       /**
        * @brief  Make a new global plan
@@ -275,6 +303,10 @@ namespace upo_nav {
 	  geometry_msgs::PoseStamped rrt_goal_;
 	  //RRT plan service
 	  ros::ServiceServer make_rrt_plan_srv_;
+	  //Feature counts service
+	  ros::ServiceServer features_srv_;
+	  //Set weights service
+	  ros::ServiceServer weights_srv_;
 
 
 	  //upo_nav::OdometryHelperRos* odom_helper_;

@@ -183,6 +183,12 @@ namespace upo_nav {
     //advertise a service for clearing the costmaps
     clear_costmaps_srv_ = private_nh.advertiseService("clear_costmaps", &UpoNavigation::clearCostmapsService, this);
 
+	//advertise a service for get the feature count of a path
+	features_srv_ = private_nh.advertiseService("path_feature_count", &UpoNavigation::getPathFeatures, this);
+	
+	//advertise a service for setting the weights for cost function
+	weights_srv_ = private_nh.advertiseService("set_cost_function_weights", &UpoNavigation::setWeightsRRT, this);
+
     //if we shutdown our costmaps when we're deactivated... we'll do that now
     if(shutdown_costmaps_){
       ROS_DEBUG_NAMED("upo_navigation","Stopping costmaps initially");
@@ -762,6 +768,22 @@ namespace upo_nav {
   void UpoNavigation::setFeaturesWeights(std::vector<float> w)
   {
 		rrt_planner_->setWeights(w);
+  }
+  
+  
+  bool UpoNavigation::setWeightsRRT(upo_navigation::SetWeights::Request  &req, upo_navigation::SetWeights::Response &res)
+  {
+	  rrt_planner_->setWeights(req.weights);
+	  return true;
+  }
+
+
+  bool UpoNavigation::getPathFeatures(upo_navigation::FeatureCounts::Request  &req, upo_navigation::FeatureCounts::Response &res)
+  {
+		geometry_msgs::PoseStamped* g = &req.goal;
+		std::vector<geometry_msgs::PoseStamped>* p = &req.path;
+		res.features = get_feature_counts(g, p);
+		return true;
   }
 
   

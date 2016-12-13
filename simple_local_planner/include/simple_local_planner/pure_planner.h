@@ -196,6 +196,7 @@ namespace simple_local_planner {
       double inscribed_radius_, circumscribed_radius_;
 
 
+	  bool dwa_;
       
       
       // Pure pursuit params

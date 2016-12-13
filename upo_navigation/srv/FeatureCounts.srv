@@ -1,0 +1,4 @@
+geometry_msgs/PoseStamped[] path
+geometry_msgs/PoseStamped goal
+---
+float32[] features

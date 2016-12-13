@@ -221,18 +221,18 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 	ros::NodeHandle n;
 	if(visualize_costmap_) {
 		printf("Visualize_costmap = true, initializing costmap_pub\n");
-		costmap_pub_ = n.advertise<nav_msgs::OccupancyGrid>("rrt_costmap", 1);
+		costmap_pub_ = n.advertise<nav_msgs::OccupancyGrid>("rrt_costmap", 5);
 	}
 	if(visualize_tree_) {
 		printf("Visualize_tree = true, initializing tree_pub\n");
-		tree_pub_ = n.advertise<visualization_msgs::Marker>("rrt_tree", 1);
+		tree_pub_ = n.advertise<visualization_msgs::Marker>("rrt_tree", 5);
 	}
 	
-	rrt_goal_pub_ = n.advertise<geometry_msgs::PoseStamped>("rrt_goal", 1);
+	rrt_goal_pub_ = n.advertise<geometry_msgs::PoseStamped>("rrt_goal", 5);
 		
-	local_goal_pub_ = n.advertise<visualization_msgs::Marker>("rrt_goal_marker", 1);
-	path_points_pub_ = n.advertise<visualization_msgs::Marker>("rrt_path_points", 1);
-	path_interpol_points_pub_ = n.advertise<visualization_msgs::Marker>("rrt_path_interpol_points", 1);
+	local_goal_pub_ = n.advertise<visualization_msgs::Marker>("rrt_goal_marker", 5);
+	path_points_pub_ = n.advertise<visualization_msgs::Marker>("rrt_path_points", 5);
+	path_interpol_points_pub_ = n.advertise<visualization_msgs::Marker>("rrt_path_interpol_points", 5);
 
 	if(size_x_ != size_y_) {
 		ROS_ERROR("X size and Y size of the State Space has to be equal!!!");
@@ -1533,6 +1533,8 @@ std::vector<float> upo_RRT_ros::RRT_ros_wrapper::get_feature_counts(geometry_msg
 			}
 			
 			checker_->preplanning_computations();
+			//if(visualize_costmap_) 
+			//	publish_feature_costmap(ros::Time());
 			
 			upo_RRT::State* robot1;
 			robot1 = new upo_RRT::State(robot_pose.pose.position.x, robot_pose.pose.position.y, tf::getYaw(robot_pose.pose.orientation));

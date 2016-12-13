@@ -44,6 +44,7 @@ namespace simple_local_planner{
 		sim_time_ = config.sim_time;
 		sim_granularity_ = config.sim_granularity;
 		angular_sim_granularity_ = config.angular_sim_granularity;
+		dwa_ = config.sample_angular_vels;
 		//printf("\nPure Planner Reconfigure. new wp_tolerance: %.2f\n", wp_tolerance_);
   }
 
@@ -87,6 +88,8 @@ namespace simple_local_planner{
 		sim_granularity_ = sim_granularity;
 		angular_sim_granularity_ = angular_sim_granularity;	
 
+		dwa_ = true;
+
   }
 
 
@@ -124,10 +127,10 @@ namespace simple_local_planner{
     //compute the number of steps we must take along this trajectory to be "safe"
     int num_steps;
 
-      num_steps = int(max((vmag * sim_time_) / sim_granularity_, fabs(vtheta_samp) / angular_sim_granularity_) + 0.5);
-    //} else {
-    //  num_steps = int(sim_time_ / sim_granularity_ + 0.5);
-    //}
+    //num_steps = int(max((vmag * sim_time_) / sim_granularity_, fabs(vtheta_samp) / angular_sim_granularity_) + 0.5);
+    
+    num_steps = int(sim_time_ / sim_granularity_ + 0.5);
+    
 
     //we at least want to take one step... even if we won't move, we want to score our current position
     if(num_steps == 0) {
@@ -601,7 +604,10 @@ namespace simple_local_planner{
 	}
 	
 	// Check if the action collide with an obstacle
-	if(checkTrajectory(rx, ry, rt, vx, vy, vt, 1.0, 0.0, 1.0) || fabs(vx) < 0.0001)	
+	//bool valid = checkTrajectory(rx, ry, rt, vx, vy, vt, 1.0, 0.0, 1.0);
+	bool valid = checkTrajectory(rx, ry, rt, rvx, rvy, rvt, vx, vy, vt);
+
+	if(valid || fabs(vx) < 0.0001)	
 	{
 		cmd_vel.linear.x = vx;
 		cmd_vel.linear.y = vy;
@@ -626,11 +632,74 @@ namespace simple_local_planner{
 	//}
 	//---------------------
 	//+++++++code added by Noé
-	else //try to perform a rotation in place to reduce more the angle if we have obstacles
-	{
+
+	// Try to find a valid command by sampling similar angular vels
+	else if(dwa_) {
+
+		//loop for cmd vels varying the angular vel
+		//decide the first direction (right or left) randomly
+		float vt_orig = vt;
+		float vx_orig = vx;
+
+		float ang_vel_inc = 0.1;
+		float lin_vel_dec = 0.1;
+
+		//Linear vel
+		for(unsigned int l=0; l <= 3; l++) 
+		{
+
+			vx = vx_orig - (lin_vel_dec*l);
+			if(vx < 0.0)
+				vx = 0.0;
+			//printf("\nChecking lin vel %.2f\n", vx);
+		
+			//Angular vel
+			for(unsigned int v=1; v <= 4; v++)
+			{
+				//To the right
+				vt = vt_orig + (ang_vel_inc * v);
+				if(fabs(vt) > max_vel_th_)
+					vt = max_vel_th_;
+				//printf("\tChecking ang vel %.2f\n", vt);
+				//valid = checkTrajectory(rx, ry, rt, vx, vy, vt, 1.0, 0.0, 1.0);
+				valid = checkTrajectory(rx, ry, rt, rvx, rvy, rvt, vx, vy, vt);
+				if(valid) {
+					cmd_vel.linear.x = vx;
+					cmd_vel.linear.y = vy;
+					cmd_vel.linear.z = 0.0;
+					cmd_vel.angular.x = 0.0;
+					cmd_vel.angular.y = 0.0;
+					cmd_vel.angular.z = vt;
+					//printf("\nValid cmd found! vx:%.2f, vth:%.2f\n", vx, vt);
+					return true;
+				}
+
+				//to the left
+				vt = vt_orig - (ang_vel_inc * v);
+				if(fabs(vt) > max_vel_th_)
+					vt = -max_vel_th_;
+				//printf("\tChecking ang vel %.2f\n", vt);
+				//valid = checkTrajectory(rx, ry, rt, vx, vy, vt, 1.0, 0.0, 1.0);
+				bool valid = checkTrajectory(rx, ry, rt, rvx, rvy, rvt, vx, vy, vt);
+				if(valid) {
+					cmd_vel.linear.x = vx;
+					cmd_vel.linear.y = vy;
+					cmd_vel.linear.z = 0.0;
+					cmd_vel.angular.x = 0.0;
+					cmd_vel.angular.y = 0.0;
+					cmd_vel.angular.z = vt;
+					//printf("\nValid cmd found! vx:%.2f, vth:%.2f\n", vx, vt);
+					return true;
+				}
+			}
+		}
+	} 
+	//else if(!valid) //try to perform a rotation in place to reduce more the angle if we have obstacles
+	//{
 		//option 1
 		if(dt > 0.09 || dt < -0.09) //0.09rad~5º
 		{
+			//printf("The robot should rotate on the spot\n");
 			vx = 0.0;
 			vy = 0.0;
 			vt = min_in_place_vel_th_;
@@ -646,6 +715,7 @@ namespace simple_local_planner{
 			return true;
 		} else {
 			// Stop the robot
+			//printf("The robot should stop\n");
 			cmd_vel.linear.x = 0.0;
 			cmd_vel.linear.y = 0.0;
 			cmd_vel.linear.z = 0.0;
@@ -685,7 +755,7 @@ namespace simple_local_planner{
 			return false;
 		}*/
 		
-	}
+	//}
 	//+++++++++++++++++++++++++
   }
 
