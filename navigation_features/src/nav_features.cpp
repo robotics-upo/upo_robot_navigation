@@ -845,7 +845,7 @@ float features::NavFeatures::obstacleDistFeature(geometry_msgs::PoseStamped* s) 
 		float px = floor(distance_x/resolution_);
 		//float py =distanceTransform->rows-floor(distance_y /resolution);
 		float py =floor(distance_y/resolution_);
-		//cout<<px<<"  "<<py<<endl;
+		//cout<<"px:"<<px<<"  py:"<<py<<std::endl;
 		float distance = 0.0;
 		if (py<0 || px<0) {
 			distance = 0.0;
@@ -860,6 +860,7 @@ float features::NavFeatures::obstacleDistFeature(geometry_msgs::PoseStamped* s) 
 				distance = 0.0;
 			}
 		}
+		//cout << "after distance_trans" << std::endl;
 		// Take into account the robot radius 
 		if(distance <= insc_radius_robot_)
 			distance = 0.0;

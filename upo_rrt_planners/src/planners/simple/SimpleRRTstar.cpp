@@ -110,7 +110,7 @@ std::vector<upo_RRT::Node> upo_RRT::SimpleRRTstar::solve(float secs)
 		
 		
 		//sample goal according to the bias parameter
-		if(space_->sampleUniform() < goalBias_)
+		if(first_sol && space_->sampleUniform() < goalBias_)
 		{
 			//randNode = goalNode;
 			randState = *goalNode->getState();
@@ -149,6 +149,7 @@ std::vector<upo_RRT::Node> upo_RRT::SimpleRRTstar::solve(float secs)
 			} while(!space_->isStateValid(&randState));
 		}
 		
+		
 		//if(randNode)
 		//	delete randNode;
 			
@@ -179,7 +180,7 @@ std::vector<upo_RRT::Node> upo_RRT::SimpleRRTstar::solve(float secs)
 			float inc_cost = steering_->motionCost(nearNode, newNode);
 			float cost_min = nearNode->getAccCost() + inc_cost;
 			//Check the nodes costs to chose the parent with 
-			// a lower cost connection
+			// a lower connection cost
 			
 			std::vector<upo_RRT::Node*> nbrs_aux;
 			nbrs_aux.push_back(nearNode);

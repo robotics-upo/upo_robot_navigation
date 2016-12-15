@@ -82,6 +82,11 @@ namespace upo_nav {
     //like nav_view and rviz
     ros::NodeHandle simple_nh("upo_navigation_simple");
     goal_sub_ = simple_nh.subscribe<geometry_msgs::PoseStamped>("goal", 1, boost::bind(&UpoNavigation::goalCB, this, _1));
+    
+    
+    //RRT path points
+    path_points_pub_ = nh.advertise<visualization_msgs::Marker>("rrt_path", 1);
+    
 
     //we'll assume the radius of the robot to be consistent with what's specified for the costmaps
     private_nh.param("local_costmap/inscribed_radius", inscribed_radius_, 0.325);
@@ -574,10 +579,13 @@ namespace upo_nav {
 		std::vector<geometry_msgs::PoseStamped> rrt_path;
 
 		bool ok = makeRRTPlan(goal, rrt_path);
+		
 		if(!ok) {
 			ROS_FATAL("ERROR obtaining RRT path");
 			return false;
 		}
+		
+		//publish_rrt_path(&rrt_path);
 		
       
 		//copy the plan into a message to send out
@@ -624,6 +632,37 @@ namespace upo_nav {
     tc_.reset();
 	delete rrt_planner_;
 
+  }
+  
+  
+  
+  void UpoNavigation::publish_rrt_path(std::vector<geometry_msgs::PoseStamped>* path)
+  {
+	  visualization_msgs::Marker points;
+	  
+		points.header.frame_id = path->at(0).header.frame_id; //robot_base_frame_; 
+		points.header.stamp = path->at(0).header.stamp; //ros::Time();
+		points.ns = "rrt";
+		points.id = 0;
+		points.type = visualization_msgs::Marker::SPHERE_LIST;
+		points.action = visualization_msgs::Marker::ADD;
+		points.pose.position.x = 0.0;
+		points.pose.position.y = 0.0;
+		points.pose.position.z = 0.1; 
+		points.scale.x = 0.12;
+		points.scale.y = 0.12;
+		points.color.r = 0.0f;
+		points.color.g = 1.0f;
+		points.color.b = 0.0f;
+		points.color.a = 1.0;
+		points.lifetime = ros::Duration();
+			
+		for(unsigned int i=0; i<path->size(); i++)
+		{
+			geometry_msgs::Point p = path->at(i).pose.position;
+			points.points.push_back(p);
+		}
+		path_points_pub_.publish(points);
   }
 
 
@@ -759,6 +798,8 @@ namespace upo_nav {
 		}
 		plan.push_back(pose_out);
 	}
+	
+	//publish_rrt_path(&plan);
 
     return true;
   }
@@ -1009,8 +1050,12 @@ namespace upo_nav {
 		rrt_goal = rrt_goal_;
 		rrt_mutex_.unlock();
 
+		bool use_new_path = true;
+		float new_path_cost = 0.0;
+		float prev_path_cost = rrt_planner_->get_path_cost();
 		
-		if(run_rrt /*!rrt_sleep && (run_rrt || !(rrt_planner_->check_rrt_path(rrt_plan)))*/)
+		
+		if(run_rrt /*!rrt_sleep && (run_rrt || !(rrt_planner_->check_rrt_path(&rrt_plan)))*/)
 		{
 			//---------
 			//rrt_mutex_.lock();
@@ -1024,8 +1069,14 @@ namespace upo_nav {
 			//rrt_goal_ is in map coordinates but makeRRTPlan transform it to base_link
 			if(makeRRTPlan(rrt_goal, rrt_plan)) {
 				got_plan = true;
-			} else
+				//new_path_cost = rrt_planner_->get_path_cost();
+				//if(new_path_cost > 0.0 && (fabs(prev_path_cost - new_path_cost)/new_path_cost) < 0.12)
+				//	use_new_path = false;
+				//printf("Prev_cost: %.3f, new_cost: %.2f, error: %.3f\n", prev_path_cost, new_path_cost, (fabs(prev_path_cost - new_path_cost)/new_path_cost));
+			} else {
 				got_plan = false;
+				
+			}
 			ros::WallDuration rrt_time = ros::WallTime::now() - startRRT;
 			
 		} /*else if(!(rrt_planner_->check_rrt_path(rrt_plan)))
@@ -1036,7 +1087,7 @@ namespace upo_nav {
 		rrt_mutex_.lock();
 		run_rrt = run_rrt_;
 		rrt_mutex_.unlock();
-		if(got_plan && run_rrt)
+		if(got_plan && run_rrt && use_new_path)
 		{
 			rrt_mutex_.lock();
 			new_rrt_plan_ = true;
@@ -1431,6 +1482,8 @@ namespace upo_nav {
 			//update the path
 			//pure_pursuit_->updatePlan(*local_plan_, true);
 			tc_->setPlan(*local_plan_);
+			
+			publish_rrt_path(local_plan_);
 		
 			//disable flag
 			new_rrt_plan_ = false;
@@ -1738,6 +1791,9 @@ namespace upo_nav {
 		new_rrt_plan_ = false;
 		//update the path
 		tc_->setPlan(*local_plan_);
+		
+		publish_rrt_path(local_plan_);
+		
 	} 
 	rrt_mutex_.unlock();
 

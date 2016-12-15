@@ -115,7 +115,7 @@ std::vector<upo_RRT::Node> upo_RRT::RRTstar::solve(float secs)
 		State randState;
 		
 		//sample goal according to the bias parameter
-		if(space_->sampleUniform() < goalBias_)
+		if(first_sol && space_->sampleUniform() < goalBias_)
 		{
 			randState = *goal_;
 			goal_samples++;

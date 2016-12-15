@@ -240,6 +240,8 @@ namespace upo_nav {
 				rrt_planner_->setBiasingPath(&path_to_follow);
 			}
 	
+	  void publish_rrt_path(std::vector<geometry_msgs::PoseStamped>* path);
+
 
       /**
        * @brief This is used to wake the planner at periodic intervals.
@@ -307,6 +309,8 @@ namespace upo_nav {
 	  ros::ServiceServer features_srv_;
 	  //Set weights service
 	  ros::ServiceServer weights_srv_;
+	  // rrt path points
+	  ros::Publisher path_points_pub_;
 
 
 	  //upo_nav::OdometryHelperRos* odom_helper_;

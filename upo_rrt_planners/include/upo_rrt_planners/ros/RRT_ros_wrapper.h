@@ -96,6 +96,7 @@ namespace upo_RRT_ros {
 			float get_path_cost(geometry_msgs::PoseStamped* goal, std::vector<geometry_msgs::PoseStamped>* path, std::vector<upo_msgs::PersonPoseArrayUPO>* people);
 			float get_path_cost();
 			
+			
 			std::vector<geometry_msgs::PoseStamped> path_interpolation(std::vector<geometry_msgs::PoseStamped> path, float step_distance);
 			
 			float get_xy_tol() { return goal_xy_tol_;};
@@ -124,7 +125,6 @@ namespace upo_RRT_ros {
 			
 			tf::TransformListener* 			tf_;
 			
-			//ros::Subscriber					people_sub_;
 
 			//Robot
 			float							inscribed_radius_;
@@ -144,6 +144,7 @@ namespace upo_RRT_ros {
 			
 
 			float							equal_path_percentage_;
+			float 							path_cost_;
 
 			//StateSpace
 			int 							dimensions_;

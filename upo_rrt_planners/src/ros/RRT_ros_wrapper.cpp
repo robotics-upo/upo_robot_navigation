@@ -884,7 +884,7 @@ std::vector<geometry_msgs::PoseStamped> upo_RRT_ros::RRT_ros_wrapper::RRT_plan(g
 	
 
 	//Visualize the tree nodes of the resulting path
-	visualization_msgs::Marker points;
+	/*visualization_msgs::Marker points;
 	  
 	points.header.frame_id = "base_link"; //robot_base_frame_; 
 	points.header.stamp = time;
@@ -909,7 +909,7 @@ std::vector<geometry_msgs::PoseStamped> upo_RRT_ros::RRT_ros_wrapper::RRT_plan(g
 		points.points.push_back(p);
 	}
 	path_points_pub_.publish(points);
-	
+	*/
 
 	if(visualize_tree_) 
 		visualizeTree(time);
@@ -926,7 +926,7 @@ std::vector<geometry_msgs::PoseStamped> upo_RRT_ros::RRT_ros_wrapper::RRT_plan(g
 		rrt_plan_ = path_interpolation(rrt_plan_, interpolate_path_distance_);
 		
 		//Visualize the interpolated path nodes
-		visualization_msgs::Marker mar;
+		/*visualization_msgs::Marker mar;
 		  
 		mar.header.frame_id = "base_link"; //robot_base_frame_; 
 		mar.header.stamp = time;
@@ -951,6 +951,7 @@ std::vector<geometry_msgs::PoseStamped> upo_RRT_ros::RRT_ros_wrapper::RRT_plan(g
 			mar.points.push_back(p);
 		}
 		path_interpol_points_pub_.publish(mar);
+		*/
 	}
 
 	if(g)

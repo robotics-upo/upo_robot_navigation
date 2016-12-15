@@ -172,10 +172,13 @@ namespace upo_RRT
 			bool				storeTree_;
 			std::vector<upo_RRT::State> tree_;
 			
+			//Used to bias the sampling to points nearby
 			std::vector<upo_RRT::State> first_path_;
 			bool 				fullBiasing_;
 			float				pathBias_;
 			float 				pathBias_stddev_;
+			
+			
 
 	};
 	
