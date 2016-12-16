@@ -369,7 +369,7 @@ namespace simple_local_planner{
 
 
   bool PurePlanner::checkTrajectory(double x, double y, double theta, double vx, double vy,
-      double vtheta, double vx_samp, double vy_samp, double vtheta_samp){
+      double vtheta, double vx_samp, double vy_samp, double vtheta_samp, double& px, double& py, double& pth){
     
 	Trajectory t;
 
@@ -389,13 +389,14 @@ namespace simple_local_planner{
 	}
     
     //otherwise the trajectory is valid
+	double pointx, pointy, pointth;
+	t.getEndpoint(pointx, pointy, pointth);
+	px = pointx;
+	py = pointy;
+	pth = pointth;
+
     return true;
   }
-
-
-
-
-
 
 
   bool PurePlanner::isGoalReached()
@@ -604,8 +605,9 @@ namespace simple_local_planner{
 	}
 	
 	// Check if the action collide with an obstacle
+	double px, py, pth;
 	//bool valid = checkTrajectory(rx, ry, rt, vx, vy, vt, 1.0, 0.0, 1.0);
-	bool valid = checkTrajectory(rx, ry, rt, rvx, rvy, rvt, vx, vy, vt);
+	bool valid = checkTrajectory(rx, ry, rt, rvx, rvy, rvt, vx, vy, vt, px, py, pth);
 
 	if(valid || fabs(vx) < 0.0001)	
 	{
@@ -615,43 +617,32 @@ namespace simple_local_planner{
 		cmd_vel.angular.x = 0.0;
 		cmd_vel.angular.y = 0.0;
 		cmd_vel.angular.z = vt;
-		//printf("max_vel_x: %.3f, vx: %.3f, vth: %.3f\n", max_vel_x_, vx, vt);
 		return true;
 	}
-	//---previous code-----
-	//else
-	//{
-		//// Stop the robot
-		//cmd_vel.linear.x = 0.0;
-		//cmd_vel.linear.y = 0.0;
-		//cmd_vel.linear.z = 0.0;
-		//cmd_vel.angular.x = 0.0;
-		//cmd_vel.angular.y = 0.0;
-		//cmd_vel.angular.z = 0.0;
-		//return false;
-	//}
-	//---------------------
-	//+++++++code added by Noé
 
-	// Try to find a valid command by sampling similar angular vels
-	else if(dwa_) {
+	// Try to find a valid command by sampling vels
+	else if(dwa_) 
+	{
 
-		//loop for cmd vels varying the angular vel
-		//decide the first direction (right or left) randomly
 		float vt_orig = vt;
 		float vx_orig = vx;
 
 		float ang_vel_inc = 0.1;
 		float lin_vel_dec = 0.1;
 
+		vels_ best_vels;
+		best_vels.vel_x = -1.0;
+		best_vels.vel_y = vy;
+
 		//Linear vel
 		for(unsigned int l=0; l <= 3; l++) 
 		{
 
 			vx = vx_orig - (lin_vel_dec*l);
-			if(vx < 0.0)
-				vx = 0.0;
-			//printf("\nChecking lin vel %.2f\n", vx);
+			if(vx < 0.1)
+				continue;
+			
+			best_vels.vel_x = vx;
 		
 			//Angular vel
 			for(unsigned int v=1; v <= 4; v++)
@@ -660,103 +651,78 @@ namespace simple_local_planner{
 				vt = vt_orig + (ang_vel_inc * v);
 				if(fabs(vt) > max_vel_th_)
 					vt = max_vel_th_;
-				//printf("\tChecking ang vel %.2f\n", vt);
-				//valid = checkTrajectory(rx, ry, rt, vx, vy, vt, 1.0, 0.0, 1.0);
-				valid = checkTrajectory(rx, ry, rt, rvx, rvy, rvt, vx, vy, vt);
-				if(valid) {
-					cmd_vel.linear.x = vx;
-					cmd_vel.linear.y = vy;
-					cmd_vel.linear.z = 0.0;
-					cmd_vel.angular.x = 0.0;
-					cmd_vel.angular.y = 0.0;
-					cmd_vel.angular.z = vt;
-					//printf("\nValid cmd found! vx:%.2f, vth:%.2f\n", vx, vt);
-					return true;
+				
+				bool valid1 = checkTrajectory(rx, ry, rt, rvx, rvy, rvt, vx, vy, vt, px, py, pth);
+				double d1 = 0.0;
+				if(valid1) {
+					d1 = sqrt((dx-px)*(dx-px) + (dy-py)*(dy-py));
+					best_vels.vel_th = vt;
 				}
 
 				//to the left
 				vt = vt_orig - (ang_vel_inc * v);
 				if(fabs(vt) > max_vel_th_)
 					vt = -max_vel_th_;
-				//printf("\tChecking ang vel %.2f\n", vt);
-				//valid = checkTrajectory(rx, ry, rt, vx, vy, vt, 1.0, 0.0, 1.0);
-				bool valid = checkTrajectory(rx, ry, rt, rvx, rvy, rvt, vx, vy, vt);
-				if(valid) {
-					cmd_vel.linear.x = vx;
-					cmd_vel.linear.y = vy;
+				bool valid2 = checkTrajectory(rx, ry, rt, rvx, rvy, rvt, vx, vy, vt, px, py, pth);
+				if(valid2) {
+
+					//If both commands are valid,
+					//chose the closest to the path.
+					if(valid1)
+					{
+						double d2 = sqrt((dx-px)*(dx-px) + (dy-py)*(dy-py));
+						if(d2 < d1)
+						{
+							best_vels.vel_th = vt;
+						}
+					}
+				}
+				if(valid1 || valid2)
+				{
+					cmd_vel.linear.x = best_vels.vel_x;
+					cmd_vel.linear.y = best_vels.vel_x;
 					cmd_vel.linear.z = 0.0;
 					cmd_vel.angular.x = 0.0;
 					cmd_vel.angular.y = 0.0;
-					cmd_vel.angular.z = vt;
+					cmd_vel.angular.z = best_vels.vel_th;
 					//printf("\nValid cmd found! vx:%.2f, vth:%.2f\n", vx, vt);
 					return true;
 				}
+
 			}
 		}
 	} 
-	//else if(!valid) //try to perform a rotation in place to reduce more the angle if we have obstacles
-	//{
-		//option 1
-		if(dt > 0.09 || dt < -0.09) //0.09rad~5º
-		{
-			//printf("The robot should rotate on the spot\n");
-			vx = 0.0;
-			vy = 0.0;
-			vt = min_in_place_vel_th_;
-			if(dt < 0.0)
-				vt = -min_in_place_vel_th_;
-				
-			cmd_vel.linear.x = vx;
-			cmd_vel.linear.y = vy;
-			cmd_vel.linear.z = 0.0;
-			cmd_vel.angular.x = 0.0;
-			cmd_vel.angular.y = 0.0;
-			cmd_vel.angular.z = vt;
-			return true;
-		} else {
-			// Stop the robot
-			//printf("The robot should stop\n");
-			cmd_vel.linear.x = 0.0;
-			cmd_vel.linear.y = 0.0;
-			cmd_vel.linear.z = 0.0;
-			cmd_vel.angular.x = 0.0;
-			cmd_vel.angular.y = 0.0;
-			cmd_vel.angular.z = 0.0;
-			return false;
-			//return true;
-		}
-		
-		//option 2
-		/*vx = rvx-incr;
-		if(vx < 0.0)
-			vx = 0.0;
+	
+	//If still a valid command is not found, try to rotate in the spot
+	if(dt > 0.09 || dt < -0.09) //0.09rad~5º
+	{
+		//printf("The robot should rotate on the spot\n");
+		vx = 0.0;
 		vy = 0.0;
 		vt = min_in_place_vel_th_;
 		if(dt < 0.0)
 			vt = -min_in_place_vel_th_;
-			
-		if(checkTrajectory(rx, ry, rt, vx, vy, vt, 1.0, 0.0, 1.0))	
-		{
-			cmd_vel.linear.x = vx;
-			cmd_vel.linear.y = vy;
-			cmd_vel.linear.z = 0.0;
-			cmd_vel.angular.x = 0.0;
-			cmd_vel.angular.y = 0.0;
-			cmd_vel.angular.z = vt;
-			return true;
-		} else {
-			// Stop the robot
-			cmd_vel.linear.x = 0.0;
-			cmd_vel.linear.y = 0.0;
-			cmd_vel.linear.z = 0.0;
-			cmd_vel.angular.x = 0.0;
-			cmd_vel.angular.y = 0.0;
-			cmd_vel.angular.z = 0.0;
-			return false;
-		}*/
+				
+		cmd_vel.linear.x = vx;
+		cmd_vel.linear.y = vy;
+		cmd_vel.linear.z = 0.0;
+		cmd_vel.angular.x = 0.0;
+		cmd_vel.angular.y = 0.0;
+		cmd_vel.angular.z = vt;
+		return true;
+	} else {
+		// Stop the robot
+		//printf("The robot should stop\n");
+		cmd_vel.linear.x = 0.0;
+		cmd_vel.linear.y = 0.0;
+		cmd_vel.linear.z = 0.0;
+		cmd_vel.angular.x = 0.0;
+		cmd_vel.angular.y = 0.0;
+		cmd_vel.angular.z = 0.0;
+		return false;
+		//return true;
+	}
 		
-	//}
-	//+++++++++++++++++++++++++
   }
 
 

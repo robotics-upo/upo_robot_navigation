@@ -90,6 +90,13 @@ namespace simple_local_planner {
       void reconfigure(SimpleLocalPlannerConfig &cfg);
 
 
+	  struct vels_ {
+			float vel_x;
+			float vel_y;
+			float vel_th;
+		};
+
+
       /**
        * @brief  Given the current position, orientation, and velocity of the robot, return a trajectory to follow
        * @param global_pose The current pose of the robot in world space 
@@ -131,7 +138,7 @@ namespace simple_local_planner {
        * @return True if the trajectory is legal, false otherwise
        */
       bool checkTrajectory(double x, double y, double theta, double vx, double vy, 
-          double vtheta, double vx_samp, double vy_samp, double vtheta_samp);
+          double vtheta, double vx_samp, double vy_samp, double vtheta_samp, double& px, double& py, double &pth);
 
 
       /** @brief Set the footprint specification of the robot. */
