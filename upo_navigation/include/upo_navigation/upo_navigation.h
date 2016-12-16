@@ -121,6 +121,8 @@ namespace upo_nav {
       int executeControllerCycle();
       geometry_msgs::PoseStamped getRobotGlobalPosition();
       void stopRRTPlanning();
+      
+      void publish_rrt_path(std::vector<geometry_msgs::PoseStamped>* path);
 
 	  //---------------
 	  
@@ -240,7 +242,6 @@ namespace upo_nav {
 				rrt_planner_->setBiasingPath(&path_to_follow);
 			}
 	
-	  void publish_rrt_path(std::vector<geometry_msgs::PoseStamped>* path);
 
 
       /**
