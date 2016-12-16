@@ -847,7 +847,7 @@ float features::NavFeatures::obstacleDistFeature(geometry_msgs::PoseStamped* s) 
 		float py =floor(distance_y/resolution_);
 		//cout<<"px:"<<px<<"  py:"<<py<<std::endl;
 		float distance = 0.0;
-		if (py<0 || px<0) {
+		if (py<0 || px<0  || px > map_image_.cols || py > map_image_.rows) {
 			distance = 0.0;
 		} else{
 			try{
