@@ -213,6 +213,10 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 	interpolate_path_distance_ = (float)aux;
 	private_nh.param<bool>("show_intermediate_states", show_intermediate_states_, false);
 	
+	//path_smoothing
+	private_nh.param<bool>("path_smoothing", path_smoothing_, true);
+	private_nh.param<int>("smoothing_samples", smoothing_samples_, 15);
+	
 	
 	//if the planner is an RRT, the nav costmap can not be visualized
 	if(rrt_planner_type_ == 1 || rrt_planner_type_ == 3)
@@ -479,6 +483,10 @@ void upo_RRT_ros::RRT_ros_wrapper::setup_controller(float controller_freq, float
 	interpolate_path_distance_ = (float)aux;
 	private_nh.param<bool>("show_intermediate_states", show_intermediate_states_, false);
 	
+	//path_smoothing
+	private_nh.param<bool>("path_smoothing", path_smoothing_, true);
+	private_nh.param<int>("smoothing_samples", smoothing_samples_, 10);
+	
 	
 	//if the planner is an RRT, the nav costmap can not be visualized
 	if(rrt_planner_type_ == 1 || rrt_planner_type_ == 3)
@@ -606,6 +614,11 @@ void upo_RRT_ros::RRT_ros_wrapper::setup_controller(float controller_freq, float
 		}
 	}
 	visualize_costmap_ = config.visualize_costmap;
+	
+	//path smoothing
+	path_smoothing_ = config.path_smoothing;
+	smoothing_samples_ = config.smoothing_samples;
+	
 
 	show_statistics_ = config.show_statistics;
 
@@ -953,6 +966,13 @@ std::vector<geometry_msgs::PoseStamped> upo_RRT_ros::RRT_ros_wrapper::RRT_plan(g
 		path_interpol_points_pub_.publish(mar);
 		*/
 	}
+	
+	
+	if(path_smoothing_)
+	{
+		rrt_plan_ = simple_path_smoothing(&rrt_plan_);
+	}
+	
 
 	if(g)
 		delete g;
@@ -1309,6 +1329,61 @@ int upo_RRT_ros::RRT_ros_wrapper::RRT_local_plan(std::vector<geometry_msgs::Pose
 	//delete rrt_planner_;
 
 	return 0;
+}
+
+
+
+
+std::vector<geometry_msgs::PoseStamped> upo_RRT_ros::RRT_ros_wrapper::simple_path_smoothing(std::vector<geometry_msgs::PoseStamped>* path)
+{
+	
+	int s = smoothing_samples_;
+	if(path->size() < (s+1))
+		return *path;
+	
+	std::vector<geometry_msgs::PoseStamped> newpath;
+	
+	//Add first point
+	newpath.push_back(path->at(0));
+	
+	//Smoothing
+	for(unsigned int i=1; i<path->size()-1; i++) 
+	{
+		newpath.push_back(path->at(i));
+		geometry_msgs::Pose2D p;
+		p.x = 0.0;
+		p.y = 0.0;
+		p.theta = 0.0;
+		int cont = 0;
+		int half = (int)floor(s/2 + 0.5);
+		if(i < half)
+			half = i;
+		else if((i+half) > path->size())
+			half = path->size()-i;
+		
+		for(unsigned int j=i-half; j<(i+half); j++)
+		{
+			p.x += path->at(j).pose.position.x;
+			p.y += path->at(j).pose.position.y;
+			p.theta += tf::getYaw(path->at(j).pose.orientation);
+			cont++;
+		}
+		//printf("i:%i, Half:%i, Cont: %i\n", i, half, cont);
+		p.x = p.x/cont;
+		p.y = p.y/cont;
+		p.theta = normalizeAngle((p.theta/cont), -M_PI, M_PI);
+		
+		newpath[i].pose.position.x = p.x;
+		newpath[i].pose.position.y = p.y;
+		newpath[i].pose.orientation = tf::createQuaternionMsgFromYaw(p.theta);
+	
+	}
+	
+	//Add last point
+	newpath.push_back(path->at(path->size()-1));
+	
+	
+	return newpath;
 }
 
 

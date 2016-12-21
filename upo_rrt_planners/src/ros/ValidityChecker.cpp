@@ -307,6 +307,7 @@ float upo_RRT_ros::ValidityChecker::getCost(upo_RRT::State* s)
 		pose.pose.position.x = s->getX();
 		pose.pose.position.y = s->getY();
 		pose.pose.orientation = tf::createQuaternionMsgFromYaw(s->getYaw());
+		//printf("ValidityChecker. x: %.2f, y:%.2f, th: %.2f\n", pose.pose.position.x, pose.pose.position.y, s->getYaw());
 		float cost = navfeatures_->getCost(&pose);
 		return cost;
 	}

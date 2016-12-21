@@ -87,6 +87,8 @@ namespace upo_RRT_ros {
 			
 			void setBiasingPath(std::vector<geometry_msgs::PoseStamped>* path_to_follow);
 			
+			std::vector<geometry_msgs::PoseStamped> simple_path_smoothing(std::vector<geometry_msgs::PoseStamped>* path);
+			
 			
 			//std::vector<float> get_features_count(geometry_msgs::PoseStamped* goal, std::vector<geometry_msgs::PoseStamped>* path, upo_msgs::PersonPoseArrayUPO* people);
 			
@@ -107,6 +109,17 @@ namespace upo_RRT_ros {
 				max_ang_vel = max_ang_vel_;
 				min_ang_vel = min_ang_vel_;
 			};
+			
+			
+			inline float normalizeAngle(float val, float min, float max) {
+				float norm = 0.0;
+				if (val >= min)
+					norm = min + fmod((val - min), (max-min));
+				else
+					norm = max - fmod((min - val), (max-min));
+						
+				return norm;
+			}
 
 
 		private:
@@ -163,6 +176,10 @@ namespace upo_RRT_ros {
 			ros::Publisher 					tree_pub_;
 			ros::Publisher					path_points_pub_;
 			ros::Publisher					path_interpol_points_pub_;
+			
+			//Path smoothing
+			bool							path_smoothing_;
+			int								smoothing_samples_;
 			
 			
 			//-------------------------------------------
