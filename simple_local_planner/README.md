@@ -1,5 +1,6 @@
 # simple_local_planner 
-A local controller that sends the velocity commands to the robot in order to follow a path. It is based on a pure pursuit controller and follows the structure of the standard base local planner of ROS.
+A controller based on pure pursuit path tracking has been extended to command velocities to the differential robot so as to follow the path smoothly.
+This path tracker runs at a frequency of 15Hz and has been extended to perform a collision detection checking similar to the Dynamic Windows Approach algorithm. If the forward projection of the robot movement given by the control law is detected as a possible collision, a valid command is tried to be found by sampling small variations of the given angular velocity. If a possible collision is still detected, a rotation in place in the correct direction is performed in order to avoid very close obstacles. Moreover, a linear decrease of the velocities when approaching the goal has been also added.
 
 ## Parameters
 
