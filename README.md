@@ -21,6 +21,8 @@ This metapackage contains the following packages:
 
 * **upo_social_layer**. This package contains a layer that can be used in the costmap_2d of ROS as a plugin. The layer is built by using the social functions of the navigation features package related to people. This way, a social cost related to the distance and orientation to people can be included in a costmap for robot navigation.
 
+* **assisted_steering** ROS node used in the TERESA project. It checks the velocity commands that the user sends to the robot. If a possible collision is detected the node tries to find a similar valid command or stops the robot otherwise. 
+
 ## Dependences
 
 * The instalation of the ROS packages **navigation** and **AMCL** are required.

@@ -35,9 +35,10 @@ This is a catkin package of ROS that contains two libraries:
 
 Only for RRT* planner:
 * **rrtstar_use_k_nearest**. Boolean to indicate whether to use k-nearest or radius search to find the neighbors in the tree.
-* **rrtstar_path_biasing**. Boolean to indicate if a sample biasing over the first path found should be performed.
-* **rrtstar_path_bias**. If *rrtstar_path_biasing* is true, this is the bias to sample for the path.
-* **rrtstar_stddev_bias**. If *rrtstar_path_biasing* is true, this is the standard deviation of the gaussian sampling performed over the first path found.
+* **rrtstar_first_path_biasing**. Boolean to indicate if a sample biasing over the first path found should be performed.
+* **rrtstar_first_path_bias**. If *rrtstar_first_path_biasing* is true, this is the bias to sample for the path.
+* **rrtstar_first_stddev_bias**. If *rrtstar_first_path_biasing* is true, this is the standard deviation of the gaussian sampling performed over the first path found.
+
 
 Only for kinodynamic planners:
 * **kino_time_step**. Time step (seconds) to propagate the movement of the robot.
@@ -64,11 +65,18 @@ State Space:
 * **rrt_xy_resolution**. Resolution of the *x,y* space.
 * **robot_radius**. Radius of the inscribed circunference of the robot (meters).
 
+Path smoothing:
+* **path_smoothing**. Boolean to indicate whether to perform a smoothing of the RRT path obtained.
+* **smoothing_samples**. Integer value to indicate the number of samples to include in the sliding window for path smoothing.
+
 Visualization options:
 * **visualize_rrt_tree**. Boolean to indicate whether to publish the tree or not as a marker in the topic *~/rrt_tree*. (NOTE: the points of the path obtained are published in the topic *~/rrt_path_points*).
 * **visualize_nav_costmap**. Boolean to indicate whether to publish a map of type costmap based on the RRT function cost. The topic is *~/rrt_costmap*.
 * **show_rrt_statistics**. If it is enabled (boolean to true), some statistics about the RRT execution are shown on the screen.
 * **show_intermediate_states**. If it is enabled (boolean to true), the intermediate states corresponding to the time step between nodes are published as a marker in the topic *~/rrt_path-interpol_points*. Only valid for kinodynamic planners.
+
+
+The upo_rrt_planners library uses nearest neighbor data structures through the FLANN library. See: M. Muja and D.G. Lowe, "Fast Approximate Nearest Neighbors with Automatic Algorithm Configuration", in International Conference on Computer Vision Theory and Applications (VISAPP'09), 2009. http://people.cs.ubc.ca/~mariusm/index.php/FLANN/FLANN
 
 #### TODO
 - [ ] Replace regular pointers by boost smart pointers. 
