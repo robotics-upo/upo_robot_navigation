@@ -1,0 +1,20 @@
+point1:
+        x: 8.4
+        y: 18.5
+        theta: 0.785
+point2:
+        x: 10.8
+        y: 16.65
+        theta: 1.66
+point3:
+        x: 11.1
+        y: 21.15
+        theta: -2.09
+point4:
+        x: 10.3
+        y: 21
+        theta: -1.92
+center1:
+        x: 10.1
+        y: 19.15
+        theta: 0.0
