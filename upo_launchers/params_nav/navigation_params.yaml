@@ -68,7 +68,7 @@ RRT_ros_wrapper:
 
   # path smoothing
   path_smoothing:             true
-  smoothing_samples:          10
+  smoothing_samples:          5
 
   #if the planner is RRT* 
   rrtstar_use_k_nearest:      false
@@ -138,7 +138,7 @@ RRT_ros_wrapper:
   show_rrt_statistics:        false
   show_intermediate_states:   false #use only in case of kino
 
-  robot_radius:               0.37 #0.345  #meters
+  robot_radius:               0.40 #0.37 #0.345  #meters
 
   # between [0-1]
   # if the equality of the path costs is below
@@ -210,7 +210,7 @@ PurePlanner:
 
   controller_freq:            15.0
 
-  dwa:                        false
+  dwa:                        true
   
 
   
