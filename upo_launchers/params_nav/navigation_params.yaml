@@ -57,14 +57,18 @@ RRT_ros_wrapper:
   # 4 -> Kinodynamic RRTstar 
   # 5 -> Kinodynamic simplified RRTstar
   rrt_planner_type:           2 
-  rrt_solve_time:             1.0 
+  rrt_solve_time:             0.5 
   rrt_goal_bias:              0.05 
   rrt_max_insertion_dist:     0.25 #0.25<-2  0.50 o 1.0<-4
   rrt_goal_xy_tol:            0.12
   rrt_goal_th_tol:            0.12
   # If we want to interpolate the resulting path
   # if we don't. This value should be 0 or below 0.
-  rrt_interpolate_path_dist:  0.05
+  rrt_interpolate_path_dist:  0.1
+
+  # path smoothing
+  path_smoothing:             true
+  smoothing_samples:          10
 
   #if the planner is RRT* 
   rrtstar_use_k_nearest:      false
@@ -73,7 +77,7 @@ RRT_ros_wrapper:
   rrtstar_first_path_stddev:  0.4
 
   full_path_biasing:          true
-  full_path_stddev:           1.0
+  full_path_stddev:           0.9
   full_path_bias:             0.8 
 
   #get the RRT* costs from a costmap
@@ -166,17 +170,17 @@ Navigation_features:
 
   # 0 -> 3 features
   # 1 -> 5 features
-  upo_featureset:             0
+  upo_featureset:             1
   # Weights for function costs (featureset 0)
-  w1:                         0.15   #goal dist
-  w2:                         0.475  #obstacle dist
-  w3:                         0.375  #proxemics
+  #w1:                         0.15   #goal dist
+  #w2:                         0.475  #obstacle dist
+  #w3:                         0.375  #proxemics
   # Weights for function costs (featureset 1)
-  #w1:                         0.1   #goal dist
-  #w2:                         0.2  #obstacle dist
-  #w3:                         0.25  #person front
-  #w4:                         0.15 # person back 
-  #w5:                         0.3 # person right side
+  w1:                         0.05   #goal dist
+  w2:                         0.35  #obstacle dist
+  w3:                         0.4  #person front
+  w4:                         0.2 # person back 
+  w5:                         0.0 # person right side
 
   
 

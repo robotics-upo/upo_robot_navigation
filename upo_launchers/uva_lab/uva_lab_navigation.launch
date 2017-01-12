@@ -2,11 +2,11 @@
 <launch>
 
 	<arg name = "scenario" value = "uva_lab"/>
-    <arg name = "xtion_nav" value = "true" />
+	<arg name = "xtion_nav" value = "true" />
 	<arg name = "robot" value = "teresa_robot5" />
-	<arg name = "x" value = "9.0"/>
-    <arg name = "y" value = "12.0"/>
-    <arg name = "a" value = "0.0"/>
+	<arg name = "x" value = "21.7"/>
+    	<arg name = "y" value = "21.9"/>
+    	<arg name = "a" value = "-0.887"/>
 
 
 	<param name="/use_sim_time" value="false"/>
@@ -19,14 +19,14 @@
   </node> -->
 
   <!--turn on the laser and launch them-->
-   <include file="$(find teresa_common)/launch/upo_lab/$(arg robot)/lasers.launch" />
+   <include file="$(find teresa_common)/launch/uva/$(arg robot)/lasers.launch" />
  
   <!--launch the xtion cameras-->
-  <include if="$(arg xtion_nav)" file="$(find teresa_common)/launch/upo_lab/$(arg robot)/xtionNav.launch" />
-  <include file="$(find teresa_common)/launch/upo_lab/$(arg robot)/xtionPeople.launch" />
+  <include if="$(arg xtion_nav)" file="$(find teresa_common)/launch/uva/$(arg robot)/xtionNav.launch" />
+  <include file="$(find teresa_common)/launch/uva/$(arg robot)/xtionPeople.launch" />
  	
   <!--laser generated from the navigation xtion-->
-  <include file="$(find teresa_common)/launch/upo_lab/$(arg robot)/depthcamscan.launch"/>
+  <include file="$(find teresa_common)/launch/uva/$(arg robot)/depthcamscan.launch"/>
 
   <!--transform people receive to UPO messages format-->
   <node pkg="spencer_to_upo_people" type="spencer_to_upo_people" name="spencer_to_upo_people" output="screen" >
@@ -86,6 +86,7 @@
 	 <node pkg="upo_navigation" type="upo_navigation_node" name="upo_navigation_node" output="screen" >
 
 		<remap from="/upo_navigation_simple/goal" to="/move_base_simple/goal" />
+		<!--remap from="cmd_vel" to="cmd_vel_fsm"/-->
 		<rosparam file="$(find upo_launchers)/params_nav/navigation_params.yaml" command="load"  />
 		<rosparam file="$(find upo_launchers)/params_nav/costmap_common_params.yaml" command="load" ns="global_costmap" />
 		<rosparam file="$(find upo_launchers)/params_nav/costmap_common_params.yaml" command="load" ns="local_costmap" />
