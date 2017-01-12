@@ -1520,9 +1520,9 @@ namespace upo_nav {
 			//We update the local plan to a empty plan in order to stop the robot
 			//until we get a new plan
 			printf("Stopping the robot!!!!!!!\n");
-			local_plan_->clear();
+			//local_plan_->clear(); //try to comment this
 			//pure_pursuit_->updatePlan(*local_plan_, true);
-			tc_->setPlan(*local_plan_);
+			//tc_->setPlan(*local_plan_); //try to comment this
 
 			//Tell the rrt thread to plan
 			rrt_mutex_.lock();
