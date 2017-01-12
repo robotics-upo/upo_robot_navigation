@@ -1823,7 +1823,7 @@ void Upo_navigation_macro_actions::wsbsCallback(const std_msgs::UInt8::ConstPtr&
 	RUNNING              = 5, 
 	TARGET_LOST          = 6,
 	FINISHED             = 7,
-	ABORTED		     	 = 8
+	ABORTED		     = 8
 	*/
 	wsbs_mutex_.lock();
 	wsbs_status_ = msg->data;
