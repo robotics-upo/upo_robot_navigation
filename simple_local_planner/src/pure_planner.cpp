@@ -606,7 +606,7 @@ namespace simple_local_planner{
 	
 	// Check if the action collide with an obstacle
 	double px, py, pth;
-	//bool valid = checkTrajectory(rx, ry, rt, vx, vy, vt, 1.0, 0.0, 1.0);
+	//bool valid = checkTrajectory(rx, ry, rt, vx, vy, vt, 1.0, 0.0, 1.0, px, py, pth);
 	bool valid = checkTrajectory(rx, ry, rt, rvx, rvy, rvt, vx, vy, vt, px, py, pth);
 
 	if(valid || fabs(vx) < 0.0001)	
@@ -652,6 +652,7 @@ namespace simple_local_planner{
 				if(fabs(vt) > max_vel_th_)
 					vt = max_vel_th_;
 				
+				//bool valid1 = checkTrajectory(rx, ry, rt, vx, vy, vt, 1.0, 0.0, 1.0, px, py, pth);
 				bool valid1 = checkTrajectory(rx, ry, rt, rvx, rvy, rvt, vx, vy, vt, px, py, pth);
 				double d1 = 0.0;
 				if(valid1) {
@@ -663,6 +664,7 @@ namespace simple_local_planner{
 				vt = vt_orig - (ang_vel_inc * v);
 				if(fabs(vt) > max_vel_th_)
 					vt = -max_vel_th_;
+				//bool valid2 = checkTrajectory(rx, ry, rt, vx, vy, vt, 1.0, 0.0, 1.0, px, py, pth);
 				bool valid2 = checkTrajectory(rx, ry, rt, rvx, rvy, rvt, vx, vy, vt, px, py, pth);
 				if(valid2) {
 
