@@ -63,6 +63,7 @@ namespace simple_local_planner {
        * @param sim_time The maximum number of seconds to expand the movement 
        * @param sim_granularity The distance between simulation points should be small enough that the robot doesn't hit things
        * @param angular_sim_granularity The distance between simulation points for angular velocity should be small enough that the robot doesn't hit things
+	   * @param dwa try to find a valid command similar to invalid command calculated by the pure pursuit.
        */
 	  PurePlanner(WorldModel& world_model, 
           	const costmap_2d::Costmap2D& costmap,
@@ -74,7 +75,7 @@ namespace simple_local_planner {
 			double max_trans_acc = 1.0, double max_rot_acc = 1.0,
 			double yaw_goal_tolerance = 0.1, double xy_goal_tolerance= 0.2,
 			double wp_tolerance = 0.5, double sim_time = 1.0,
-			double sim_granularity = 0.025, double angular_sim_granularity = 0.025);
+			double sim_granularity = 0.025, double angular_sim_granularity = 0.025, bool dwa=true);
 
      
 

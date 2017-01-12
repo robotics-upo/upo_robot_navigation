@@ -140,6 +140,9 @@ namespace simple_local_planner {
       //also allows the frequency to be overwritten locally.
       private_nh.param("controller_freq", controller_freq_, 15.0);
 
+	  bool dwa;
+	  private_nh.param("dwa", dwa, true);
+
       
       world_model_ = new CostmapModel(*costmap_);
       
@@ -147,7 +150,7 @@ namespace simple_local_planner {
 
       tc_ = new PurePlanner(*world_model_, *costmap_, footprint_spec_, controller_freq_,
           max_vel_x_, min_vel_x_, max_vel_th_, min_vel_th_, min_in_place_vel_th_, max_trans_acc_, max_rot_acc_, 
-		  yaw_goal_tolerance_, xy_goal_tolerance_, wp_tolerance_, sim_time_, sim_granularity_, angular_sim_granularity_);
+		  yaw_goal_tolerance_, xy_goal_tolerance_, wp_tolerance_, sim_time_, sim_granularity_, angular_sim_granularity_, dwa);
 
       //map_viz_.initialize(name, global_frame_, boost::bind(&TrajectoryPlanner::getCellCosts, tc_, _1, _2, _3, _4, _5, _6));
       initialized_ = true;

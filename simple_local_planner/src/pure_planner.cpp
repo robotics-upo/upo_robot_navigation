@@ -60,7 +60,7 @@ namespace simple_local_planner{
 			double max_trans_acc, double max_rot_acc,
 			double yaw_goal_tolerance, double xy_goal_tolerance,
 			double wp_tolerance, double sim_time,
-			double sim_granularity, double angular_sim_granularity)
+			double sim_granularity, double angular_sim_granularity, bool dwa)
 				: world_model_(world_model), costmap_(costmap), footprint_spec_(footprint_spec)
   {
 
@@ -88,7 +88,7 @@ namespace simple_local_planner{
 		sim_granularity_ = sim_granularity;
 		angular_sim_granularity_ = angular_sim_granularity;	
 
-		dwa_ = true;
+		dwa_ = dwa;
 
   }
 

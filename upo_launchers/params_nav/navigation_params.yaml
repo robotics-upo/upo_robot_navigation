@@ -138,7 +138,7 @@ RRT_ros_wrapper:
   show_rrt_statistics:        false
   show_intermediate_states:   false #use only in case of kino
 
-  robot_radius:               0.345  #meters
+  robot_radius:               0.37 #0.345  #meters
 
   # between [0-1]
   # if the equality of the path costs is below
@@ -190,8 +190,8 @@ Navigation_features:
 PurePlanner:
 
 # Robot Configuration Parameters
-  max_trans_acc:              1.0
-  max_rot_acc:                1.0
+  max_trans_acc:              1.5 #1.0
+  max_rot_acc:                1.5 #1.0
   max_trans_vel:              0.5 
   min_trans_vel:              0.1
   max_rot_vel:                0.7
@@ -209,6 +209,8 @@ PurePlanner:
   angular_sim_granularity:    0.025
 
   controller_freq:            15.0
+
+  dwa:                        false
   
 
   
