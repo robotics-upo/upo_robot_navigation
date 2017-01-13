@@ -4,9 +4,9 @@
 	<arg name = "scenario" value = "uva_demo"/>
 	<arg name = "xtion_nav" value = "true" />
 	<arg name = "robot" value = "teresa_robot5" />
-	<arg name = "x" value = "21.7"/>
-    	<arg name = "y" value = "21.9"/>
-    	<arg name = "a" value = "-0.887"/>
+	<arg name = "x" value = "10.95"/>
+    <arg name = "y" value = "16.1"/>
+    <arg name = "a" value = "-0.2"/>
 
 
 	<param name="/use_sim_time" value="false"/>
