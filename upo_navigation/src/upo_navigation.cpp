@@ -638,6 +638,8 @@ namespace upo_nav {
   
   void UpoNavigation::publish_rrt_path(std::vector<geometry_msgs::PoseStamped>* path)
   {
+
+	if(path && path->size() > 0) {
 	  visualization_msgs::Marker points;
 	  
 		points.header.frame_id = path->at(0).header.frame_id; //robot_base_frame_; 
@@ -662,7 +664,8 @@ namespace upo_nav {
 			geometry_msgs::Point p = path->at(i).pose.position;
 			points.points.push_back(p);
 		}
-		path_points_pub_.publish(points);
+		path_points_pub_.publish(points);	
+	}
   }
 
 
@@ -774,6 +777,8 @@ namespace upo_nav {
 	std::vector<geometry_msgs::PoseStamped> aux;
 	//Plan is in base_link coordinates
 	aux = rrt_planner_->RRT_plan(start, goal_rrt, lv, av); //(sx, sy, sh, lv, av, gx, gy, gh);
+	if(aux.empty())
+		return false;
     if(aux.size() == 1 && aux.at(0).pose.position.x == -100.0 && aux.at(0).pose.position.z == -100.0) {
 		ROS_ERROR("makeRRTPlan. No RRT plan found!!!");
 		return false;

@@ -152,6 +152,8 @@ Navigation_features:
 
   # param to use UvA social cost library
   use_uva_features:           false
+
+  no_costmaps:                false
   
   #Use the laser projection or the ros costmap
   # to calculate the obstacle distance cost
@@ -162,7 +164,7 @@ Navigation_features:
   # Gaussian functions
   stddev_person_front:        1.2
   stddev_person_aside:        0.8
-  #stddev_person_right:       0.8  #only used in upo_featureset 1
+  stddev_person_right:        0.8  #only used in upo_featureset 1
 
   enable_grouping:            true  
   stddev_group:               0.8

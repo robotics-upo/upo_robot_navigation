@@ -296,6 +296,12 @@ std::vector<upo_RRT::Node> upo_RRT::SimpleRRTstar::solve(float secs)
 
 	//Construct the solution path
 	std::vector<upo_RRT::Node> path;
+
+	//path for a weird bug
+	if(approxDist > 1000.0) {
+		printf("\nSimpleRRTStar. Error calculating the path!!!!\n\n");
+		return path;
+	}
 	solution->getState()->setYaw(goal_->getYaw());
 	Node* current = solution;
 	path_cost_ = current->getAccCost();

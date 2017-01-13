@@ -14,7 +14,7 @@ features::NavFeatures::NavFeatures(tf::TransformListener* tf, float size_x, floa
 	size_x_ = size_x;
 	size_y_ = size_y;
 	max_planning_dist_ = sqrt((size_x_*2*size_x_*2)+(size_y_*2*size_y_*2));
-	insc_radius_robot_ = 0.34;
+	insc_radius_robot_ = 0.40;
 	
 
 	//Advertise service
@@ -95,7 +95,7 @@ void features::NavFeatures::setParams()
 	
 	n.param<int>("upo_featureset", upo_featureset_, 0);
 	
-	
+	n.param<bool>("no_costmaps", no_costmaps_, false);
 	
 	n.param<bool>("use_laser_projection", use_laser_projection_, true);
 	std::string pc_topic;
@@ -495,6 +495,11 @@ void features::NavFeatures::setWeights(std::vector<float> we) {
 
 bool features::NavFeatures::poseValid(geometry_msgs::PoseStamped* pose)
 {
+
+	if(no_costmaps_)
+		return poseValid_projection(pose);
+
+
 	//Take the values of the state
 	float x_i = pose->pose.position.x;
 	float y_i = pose->pose.position.y;
@@ -600,6 +605,48 @@ bool features::NavFeatures::poseValid(geometry_msgs::PoseStamped* pose)
 
 	return true;
 }
+
+
+
+bool features::NavFeatures::poseValid_projection(geometry_msgs::PoseStamped* pose)
+{
+	if(use_laser_projection_) 
+	{
+		
+		//Transform to map coordinates
+		geometry_msgs::PoseStamped sm = transformPoseTo(*pose, std::string("/map"), false);
+		
+		// This functions transforms position of people to pixels on map, gets distance and then converts to meters
+		float distance_x = sm.pose.position.x - (origin_)[0];
+		float distance_y = sm.pose.position.y - (origin_)[1];
+
+		float px = floor(distance_x/resolution_);
+		//float py =distanceTransform->rows-floor(distance_y /resolution);
+		float py =floor(distance_y/resolution_);
+		//cout<<"px:"<<px<<"  py:"<<py<<std::endl;
+		float distance = 0.0;
+		if (py<0 || px<0  || px > map_image_.cols || py > map_image_.rows) {
+			distance = 0.0;
+		} else{
+			try{
+				dtMutex_.lock();
+				distance = distance_transform_.at<float>(py,px)*resolution_;
+				dtMutex_.unlock();
+			} catch(...)
+			{
+				ROS_ERROR("ERROR. OBSTACLE FEATURE. px:%.2f, py:%.2f, distance:%.2f", px, py, distance);
+				distance = 0.0;
+			}
+		}
+		// Take into account the robot radius 
+		if(distance <= insc_radius_robot_)
+			return false;
+		else
+			return true;
+	}
+	return false;
+}
+
 
 
 //calculate the cost of a ray-traced line

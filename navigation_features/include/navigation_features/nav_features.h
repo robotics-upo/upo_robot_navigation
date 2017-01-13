@@ -83,6 +83,8 @@ namespace features {
 
 			bool poseValid(geometry_msgs::PoseStamped* pose);
 
+			bool poseValid_projection(geometry_msgs::PoseStamped* pose);
+
 			float getCost(geometry_msgs::PoseStamped* s);
 		
 			std::vector<float> getFeatures(geometry_msgs::PoseStamped* s);
@@ -190,6 +192,8 @@ namespace features {
 			
 			bool 								use_uva_features_;
 			uva_cost_functions::UvaFeatures*	uva_features_;
+
+			bool 								no_costmaps_;
 		
 			
 			bool 								use_global_costmap_;

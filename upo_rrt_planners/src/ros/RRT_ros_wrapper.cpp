@@ -812,8 +812,10 @@ std::vector<geometry_msgs::PoseStamped> upo_RRT_ros::RRT_ros_wrapper::RRT_plan(g
 			path = rrt_planner_->as<upo_RRT::SimpleRRT>()->solve(solve_time_);
 	}
 
-	
-
+	if(path.empty()) {
+		//rrt_plan_.clear();
+		return rrt_plan_; 
+	}
 	if(show_statistics_) {
 		upo_RRT::Planner::statistics stats = rrt_planner_->getStatistics();
 		printf("Planning time:   %.4f secs\n", stats.planning_time);
