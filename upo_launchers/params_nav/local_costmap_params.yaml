@@ -1,7 +1,7 @@
 local_costmap:
   global_frame: /odom
   robot_base_frame: /base_link
-  update_frequency: 8.0  
+  update_frequency: 10.0 #8.0  
   publish_frequency: 2.0 #5.0
   static_map: false
   rolling_window: true
@@ -31,6 +31,6 @@ local_costmap:
       
 
   inflation_layer:
-    inflation_radius: 0.69  #0.345*2 = 0.68 #0.34*4=1.36
+    inflation_radius: 0.74  #0.345*2 = 0.68 #0.37*2=0.74
     cost_scaling_factor: 10.0 #10.0=default
 
