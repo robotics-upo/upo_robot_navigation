@@ -1,0 +1,7 @@
+<!-- -->
+
+<launch>
+
+  	<node pkg="rosbag" type="record" name="record_nav" args="/tf /imu/data /odom /cmd_vel /scanfront /scanback /scan360 /amcl_pose /people/navigation /rrt_path /rrt_path_points /rrt_tree /rrt_goal /rrt_goal_marker /upo_navigation_node/NavfnROS/plan /upo_navigation_node/local_costmap/footprint /upo_navigation_node/Navigation_features/gaussian_markers /upo_navigation_macro_actions/NavfnROS/plan /upo_navigation_macro_actions/local_costmap/footprint /upo_navigation_macro_actions/Navigation_features/gaussian_markers /AssistedSteering/status /AssistedSteering/goal /NavigateHome/status /NavigationHome/goal /NavigateWaypoint/status /NavigateWaypoint/goal /NavigateInteractionTarget/status /NavigateInteractionTarget/goal /Wait/status /Wait/goal /Yield/status /Yield/goal /WalkSideBySide/status /WalkSideBySide/goal -o /home/teresa/data/teresa_nav.bag" />
+  
+</launch>
