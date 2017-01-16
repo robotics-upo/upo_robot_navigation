@@ -23,6 +23,12 @@
 	<remap from="scan" to="scan360"/>
   </node>
 
+  <node pkg="laser_assembler" type="laser_closed" name="laser_closed" >
+	<param name="input_topic" value="scan360"/>
+	<param name="output_topic" value="scan360_nav"/>
+	<!--param name="input_max_range" value="10.0"/-->
+  </node>
+
 
   <!--- amcl -->
   <node pkg="amcl" type="amcl" name="amcl" args="scan:=/scan360">
