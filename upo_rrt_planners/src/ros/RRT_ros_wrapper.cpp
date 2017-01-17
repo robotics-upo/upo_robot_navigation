@@ -91,7 +91,7 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 	
 	//RRT 
 	double aux;
- 	private_nh.param<double>("rrt_solve_time", aux, 0.8);
+ 	private_nh.param<double>("rrt_solve_time", aux, 0.5);
  	solve_time_ = (float)aux;
 	printf("RRT_ros_wrapper. rrt_solve_time = %.2f\n",  solve_time_);
  	
