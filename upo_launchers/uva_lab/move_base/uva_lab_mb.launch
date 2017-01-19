@@ -1,0 +1,106 @@
+<!-- -*- mode: XML -*- -->
+
+<launch>
+  <master auto="start"/>
+
+  	<arg name = "scenario" value = "uva_lab"/>
+	<arg name = "xtion_nav" value = "true" />
+	<arg name = "robot" value = "teresa_robot5" />
+	<arg name = "x" value = "39.7"/>
+	<arg name = "y" value = "17.45"/>
+	<arg name = "a" value = "1.75"/>
+
+
+	<param name="/use_sim_time" value="false"/>
+
+
+  <!-- Run Stage Simulator 
+   <node pkg="upo_stage_ros" type="upo_stageros" name="upo_stage" args="$(find upo_launchers)/$(arg scenario)/$(arg scenario).world" respawn="false" output="screen" >
+    <param name="base_watchdog_timeout" value="0.2"/>
+	<param name="fiducials_frame" value="odom" />
+  </node> -->
+
+  <!--turn on the laser and launch them-->
+   <include file="$(find teresa_common)/launch/uva/$(arg robot)/lasers.launch" />
+ 
+  <!--launch the xtion cameras -->
+  <include if="$(arg xtion_nav)" file="$(find teresa_common)/launch/uva/$(arg robot)/xtionNav.launch" />
+  <!--include file="$(find teresa_common)/launch/uva/$(arg robot)/xtionPeople.launch" /-->
+ 	
+  <!--laser generated from the navigation xtion-->
+  <include file="$(find teresa_common)/launch/uva/$(arg robot)/depthcamscan.launch"/>
+
+  <!--transform people receive to UPO messages format-->
+  <!--node pkg="spencer_to_upo_people" type="spencer_to_upo_people" name="spencer_to_upo_people" output="screen" >
+	<param name="publish_markers" type="bool" value="false" />
+        <param name="use_kf" type="bool" value="false" />
+        <param name="spencer_people_id" type="str" value="/spencer/perception/tracked_persons" />
+  </node-->
+  
+  <!-- Run the map server -->
+  <node pkg="map_server" type="map_server" name="map_server" args="$(find upo_launchers)/$(arg scenario)/maps/$(arg scenario).yaml" /> 
+
+   <!--- amcl -->
+  <node pkg="amcl" type="amcl" name="amcl" args="scan:=/scan360_filtered">
+	<param name="use_map_topic" value="true" />
+    <param name="odom_model_type" value="diff"/>
+    <param name="transform_tolerance" value="0.9" /> <!--"0.2" />-->
+    <param name="gui_publish_rate" value="10.0"/>
+    <param name="laser_max_beams" value="50"/>
+    <param name="min_particles" value="200"/> <!--200-->
+    <param name="max_particles" value="1000"/> <!--1000-->
+    <param name="kld_err" value="0.05"/>
+    <param name="kld_z" value="0.99"/>
+    <param name="odom_alpha1" value="0.2"/><!-- 0.1 def:0.2 -->
+    <param name="odom_alpha2" value="0.1"/><!-- 0.1 def:0.2 -->
+    <!-- translation std dev, m -->
+    <param name="odom_alpha3" value="0.2"/><!--0.8 def:0.2 -->
+    <param name="odom_alpha4" value="0.1"/><!--def:0.2 -->
+    <param name="odom_alpha5" value="0.0"/>
+    <param name="laser_max_range" value="10"/> <!-- new -->
+    <param name="laser_min_range" value="0.5"/> <!-- new -->
+    <param name="laser_z_hit" value="0.85"/> <!-- 0.5 -->
+    <param name="laser_z_short" value="0.05"/>
+    <param name="laser_z_max" value="0.05"/>
+    <param name="laser_z_rand" value="0.05"/> <!-- 0.5 -->
+    <param name="laser_sigma_hit" value="0.05"/> <!-- 0.05  default:0.2-->
+    <param name="laser_lambda_short" value="0.1"/>
+    <param name="laser_model_type" value="likelihood_field"/>
+    <!-- <param name="laser_model_type" value="beam"/> -->
+    <param name="laser_likelihood_max_dist" value="2.0"/>
+    <param name="update_min_d" value="0.3"/>
+    <param name="update_min_a" value="0.2"/>
+    <param name="odom_frame_id" value="/odom"/>
+    <param name="base_frame_id" value="/base_link"/>
+    <param name="global_frame_id" value="/map"/>
+    <param name="resample_interval" value="2"/>
+    <param name="recovery_alpha_slow" value="0"/> <!--0.001--><!-- 0 -->
+    <param name="recovery_alpha_fast" value="0"/> <!--0.1--><!-- 0 -->
+    <param name="initial_pose_x" value="$(arg x)" /> <!--11.1-->
+    <param name="initial_pose_y" value="$(arg y)" /> <!--5.2-->
+    <param name="initial_pose_a" value="$(arg a)" /><!-- -2.79 radians -->
+  </node>
+
+   <!--Rviz tool visualizer -->
+   <!--node pkg="rviz" type="rviz" name="rviz" args="-d $(find upo_launchers)/upo_lab/move_base/navigation_move_base.rviz" /-->
+
+
+	 <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+		<rosparam file="$(find upo_launchers)/$(arg scenario)/move_base/params_mb/costmap_common_params.yaml" command="load" ns="global_costmap" />
+	<rosparam file="$(find upo_launchers)/$(arg scenario)/move_base/params_mb/costmap_common_params.yaml" command="load" ns="local_costmap" />
+	<rosparam file="$(find upo_launchers)/$(arg scenario)/move_base/params_mb/local_costmap_params.yaml" command="load" />
+	<rosparam file="$(find upo_launchers)/$(arg scenario)/move_base/params_mb/global_costmap_params.yaml" command="load" />
+		<rosparam file="$(find upo_launchers)/$(arg scenario)/move_base/params_mb/navigation_params.yaml" command="load" />
+		<param name="recovery_behavior_enabled" type="bool" value="true" /> 
+		<param name="clearing_rotation_allowed" type="bool" value="true" /><!--default=true--> 
+		<param name="shutdown_costmaps" value="false" /> 
+		<param name="restore_defaults" value="false" />	
+		<param name="oscillation_timeout" type="double" value="0.0" /> <!--default=0.0-->
+		<param name="oscillation_distance" type="double" value="0.5" /> <!--default=0.5-->	
+  </node>
+
+
+
+  
+
+</launch>
