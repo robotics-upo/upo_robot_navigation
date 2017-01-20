@@ -589,7 +589,9 @@ namespace simple_local_planner{
 		else
 		{
 			
-			vx = max_vel_x_* exp(-fabs(dt)); // * tanh(4*dist_swp); //max_vel_x_;
+			vx = max_vel_x_ * (0.2 + exp(-fabs(dt))); // * tanh(4*dist_swp); //max_vel_x_;
+			if(vx > max_vel_x_)
+				vx = max_vel_x_;
 			vy = 0.0;
 			vt = max_vel_th_* dt; //max_vel_th_;
 		}
