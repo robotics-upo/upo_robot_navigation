@@ -104,7 +104,7 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 	printf("RRT_ros_wrapper. max_range_ = %.2f\n",  max_range_);
 	
 	double robot_radius;
-	private_nh.param<double>("robot_radius", robot_radius, 0.3);
+	private_nh.param<double>("robot_radius", robot_radius, 0.4);
 	printf("RRT_ros_wrapper. robot_radius = %.2f\n",  robot_radius);
 	
 	//RRT* 
@@ -398,7 +398,7 @@ void upo_RRT_ros::RRT_ros_wrapper::setup_controller(float controller_freq, float
 	max_range_ = (float) aux;
 	
 	double robot_radius;
-	private_nh.param<double>("robot_radius", robot_radius, 0.3);
+	private_nh.param<double>("robot_radius", robot_radius, 0.4);
 	
 	//RRT* 
 	if(rrt_planner_type_ == 2 || rrt_planner_type_ >= 4) {
