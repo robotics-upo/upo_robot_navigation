@@ -71,7 +71,7 @@ namespace simple_local_planner{
 		printf("Footprint_specs:\n");
 		for(unsigned int i = 0; i<footprint_spec_.size(); i++)
 		{
-			printf("\npoint %u: x=%.3f, y=%.3f\n", (i+1), footprint_spec_[i].x, footprint_spec_[i].y); 
+			printf("point %u: x=%.3f, y=%.3f\n", (i+1), footprint_spec_[i].x, footprint_spec_[i].y); 
 		}   
 		printf("\n\n"); 
 
@@ -170,6 +170,13 @@ namespace simple_local_planner{
 
       //check the point on the trajectory for legality
       double footprint_cost = footprintCost(x_i, y_i, theta_i);
+
+	  //Added by Noé
+	  if(footprint_cost >= 254.0){
+		printf("\n\nfootprint cost invalid: %.2f!!!\n\n", footprint_cost);
+        traj.cost_ = -1.0;
+        return;
+      }
 
       //if the footprint hits an obstacle this trajectory is invalid
       if(footprint_cost < 0){
