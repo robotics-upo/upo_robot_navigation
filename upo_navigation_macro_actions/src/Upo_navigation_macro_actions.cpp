@@ -211,6 +211,10 @@ void Upo_navigation_macro_actions::navigateWaypointCB(const upo_navigation_macro
 	//printf("Goal  x: %.2f, y: %.2f frame: %s\n", goal->target_pose.pose.position.x, goal->target_pose.pose.position.y, goal->target_pose.header.frame_id.c_str());
 	UpoNav_->stopRRTPlanning();
 
+	//stop the current wsbs if it is running
+	teresa_wsbs::stop stop_srv;
+	stop_client_.call(stop_srv);
+
 	if(use_leds_) 
 		setLedColor(GREEN);
 	
@@ -419,6 +423,10 @@ void Upo_navigation_macro_actions::navigateHomeCB(const upo_navigation_macro_act
 	printf("¡¡¡¡¡¡¡MacroAction NavigateHome  -->  started!!!!!!\n");
 	//printf("Goal  x: %.2f, y: %.2f frame: %s\n", goal->home_pose.pose.position.x, goal->home_pose.pose.position.y, goal->home_pose.header.frame_id.c_str());
 	UpoNav_->stopRRTPlanning();
+
+	//stop the current wsbs if it is running
+	teresa_wsbs::stop stop_srv;
+	stop_client_.call(stop_srv);
 
 	if(use_leds_) 
 		setLedColor(RED);
@@ -630,6 +638,10 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 	printf("¡¡¡¡¡¡¡MacroAction NavigateToInteractionTarget  -->  started!!!!!!\n");
 	UpoNav_->stopRRTPlanning();
 	target_counter_ = 0;
+
+	//stop the current wsbs if it is running
+	teresa_wsbs::stop stop_srv;
+	stop_client_.call(stop_srv);
 
 	if(use_leds_) 
 		setLedColor(BLUE);
@@ -1482,6 +1494,10 @@ void Upo_navigation_macro_actions::yieldCB(const upo_navigation_macro_actions::Y
 {
 	
 	printf("¡¡¡¡¡¡¡MacroAction Yield  -->  started!!!!!!\n");
+
+	//stop the current wsbs if it is running
+	teresa_wsbs::stop stop_srv;
+	stop_client_.call(stop_srv);
 	
 	if(use_leds_) 
 			setLedColor(ORANGE);
@@ -1671,6 +1687,9 @@ void Upo_navigation_macro_actions::assistedSteeringCB(const upo_navigation_macro
 		printf("¡¡¡¡¡¡¡MacroAction AssistedSteering  -->  started!!!!!!\n");
 		manual_control_ = true;
 		UpoNav_->stopRRTPlanning();
+		//stop the current wsbs if it is running
+		teresa_wsbs::stop stop_srv;
+		stop_client_.call(stop_srv);
 	} 
 
 	if(use_leds_) 
