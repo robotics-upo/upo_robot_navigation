@@ -141,7 +141,7 @@ namespace simple_local_planner {
       private_nh.param("controller_freq", controller_freq_, 15.0);
 
 	  bool dwa;
-	  private_nh.param("dwa", dwa, true);
+	  private_nh.param("dwa", dwa, false);
 
       
       world_model_ = new CostmapModel(*costmap_);

@@ -395,7 +395,7 @@ namespace simple_local_planner{
                        acc_lim_trans_, 0.0, acc_lim_rot_, t);
 
 	if(t.cost_ < 0.0) {
-		ROS_WARN("Invalid Trajectory vx:%f, vy:%f, vth:%f, cost: %f", vx, vy, vtheta, t.cost_);
+		//ROS_WARN("Invalid Trajectory vx:%f, vy:%f, vth:%f, cost: %f", vx, vy, vtheta, t.cost_);
 		return false;
     }
     if(isnan(t.cost_)) {
@@ -403,6 +403,7 @@ namespace simple_local_planner{
 		//cost = 0.0;
 		return false;
 	}
+	//ROS_WARN("VALID Trajectory vx:%f, vy:%f, vth:%f, cost: %f", vx, vy, vtheta, t.cost_);
     
     //otherwise the trajectory is valid
 	double pointx, pointy, pointth;
