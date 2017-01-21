@@ -65,7 +65,16 @@ namespace simple_local_planner{
   {
 
 		costmap_2d::calculateMinAndMaxDistances(footprint_spec_, inscribed_radius_, circumscribed_radius_);
-    
+
+		printf("\n\n\n---FOOTPRINT----\n");
+		printf("inscribed_radius: %.3f, circumscribed_radius: %.3f\n", inscribed_radius_, circumscribed_radius_);
+		printf("Footprint_specs:\n");
+		for(unsigned int i = 0; i<footprint_spec_.size(); i++)
+		{
+			printf("\npoint %u: x=%.3f, y=%.3f\n", (i+1), footprint_spec_[i].x, footprint_spec_[i].y); 
+		}   
+		printf("\n\n"); 
+
 		controller_freq_ = controller_freq;
 		goal_reached_ = false;
 
