@@ -459,10 +459,10 @@ bool CollisionDetection::checkTraj(double cvx, double cvy, double cvth, double t
 		th = normalizeAngle(th, -M_PI, M_PI);
 		x = x + lin_dist*cos(th); //cos(th+av*dt/2.0)
 		y = y + lin_dist*sin(th); 
-		if(inCollision(x, y, &laser1))
+		if(inCollision2(x, y, &laser1))
 			return false;
 		if(n_lasers_ >= 2) {
-			if(inCollision(x, y, &laser2))
+			if(inCollision2(x, y, &laser2))
 				return false;
 		}
 
@@ -557,12 +557,19 @@ bool CollisionDetection::inCollision(float x, float y, sensor_msgs::LaserScan* s
 
 bool CollisionDetection::inCollision2(float x, float y, sensor_msgs::LaserScan* scan)
 {
-	float d = sqrt(x*x + y*y);
-
 	for(unsigned int i=0; i<=scan->ranges.size(); i++)
 	{
-		float range_dist = scan->ranges[i];
-		if(fabs(range_dist - d) <= robot_radius_)
+		//laser measure polar coordinates
+		float laser_d = scan->ranges[i];
+		float laser_th = scan->angle_min + scan->angle_increment*i;
+		//transform to x,y
+		float laser_x = laser_d*cos(laser_th);
+		float laser_y = laser_d*sin(laser_th);
+
+		float dx = (x - laser_x);
+		float dy = (y - laser_y);
+		float dist = sqrt(dx*dx + dy*dy);
+		if(dist <= robot_radius_)
 			return false; 
 	}
 	return true;
