@@ -457,6 +457,8 @@ namespace upo_local_planner{
       geometry_msgs::Twist& cmd_vel)
   {
 
+	//ros::WallTime t1 = ros::WallTime::now();
+
 	//boost::mutex::scoped_lock l(configuration_mutex_);
 	
 	goal_reached_ = false;
@@ -548,6 +550,9 @@ namespace upo_local_planner{
 		cmd_vel.angular.x = 0.0;
 		cmd_vel.angular.y = 0.0;
 		cmd_vel.angular.z = vt;
+		//ros::WallTime t2 = ros::WallTime::now();
+		//double secs = (t2-t1).toSec();
+		//printf("\n\nFindBestPathTime: %f seconds\n\n", secs);
 		return true;
 		
 	}
@@ -629,7 +634,7 @@ namespace upo_local_planner{
 		else
 		{
 			
-			vx = max_vel_x_*(0.2 + exp(-fabs(dt))); // * tanh(4*dist_swp); //max_vel_x_;
+			vx = max_vel_x_*(0.1 + exp(-fabs(dt))); // * tanh(4*dist_swp); //max_vel_x_;
 			if(vx > max_vel_x_)
 				vx = max_vel_x_;
 			vy = 0.0;
@@ -648,11 +653,14 @@ namespace upo_local_planner{
 	
 	// Check if the action collide with an obstacle
 	double px=0.0, py=0.0, pth=0.0;
-	//bool valid = checkTrajectory(rx, ry, rt, vx, vy, vt, 1.0, 0.0, 1.0, px, py, pth);
 	bool valid = true;
-	if(vx != 0) {
+	if(vx != 0.0) {
 		//valid = checkTrajectory(rx, ry, rt, rvx, rvy, rvt, vx, vy, vt, px, py, pth);
+		//ros::WallTime t_check1 = ros::WallTime::now();
 		valid = collision_detector_->checkTraj(rvx, rvy, rvt, vx, vy, vt, px, py, pth);
+		//ros::WallTime t_check2 = ros::WallTime::now();
+		//double secs = (t_check2-t_check1).toSec();
+		//printf("\n\nCheckTraj time: %f seconds\n\n", secs);
 	}
 	if(valid || fabs(vx) < 0.0001)	
 	{
@@ -662,6 +670,9 @@ namespace upo_local_planner{
 		cmd_vel.angular.x = 0.0;
 		cmd_vel.angular.y = 0.0;
 		cmd_vel.angular.z = vt;
+		//ros::WallTime t2 = ros::WallTime::now();
+		//double secs = (t2-t1).toSec();
+		//printf("\n\nFindBestPathTime: %f seconds\n\n", secs);
 		return true;
 	}
 
@@ -734,6 +745,9 @@ namespace upo_local_planner{
 					cmd_vel.angular.y = 0.0;
 					cmd_vel.angular.z = best_vels.vel_th;
 					//printf("\nValid cmd found! vx:%.2f, vth:%.2f\n", vx, vt);
+					//ros::WallTime t2 = ros::WallTime::now();
+					//double secs = (t2-t1).toSec();
+					//printf("\n\nFindBestPathTime: %f seconds\n\n", secs);
 					return true;
 				}
 
@@ -757,6 +771,9 @@ namespace upo_local_planner{
 		cmd_vel.angular.x = 0.0;
 		cmd_vel.angular.y = 0.0;
 		cmd_vel.angular.z = vt;
+		//ros::WallTime t2 = ros::WallTime::now();
+		//double secs = (t2-t1).toSec();
+		//printf("\n\nFindBestPathTime: %f seconds\n\n", secs);
 		return true;
 	} else {
 		// Stop the robot
@@ -767,6 +784,9 @@ namespace upo_local_planner{
 		cmd_vel.angular.x = 0.0;
 		cmd_vel.angular.y = 0.0;
 		cmd_vel.angular.z = 0.0;
+		//ros::WallTime t2 = ros::WallTime::now();
+		//double secs = (t2-t1).toSec();
+		//printf("\n\nFindBestPathTime: %f seconds\n\n", secs);
 		return false;
 		//return true;
 	}

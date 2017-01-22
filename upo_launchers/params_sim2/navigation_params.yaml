@@ -219,5 +219,6 @@ UpoPlanner:
   laser1_topic:               scan360
   laser2_topic:               depthcamscan_node/scanXtion   
   odom_topic:                 odom
+  laser_uncertainty:          0.025
 
   

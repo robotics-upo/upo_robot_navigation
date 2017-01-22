@@ -18,6 +18,8 @@
 
 #include <boost/thread/mutex.hpp> //Mutex
 
+#include <sys/time.h>
+
 
 
 namespace upo_local_planner {
@@ -178,7 +180,9 @@ namespace upo_local_planner {
 			//ros::Publisher					out_cmdvel_pub_;
 
 			sensor_msgs::LaserScan			laser1_scan_;
+			//std::vector<geometry_msgs::Point> laser1_euclidean_;
 			sensor_msgs::LaserScan			laser2_scan_;
+			//std::vector<geometry_msgs::Point> laser2_euclidean_;
 			sensor_msgs::LaserScan			laser1_scan_copy_;
 			sensor_msgs::LaserScan			laser2_scan_copy_;
 			boost::mutex 					laser1_mutex_;
@@ -195,9 +199,9 @@ namespace upo_local_planner {
 			double							max_ang_acc_;
 			double							sim_time_;
 			double 							robot_radius_;
+			double 							robot_radius_aug_;
 			double							granularity_;
-			//double							ang_vel_inc_;
-			//double							lin_vel_inc_;
+			double							laser_uncertainty_;
 
 			float 							max_lv_var_;
 			float 							max_av_var_;

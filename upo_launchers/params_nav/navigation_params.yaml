@@ -1,6 +1,7 @@
 #-----GENERAL PARAMS FOR UPO_NAVIGATION -------------------------
 base_global_planner: navfn/NavfnROS
-base_local_planner: simple_local_planner/PurePlannerROS
+base_local_planner: upo_local_planner/UpoPlannerROS
+#simple_local_planner/PurePlannerROS
 recovery_behaviors: [{
     name: conservative_reset, 
     type: clear_costmap_recovery/ClearCostmapRecovery
@@ -138,7 +139,7 @@ RRT_ros_wrapper:
   show_rrt_statistics:        false
   show_intermediate_states:   false #use only in case of kino
 
-  robot_radius:               0.40 #0.37 #0.345  #meters
+  robot_radius:               0.345  #meters
 
   # between [0-1]
   # if the equality of the path costs is below
@@ -190,14 +191,15 @@ Navigation_features:
 #------------------------------------------------------------
 # Parameters for the PATH FOLLOWING CONTROLLER
 # Be careful! the cfg file for reconfiguration overrides these values
-PurePlanner:
+#PurePlanner:
+UpoPlanner:
 
 # Robot Configuration Parameters
   max_trans_acc:              1.0 #1.0
   max_rot_acc:                1.0 #1.0
   max_trans_vel:              0.6 #0.5 
   min_trans_vel:              0.1
-  max_rot_vel:                0.9 #0.7
+  max_rot_vel:                0.8 #0.7
   min_rot_vel:                0.3
   min_in_place_rot_vel:       0.5
 
@@ -214,6 +216,14 @@ PurePlanner:
   controller_freq:            15.0
 
   dwa:                        true
+ 
+  robot_radius:               0.345
+
+  number_of_lasers:           2
+  laser1_topic:               scan360
+  laser2_topic:               depthcamscan_node/scanXtion   
+  odom_topic:                 odom
+  laser_uncertainty:          0.025
   
 
   

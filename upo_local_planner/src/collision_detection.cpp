@@ -49,18 +49,10 @@ void CollisionDetection::setup() {
 	n.param<std::string>("laser1_topic", laser1_topic_, std::string("scanfront"));
 	n.param<std::string>("laser2_topic", laser2_topic_, std::string("scanback"));
 	n.param<std::string>("odom_topic", odom_topic_, std::string("odom"));
-	//n.param<std::string>("cmdvel_topic", cmdvel_topic_, std::string("teresa/cmd_vel"));
-	//n.param<std::string>("new_cmdvel_topic", new_cmdvel_topic_, std::string("cmd_vel"));
-	//n.param<double>("robot_radius", robot_radius_, 0.35);
-	//n.param<double>("granularity", granularity_, 0.025);
-	//n.param<double>("max_lin_vel", max_lin_vel_, 0.6);
-	//n.param<double>("max_ang_vel", max_ang_vel_, 0.6);
-	//n.param<double>("max_lin_acc", max_lin_acc_, 1.0);
-	//n.param<double>("max_ang_acc", max_ang_acc_, 1.0);
-	//n.param<double>("sim_time", sim_time_, 0.05);
-	//n.param<bool>("is_active", isActive_, true);
-	//n.param<double>("ang_vel_inc", ang_vel_inc_, 0.20);
-	//n.param<double>("lin_vel_inc", lin_vel_inc_, 0.10);
+	n.param<double>("laser_uncertainty", laser_uncertainty_, 0.025);
+	robot_radius_aug_ = robot_radius_+ laser_uncertainty_;
+
+
 	max_lv_var_ = max_lin_acc_ * sim_time_;
 	max_av_var_ = max_ang_acc_ * sim_time_;
 
@@ -470,12 +462,7 @@ bool CollisionDetection::checkTraj(double cvx, double cvy, double cvth, double t
 
 	px = x;
 	py = y;
-	pth = th;
-
-	// Now we have to check that the robot is
-	// able to stop from the final velocity, and
-	// and check the possible collisions in the movement
-	// until the robot stops. 
+	pth = th; 
 		
 	return true;
 }
@@ -514,7 +501,7 @@ bool CollisionDetection::inCollision(float x, float y, sensor_msgs::LaserScan* s
 	}
 
 	float range_dist = scan->ranges[i];
-	if(fabs(range_dist - d) <= robot_radius_) {
+	if(fabs(range_dist - d) <= robot_radius_aug_) {
 		return true;
 	}
 
@@ -523,7 +510,7 @@ bool CollisionDetection::inCollision(float x, float y, sensor_msgs::LaserScan* s
 	//sabiendo el radio (r) y el ángulo (ɸ) que forman los dos radios, es: L = r * ɸ
 
 	double arc_long = d * scan->angle_increment; //rad 
-	double aux = (robot_radius_/arc_long); 
+	double aux = (robot_radius_aug_/arc_long); 
 	int nranges = (int) ceil(aux);
 	nranges = (int) floor(nranges/2 + 0.5);
 	//printf("\narc_long:%.5f, aux:%.5f, nranges:%i totalrang:%u\n", arc_long, aux, nranges, (unsigned int)scan->ranges.size()); 
@@ -535,7 +522,7 @@ bool CollisionDetection::inCollision(float x, float y, sensor_msgs::LaserScan* s
 	for(unsigned int j=1; j<=nranges; j++) {
 		int newi = (i-j) % scan->ranges.size();
 		range_dist = scan->ranges[newi];
-		if(fabs(range_dist - d) <= robot_radius_) {
+		if(fabs(range_dist - d) <= robot_radius_aug_) {
 			//printf("collision in the left! ind:%i dist:%.2f\n", newi, range_dist);
 			return true;
 		}
@@ -545,7 +532,7 @@ bool CollisionDetection::inCollision(float x, float y, sensor_msgs::LaserScan* s
 	for(unsigned int k=1; k<=nranges; k++) {
 		int newi = (i+k) % scan->ranges.size();
 		range_dist = scan->ranges[newi];
-		if(fabs(range_dist - d) <= robot_radius_) {
+		if(fabs(range_dist - d) <= robot_radius_aug_) {
 			//printf("collision in the right! ind:%i dist:%.2f\n", newi, range_dist);
 			return true;
 		}
@@ -557,7 +544,7 @@ bool CollisionDetection::inCollision(float x, float y, sensor_msgs::LaserScan* s
 
 bool CollisionDetection::inCollision2(float x, float y, sensor_msgs::LaserScan* scan)
 {
-	for(unsigned int i=0; i<=scan->ranges.size(); i++)
+	for(unsigned int i=0; i<scan->ranges.size(); i++)
 	{
 		//laser measure polar coordinates
 		float laser_d = scan->ranges[i];
@@ -568,11 +555,13 @@ bool CollisionDetection::inCollision2(float x, float y, sensor_msgs::LaserScan* 
 
 		float dx = (x - laser_x);
 		float dy = (y - laser_y);
-		float dist = sqrt(dx*dx + dy*dy);
-		if(dist <= robot_radius_)
-			return false; 
+		//float dist = sqrt(dx*dx + dy*dy);
+		//if(dist <= robot_radius_)
+		float dist = dx*dx + dy*dy;
+		if(dist <= (robot_radius_aug_*robot_radius_aug_))
+			return true; 
 	}
-	return true;
+	return false;
 }
 
 
