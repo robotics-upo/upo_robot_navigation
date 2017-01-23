@@ -144,8 +144,8 @@ namespace upo_local_planner {
        * @param vtheta_samp The theta velocity used to seed the trajectory
        * @return True if the trajectory is legal, false otherwise
        */
-      bool checkTrajectory(double x, double y, double theta, double vx, double vy, 
-          double vtheta, double vx_samp, double vy_samp, double vtheta_samp, double& px, double& py, double &pth);
+      //bool checkTrajectory(double x, double y, double theta, double vx, double vy, 
+       //   double vtheta, double vx_samp, double vy_samp, double vtheta_samp, double& px, double& py, double &pth);
 
 
       /** @brief Set the footprint specification of the robot. */
@@ -170,9 +170,10 @@ namespace upo_local_planner {
        * @param acc_rot The angular acceleration limit of the robot
        * @param traj Will be set to the generated trajectory with its associated score 
        */
-      void generateTrajectory(double x, double y, double theta, double vx, double vy,
+      /*void generateTrajectory(double x, double y, double theta, double vx, double vy,
           double vtheta, double vx_samp, double vy_samp, double vtheta_samp, double acc_x,
           double acc_y, double acc_theta, Trajectory& traj);
+		*/
 
       /**
        * @brief  Checks the legality of the robot footprint at a position and orientation using the world model

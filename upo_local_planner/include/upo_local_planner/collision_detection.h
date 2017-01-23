@@ -58,13 +58,14 @@ namespace upo_local_planner {
 			* return true if a possible collision is detected, false otherwise
 			*/
 			bool inCollision(float x, float y, sensor_msgs::LaserScan* scan);
+			//bool inCollision(float x, float y, std::vector<geometry_msgs::Point>* scanpoints);
 
-
-			bool inCollision2(float x, float y, sensor_msgs::LaserScan* scan);
+			//bool inCollision2(float x, float y, sensor_msgs::LaserScan* scan); 
+			bool inCollision2(float x, float y, std::vector<geometry_msgs::Point>* scanpoints);
 
 			bool collision(float x, float y);
 
-			bool collision2(float x, float y);
+			//bool collision2(float x, float y);
 
 			/**
 		   * @brief  Generate and check a single trajectory
@@ -80,6 +81,8 @@ namespace upo_local_planner {
 		   * @return True if the trajectory is legal, false otherwise
 		   */
 			bool checkTraj(double cvx, double cvy, double cvth, double tvx, double tvy, double tvth, double& px, double& py, double &pth);
+
+			std::vector<geometry_msgs::Point> laser_polar2euclidean(sensor_msgs::LaserScan* scan);
 
 			void updateSensorReadings();
 
@@ -163,7 +166,7 @@ namespace upo_local_planner {
 			std::string 					laser1_topic_;
 			std::string 					laser2_topic_;
 
-			bool 							n_lasers_;
+			int 							n_lasers_;
 
 			std::string 					odom_topic_;
 
@@ -180,9 +183,9 @@ namespace upo_local_planner {
 			//ros::Publisher					out_cmdvel_pub_;
 
 			sensor_msgs::LaserScan			laser1_scan_;
-			//std::vector<geometry_msgs::Point> laser1_euclidean_;
+			std::vector<geometry_msgs::Point> laser1_euclidean_;
 			sensor_msgs::LaserScan			laser2_scan_;
-			//std::vector<geometry_msgs::Point> laser2_euclidean_;
+			std::vector<geometry_msgs::Point> laser2_euclidean_;
 			sensor_msgs::LaserScan			laser1_scan_copy_;
 			sensor_msgs::LaserScan			laser2_scan_copy_;
 			boost::mutex 					laser1_mutex_;

@@ -217,7 +217,7 @@ UpoPlanner:
  
   number_of_lasers:           1
   laser1_topic:               scan360
-  laser2_topic:               depthcamscan_node/scanXtion   
+  laser2_topic:               scan360_fake #depthcamscan_node/scanXtion   
   odom_topic:                 odom
   laser_uncertainty:          0.025
 
