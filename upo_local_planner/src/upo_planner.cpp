@@ -67,14 +67,14 @@ namespace upo_local_planner{
 
 		costmap_2d::calculateMinAndMaxDistances(footprint_spec_, inscribed_radius_, circumscribed_radius_);
 
-		printf("\n\n\n---FOOTPRINT----\n");
-		printf("inscribed_radius: %.3f, circumscribed_radius: %.3f\n", inscribed_radius_, circumscribed_radius_);
-		printf("Footprint_specs:\n");
-		for(unsigned int i = 0; i<footprint_spec_.size(); i++)
-		{
-			printf("point %u: x=%.3f, y=%.3f\n", (i+1), footprint_spec_[i].x, footprint_spec_[i].y); 
-		}   
-		printf("\n\n"); 
+		//printf("\n\n\n---FOOTPRINT----\n");
+		//printf("inscribed_radius: %.3f, circumscribed_radius: %.3f\n", inscribed_radius_, circumscribed_radius_);
+		//printf("Footprint_specs:\n");
+		//for(unsigned int i = 0; i<footprint_spec_.size(); i++)
+		//{
+		//	printf("point %u: x=%.3f, y=%.3f\n", (i+1), footprint_spec_[i].x, footprint_spec_[i].y); 
+		//}   
+		//printf("\n\n"); 
 
 		controller_freq_ = controller_freq;
 		goal_reached_ = false;
@@ -120,7 +120,7 @@ namespace upo_local_planner{
   /**
    * create and score a trajectory given the current pose of the robot and selected velocities
    */
-  void UpoPlanner::generateTrajectory(
+  /*void UpoPlanner::generateTrajectory(
       double x, double y, double theta, double vx, double vy,
           double vtheta, double vx_samp, double vy_samp, double vtheta_samp, double acc_x,
           double acc_y, double acc_theta, Trajectory& traj) {
@@ -164,12 +164,12 @@ namespace upo_local_planner{
     traj.thetav_ = vtheta_samp;
     traj.cost_ = -1.0;
 
-	collision_detector_->updateSensorReadings();
+	//collision_detector_->updateSensorReadings();
 
     for(int i = 0; i < num_steps; ++i) 
 	{
       //get map coordinates of a point
-      /*unsigned int cell_x, cell_y;
+      unsigned int cell_x, cell_y;
 
       //we don't want a path that goes off the know map
       if(!costmap_.worldToMap(x_i, y_i, cell_x, cell_y)){
@@ -191,20 +191,20 @@ namespace upo_local_planner{
       if(footprint_cost < 0){
         traj.cost_ = -1.0;
         return;
-      }*/
+      }
 
 	  //x_i, y_i are in odom coordinates. Transform to base_link
 	  // Transform way-point into local robot frame and get desired x,y,theta
 
 	 // Transform way-point into local robot frame and get desired x,y,theta
-	 float lx = (x_i-x)*cos(theta) + (y_i-y)*sin(theta);
-	 float ly =-(x_i-x)*sin(theta) + (y_i-y)*cos(theta);
+	 //float lx = (x_i-x)*cos(theta) + (y_i-y)*sin(theta);
+	 //float ly =-(x_i-x)*sin(theta) + (y_i-y)*cos(theta);
 	 //float lt = atan2(dy, dx);
-	  if(collision_detector_->collision2(lx, ly))
-	  {
-			traj.cost_ = -1.0;
-			return;
-	  }
+	  //if(collision_detector_->collision2(lx, ly))
+	  //{
+	//		traj.cost_ = -1.0;
+	//		return;
+	 // }
 
       //the point is legal... add it to the trajectory
       traj.addPoint(x_i, y_i, theta_i);
@@ -225,7 +225,7 @@ namespace upo_local_planner{
 
     traj.cost_ = 0;
 
-  }
+  }*/
 
 
 
@@ -406,7 +406,7 @@ namespace upo_local_planner{
   }
 
 
-  bool UpoPlanner::checkTrajectory(double x, double y, double theta, double vx, double vy,
+  /*bool UpoPlanner::checkTrajectory(double x, double y, double theta, double vx, double vy,
       double vtheta, double vx_samp, double vy_samp, double vtheta_samp, double& px, double& py, double& pth){
     
 	Trajectory t;
@@ -435,7 +435,7 @@ namespace upo_local_planner{
 	pth = pointth;
 
     return true;
-  }
+  }*/
 
 
   bool UpoPlanner::isGoalReached()
@@ -656,13 +656,13 @@ namespace upo_local_planner{
 	bool valid = true;
 	if(vx != 0.0) {
 		//valid = checkTrajectory(rx, ry, rt, rvx, rvy, rvt, vx, vy, vt, px, py, pth);
-		//ros::WallTime t_check1 = ros::WallTime::now();
+		ros::WallTime t_check1 = ros::WallTime::now();
 		valid = collision_detector_->checkTraj(rvx, rvy, rvt, vx, vy, vt, px, py, pth);
-		//ros::WallTime t_check2 = ros::WallTime::now();
-		//double secs = (t_check2-t_check1).toSec();
+		ros::WallTime t_check2 = ros::WallTime::now();
+		double secs = (t_check2-t_check1).toSec();
 		//printf("\n\nCheckTraj time: %f seconds\n\n", secs);
 	}
-	if(valid || fabs(vx) < 0.0001)	
+	if(valid /*|| fabs(vx) < 0.0001*/)	
 	{
 		cmd_vel.linear.x = vx;
 		cmd_vel.linear.y = vy;
@@ -679,6 +679,7 @@ namespace upo_local_planner{
 	// Try to find a valid command by sampling vels
 	else if(dwa_) 
 	{
+		//printf("Dentro de DWA!!!!!!!\n");
 		float vt_orig = vt;
 		float vx_orig = vx;
 

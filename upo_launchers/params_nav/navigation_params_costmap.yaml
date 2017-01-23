@@ -1,6 +1,6 @@
 #-----GENERAL PARAMS FOR UPO_NAVIGATION -------------------------
 base_global_planner: navfn/NavfnROS
-base_local_planner: upo_local_planner/UpoPlannerROS
+base_local_planner: simple_local_planner/PurePlannerROS
 recovery_behaviors: [{
     name: conservative_reset, 
     type: clear_costmap_recovery/ClearCostmapRecovery
@@ -60,7 +60,7 @@ RRT_ros_wrapper:
   rrt_solve_time:             0.5 
   rrt_goal_bias:              0.05 
   rrt_max_insertion_dist:     0.25 #0.25<-2  0.50 o 1.0<-4
-  rrt_goal_xy_tol:            0.1
+  rrt_goal_xy_tol:            0.12
   rrt_goal_th_tol:            0.12
   # If we want to interpolate the resulting path
   # if we don't. This value should be 0 or below 0.
@@ -70,7 +70,7 @@ RRT_ros_wrapper:
   path_smoothing:             true
   smoothing_samples:          5
 
-  #if the planner is RRT* or kinoRRT* 
+  #if the planner is RRT* 
   rrtstar_use_k_nearest:      false
   rrtstar_first_path_biasing: false
   rrtstar_first_path_bias:    0.8
@@ -83,7 +83,7 @@ RRT_ros_wrapper:
   #get the RRT* costs from a costmap
   use_fc_in_costmap:          false
 
-  #if the planner is kinodynamic 
+  #if the planner is kinodynamic (options 3 and 4)
   kino_time_step:             0.15 
   kino_min_control_steps:     5  #not used currently
   kino_max_control_steps:     3    
@@ -127,7 +127,7 @@ RRT_ros_wrapper:
   rrt_yaw_resolution:         0.02
   rrt_min_linear_vel:         0.0
   rrt_max_linear_vel:         0.4
-  rrt_max_angular_vel:        0.5
+  rrt_max_angular_vel:        0.8
   rrt_lin_vel_resolution:     0.05
   rrt_ang_vel_resolution:     0.1
   rrt_nn_type:                1
@@ -136,14 +136,14 @@ RRT_ros_wrapper:
   visualize_rrt_tree:         true
   visualize_nav_costmap:      true
   show_rrt_statistics:        false
-  show_intermediate_states:   false #use true only in case of kino
+  show_intermediate_states:   false #use only in case of kino
 
-  robot_radius:               0.35  #meters
+  robot_radius:               0.345  #meters
 
   # between [0-1]
   # if the equality of the path costs is below
   # this percentage, calculate a new RRT path 
-  equal_path_percentage:      1.0   #Not used currently
+  #equal_path_percentage:      1.0   #Not used currently
 
 
 
@@ -164,7 +164,7 @@ Navigation_features:
   # Gaussian functions
   stddev_person_front:        1.2
   stddev_person_aside:        0.8
-  stddev_person_right:        0.8
+  stddev_person_right:        0.8  #only used in upo_featureset 1
 
   enable_grouping:            true  
   stddev_group:               0.8
@@ -174,35 +174,37 @@ Navigation_features:
   # 1 -> 5 features
   upo_featureset:             1
   # Weights for function costs (featureset 0)
-  #w1:                         0.1   #goal dist
-  #w2:                         0.5  #obstacle dist
-  #w3:                         0.4  #proxemics
+  #w1:                         0.15   #goal dist
+  #w2:                         0.475  #obstacle dist
+  #w3:                         0.375  #proxemics
   # Weights for function costs (featureset 1)
-  w1:                          0.05   #goal dist
-  w2:                          0.35  #obstacle dist
-  w3:                          0.4  #person front
-  w4:                          0.2 # person back 
-  w5:                          0.0 # person right side
+  w1:                         0.05   #goal dist
+  w2:                         0.35  #obstacle dist
+  w3:                         0.4  #person front
+  w4:                         0.2 # person back 
+  w5:                         0.0 # person right side
+
   
 
 
 #------------------------------------------------------------
 # Parameters for the PATH FOLLOWING CONTROLLER
-UpoPlanner:
+PurePlanner:
+#UpoPlanner:
 
 # Robot Configuration Parameters
-  max_trans_acc:              1.5
-  max_rot_acc:                1.5
-  max_trans_vel:              0.6 
+  max_trans_acc:              1.0 #1.0
+  max_rot_acc:                1.0 #1.0
+  max_trans_vel:              0.6 #0.5 
   min_trans_vel:              0.1
-  max_rot_vel:                0.8
-  min_rot_vel:                0.1
-  min_in_place_rot_vel:       0.4
+  max_rot_vel:                0.8 #0.7
+  min_rot_vel:                0.3
+  min_in_place_rot_vel:       0.5
 
 # Goal Tolerance Parameters
-  yaw_goal_tolerance:         0.1
-  xy_goal_tolerance:          0.10
-  wp_tolerance:               0.3
+  yaw_goal_tolerance:         0.12
+  xy_goal_tolerance:          0.20
+  wp_tolerance:               0.5
   
 # Forward Simulation Parameters
   sim_time:                   0.5 
@@ -212,13 +214,14 @@ UpoPlanner:
   controller_freq:            15.0
 
   dwa:                        true
-
-  robot_radius:               0.35
  
-  number_of_lasers:           2
-  laser1_topic:               scan360
-  laser2_topic:               scan360_nav #depthcamscan_node/scanXtion   
-  odom_topic:                 odom
-  laser_uncertainty:          0.025
+  #robot_radius:               0.345
+
+  #number_of_lasers:           2
+  #laser1_topic:               scan360
+  #laser2_topic:               depthcamscan_node/scanXtion   
+  #odom_topic:                 odom
+  #laser_uncertainty:          0.025
+  
 
   

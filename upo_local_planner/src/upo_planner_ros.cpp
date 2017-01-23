@@ -112,7 +112,7 @@ namespace upo_local_planner {
       private_nh.param("controller_freq", controller_freq_, 15.0);
 
 	  bool dwa;
-	  private_nh.param("dwa", dwa, false);
+	  private_nh.param("dwa", dwa, true);
 
 	  double r_radius;
 	  private_nh.param("robot_radius", r_radius, 0.4);      

@@ -43,9 +43,11 @@ void CollisionDetection::setup() {
     //dynamic_reconfigure::Server<assisted_steering::AssistedSteeringConfig>::CallbackType cb = boost::bind(&AssistedSteering::reconfigureCB, this, _1, _2);
     //dsrv_->setCallback(cb);
 
-	double l = 1;
-	n.param<double>("number_of_lasers", l, 2.0);
-	n_lasers_ = (int) floor(l);
+	double l = 2.0;
+	n.param<double>("number_of_lasers", l, 1.0);
+	//printf("\n\nnumber of lasers1: %.1f\n\n", l);
+	n_lasers_ = (int)(l + 0.5);
+	//printf("\n\nnumber of lasers2: %i\n\n", n_lasers_);
 	n.param<std::string>("laser1_topic", laser1_topic_, std::string("scanfront"));
 	n.param<std::string>("laser2_topic", laser2_topic_, std::string("scanback"));
 	n.param<std::string>("odom_topic", odom_topic_, std::string("odom"));
@@ -279,7 +281,7 @@ void CollisionDetection::updateSensorReadings()
 }
 
 
-bool CollisionDetection::collision2(float x, float y)
+/*bool CollisionDetection::collision2(float x, float y)
 {
 	if(inCollision2(x, y, &laser1_scan_copy_))
 		return true;
@@ -290,7 +292,7 @@ bool CollisionDetection::collision2(float x, float y)
 	}
 
 	return false;
-}
+}*/
 
 bool CollisionDetection::collision(float x, float y)
 {
@@ -427,14 +429,22 @@ bool CollisionDetection::checkTraj(double cvx, double cvy, double cvth, double t
 	sensor_msgs::LaserScan laser1 = laser1_scan_;
 	laser1_mutex_.unlock();
 
+	//Tranform it to x,y coordinates
+	laser1_euclidean_.clear();
+	laser1_euclidean_ = laser_polar2euclidean(&laser1);
+
 	sensor_msgs::LaserScan laser2;
 	if(n_lasers_ >= 2)
 	{
 		//Take the laser scan 2
 		laser2_mutex_.lock();
 		laser2 = laser2_scan_;
-		laser1_mutex_.unlock();
+		laser2_mutex_.unlock();
+		//Tranform it to x,y coordinates
+		laser2_euclidean_.clear();
+		laser2_euclidean_ = laser_polar2euclidean(&laser2);
 	}
+	//printf("laser1 size: %u, laser2 size: %u\n", (unsigned int)laser1_euclidean_.size(), (unsigned int)laser2_euclidean_.size());
 
 	double lv = cvx;
 	double av = cvth;
@@ -451,10 +461,12 @@ bool CollisionDetection::checkTraj(double cvx, double cvy, double cvth, double t
 		th = normalizeAngle(th, -M_PI, M_PI);
 		x = x + lin_dist*cos(th); //cos(th+av*dt/2.0)
 		y = y + lin_dist*sin(th); 
-		if(inCollision2(x, y, &laser1))
+		//if(inCollision(x, y, &laser1))
+		if(inCollision2(x, y, &laser1_euclidean_))
 			return false;
 		if(n_lasers_ >= 2) {
-			if(inCollision2(x, y, &laser2))
+			//if(inCollision(x, y, &laser2))
+			if(inCollision2(x, y, &laser2_euclidean_))
 				return false;
 		}
 
@@ -468,6 +480,25 @@ bool CollisionDetection::checkTraj(double cvx, double cvy, double cvth, double t
 }
 
 
+
+std::vector<geometry_msgs::Point> CollisionDetection::laser_polar2euclidean(sensor_msgs::LaserScan* scan)
+{
+	std::vector<geometry_msgs::Point> points;
+	points.reserve(scan->ranges.size());
+	geometry_msgs::Point p;
+	p.z = 0.0;
+	for(unsigned int i=0; i<scan->ranges.size(); i++)
+	{
+		//laser measure polar coordinates
+		float laser_d = scan->ranges[i];
+		float laser_th = scan->angle_min + scan->angle_increment*i;
+		//transform to x,y
+		p.x = laser_d*cos(laser_th);
+		p.y = laser_d*sin(laser_th);
+		points.push_back(p);
+	}
+	return points;
+}
 
 
 /**
@@ -500,10 +531,26 @@ bool CollisionDetection::inCollision(float x, float y, sensor_msgs::LaserScan* s
 		i = (int) ind;
 	}
 
-	float range_dist = scan->ranges[i];
+	/*float range_dist = scan->ranges[i];
 	if(fabs(range_dist - d) <= robot_radius_aug_) {
 		return true;
-	}
+	}*/
+
+	//laser measure polar coordinates
+	float laser_d = scan->ranges[i];
+	float laser_th = scan->angle_min + scan->angle_increment*i;
+	//transform to x,y
+	float laser_x = laser_d*cos(laser_th);
+	float laser_y = laser_d*sin(laser_th);
+
+	float dx = (x - laser_x);
+	float dy = (y - laser_y);
+	//float dist = sqrt(dx*dx + dy*dy);
+	//if(dist <= robot_radius_)
+	float dist = dx*dx + dy*dy;
+	if(dist <= (robot_radius_aug_*robot_radius_aug_))
+		return true;
+
 
 	//Check the ranges according to the robot radius
 	//La longitud del arco (L) en una circunferencia, 
@@ -512,7 +559,7 @@ bool CollisionDetection::inCollision(float x, float y, sensor_msgs::LaserScan* s
 	double arc_long = d * scan->angle_increment; //rad 
 	double aux = (robot_radius_aug_/arc_long); 
 	int nranges = (int) ceil(aux);
-	nranges = (int) floor(nranges/2 + 0.5);
+	//nranges = (int) floor(nranges/2 + 0.5);
 	//printf("\narc_long:%.5f, aux:%.5f, nranges:%i totalrang:%u\n", arc_long, aux, nranges, (unsigned int)scan->ranges.size()); 
 	if(nranges > scan->ranges.size()) {
 		nranges = scan->ranges.size();
@@ -521,28 +568,56 @@ bool CollisionDetection::inCollision(float x, float y, sensor_msgs::LaserScan* s
 	//Ranges to the left
 	for(unsigned int j=1; j<=nranges; j++) {
 		int newi = (i-j) % scan->ranges.size();
-		range_dist = scan->ranges[newi];
+		/*range_dist = scan->ranges[newi];
 		if(fabs(range_dist - d) <= robot_radius_aug_) {
 			//printf("collision in the left! ind:%i dist:%.2f\n", newi, range_dist);
 			return true;
-		}
+		}*/
+		//laser measure polar coordinates
+		float laser_d = scan->ranges[newi];
+		float laser_th = scan->angle_min + scan->angle_increment*newi;
+		//transform to x,y
+		float laser_x = laser_d*cos(laser_th);
+		float laser_y = laser_d*sin(laser_th);
+
+		float dx = (x - laser_x);
+		float dy = (y - laser_y);
+		//float dist = sqrt(dx*dx + dy*dy);
+		//if(dist <= robot_radius_)
+		float dist = dx*dx + dy*dy;
+		if(dist <= (robot_radius_aug_*robot_radius_aug_))
+			return true;
 	}
 
 	//Ranges to the right
 	for(unsigned int k=1; k<=nranges; k++) {
 		int newi = (i+k) % scan->ranges.size();
-		range_dist = scan->ranges[newi];
+		/*range_dist = scan->ranges[newi];
 		if(fabs(range_dist - d) <= robot_radius_aug_) {
 			//printf("collision in the right! ind:%i dist:%.2f\n", newi, range_dist);
 			return true;
-		}
+		}*/
+		//laser measure polar coordinates
+		float laser_d = scan->ranges[newi];
+		float laser_th = scan->angle_min + scan->angle_increment*newi;
+		//transform to x,y
+		float laser_x = laser_d*cos(laser_th);
+		float laser_y = laser_d*sin(laser_th);
+
+		float dx = (x - laser_x);
+		float dy = (y - laser_y);
+		//float dist = sqrt(dx*dx + dy*dy);
+		//if(dist <= robot_radius_)
+		float dist = dx*dx + dy*dy;
+		if(dist <= (robot_radius_aug_*robot_radius_aug_))
+			return true;
 	}
 
 	return false;
 }
 
 
-bool CollisionDetection::inCollision2(float x, float y, sensor_msgs::LaserScan* scan)
+/*bool CollisionDetection::inCollision2(float x, float y, sensor_msgs::LaserScan* scan)
 {
 	for(unsigned int i=0; i<scan->ranges.size(); i++)
 	{
@@ -555,6 +630,21 @@ bool CollisionDetection::inCollision2(float x, float y, sensor_msgs::LaserScan* 
 
 		float dx = (x - laser_x);
 		float dy = (y - laser_y);
+		//float dist = sqrt(dx*dx + dy*dy);
+		//if(dist <= robot_radius_)
+		float dist = dx*dx + dy*dy;
+		if(dist <= (robot_radius_aug_*robot_radius_aug_))
+			return true; 
+	}
+	return false;
+}*/
+
+bool CollisionDetection::inCollision2(float x, float y, std::vector<geometry_msgs::Point>* scanpoints)
+{
+	for(unsigned int i=0; i<scanpoints->size(); i++)
+	{
+		float dx = (x - scanpoints->at(i).x);
+		float dy = (y - scanpoints->at(i).y);
 		//float dist = sqrt(dx*dx + dy*dy);
 		//if(dist <= robot_radius_)
 		float dist = dx*dx + dy*dy;
