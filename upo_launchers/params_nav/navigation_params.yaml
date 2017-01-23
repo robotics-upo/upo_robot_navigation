@@ -154,7 +154,7 @@ Navigation_features:
   # param to use UvA social cost library
   use_uva_features:           false
 
-  no_costmaps:                false
+  no_costmaps:                true
   
   #Use the laser projection or the ros costmap
   # to calculate the obstacle distance cost
@@ -190,7 +190,6 @@ Navigation_features:
 
 #------------------------------------------------------------
 # Parameters for the PATH FOLLOWING CONTROLLER
-# Be careful! the cfg file for reconfiguration overrides these values
 #PurePlanner:
 UpoPlanner:
 

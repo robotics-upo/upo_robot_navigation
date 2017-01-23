@@ -3,10 +3,10 @@
 
 	<arg name = "scenario" value = "uva_demo"/>
 	<arg name = "xtion_nav" value = "true" />
-	<arg name = "robot" value = "teresa_robot5" />
+	<arg name = "robot" value = "teresa_robot6" />
 	<arg name = "x" value = "10.95"/>
-    <arg name = "y" value = "16.1"/>
-    <arg name = "a" value = "-0.2"/>
+	<arg name = "y" value = "16.1"/>
+ 	<arg name = "a" value = "-0.2"/>
 
 
 	<param name="/use_sim_time" value="false"/>
@@ -18,28 +18,38 @@
 	<param name="fiducials_frame" value="odom" />
   </node> -->
 
-  <!--turn on the laser and launch them-->
-   <include file="$(find teresa_common)/launch/uva/$(arg robot)/lasers.launch" />
+  	<!--turn on the laser and launch them-->
+   	<include file="$(find teresa_common)/launch/uva/$(arg robot)/lasers.launch" />
  
-  <!--launch the xtion cameras-->
-  <include if="$(arg xtion_nav)" file="$(find teresa_common)/launch/uva/$(arg robot)/xtionNav.launch" />
-  <include file="$(find teresa_common)/launch/uva/$(arg robot)/xtionPeople.launch" />
+  	<!--launch the xtion cameras-->
+  	<include if="$(arg xtion_nav)" file="$(find teresa_common)/launch/uva/$(arg robot)/xtionNav.launch" />
+  	<include file="$(find teresa_common)/launch/uva/$(arg robot)/xtionPeople.launch" />
  	
-  <!--laser generated from the navigation xtion-->
-  <include file="$(find teresa_common)/launch/uva/$(arg robot)/depthcamscan.launch"/>
+ 	 <!--laser generated from the navigation xtion-->
+  	<include file="$(find teresa_common)/launch/uva/$(arg robot)/depthcamscan.launch"/>
 
-  <!--transform people receive to UPO messages format-->
-  <node pkg="spencer_to_upo_people" type="spencer_to_upo_people" name="spencer_to_upo_people" output="screen" >
-	<param name="publish_markers" type="bool" value="false" />
-        <param name="use_kf" type="bool" value="false" />
-        <param name="spencer_people_id" type="str" value="/spencer/perception/tracked_persons" />
-  </node>
+  	<!--transform people receive to UPO messages format-->
+  	<node pkg="spencer_to_upo_people" type="spencer_to_upo_people" name="spencer_to_upo_people_nav" output="screen" >
+		<param name="upo_people_id" value="/people/navigation" />
+		<param name="publish_markers" type="bool" value="false" />
+        	<param name="use_kf" type="bool" value="false" />
+		<!--param name="spencer_people_id" type="str" value="/spencer/perception/tracked_persons" /--> <!--Spencer tracker-->
+		<param name="spencer_people_id" type="str" value="/people_tracker_node/tracked_persons" /> <!--UPO tracker-->
+  	</node>
+
+  	<!--transform people receive to UPO messages format-->
+  	<node pkg="spencer_to_upo_people" type="spencer_to_upo_people" name="spencer_to_upo_people_wsbs" output="screen" >
+		<param name="upo_people_id" value="/people/wsbs" />
+		<param name="publish_markers" type="bool" value="false" />
+       		<param name="use_kf" type="bool" value="false" />
+		<param name="spencer_people_id" type="str" value="/people_tracker_node/tracked_persons/with_visual_confirmation" /> <!--UPO tracker-->
+	</node>
   
-  <!-- Run the map server -->
-  <node pkg="map_server" type="map_server" name="map_server" args="$(find upo_launchers)/$(arg scenario)/maps/$(arg scenario).yaml" /> 
+  	<!-- Run the map server -->
+  	<node pkg="map_server" type="map_server" name="map_server" args="$(find upo_launchers)/$(arg scenario)/maps/$(arg scenario).yaml" /> 
 
-   <!--- amcl -->
-  <node pkg="amcl" type="amcl" name="amcl" args="scan:=/scan360_filtered">
+   	<!--- amcl -->
+  	<node pkg="amcl" type="amcl" name="amcl" args="scan:=/scan360_filtered">
 	<param name="use_map_topic" value="true" />
     <param name="odom_model_type" value="diff"/>
     <param name="transform_tolerance" value="0.9" /> <!--"0.2" />-->
@@ -97,7 +107,7 @@
 
  
     <!-- ################### Tracking ######################## -->  
-  	<include file="$(find uva_launchers)/launch/combined_tracking.launch"/>
+    <include file="$(find teresa_common)/launch/uva/combined_tracking_demo.launch" />
 
   	<!-- ################### UvA stuff ########################  
   	<param name="hri_common/tracks_topic" value="tracked_persons_confirmed_by_face_recog_or_com"/>
