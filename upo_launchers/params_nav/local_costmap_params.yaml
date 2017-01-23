@@ -25,9 +25,9 @@ local_costmap:
     track_unknown_space: false
     transform_tolerance: 0.2 #default=0.2
     ### Sensor management parameters ###
-    observation_sources: laser xtion 
-    laser: {sensor_frame: base_link, data_type: LaserScan, topic: scan360_nav, marking: true, clearing: true, inf_is_valid: false, expected_update_rate: 0.6}
-    xtion: {sensor_frame: base_link, data_type: LaserScan, topic: depthcamscan_node/scanXtion, marking: true, clearing: true, inf_is_valid: false, expected_update_rate: 0.8}
+    observation_sources: laser #xtion 
+    laser: {sensor_frame: base_link, data_type: LaserScan, topic: scan360, marking: true, clearing: true, inf_is_valid: false, expected_update_rate: 0.6}
+    #xtion: {sensor_frame: base_link, data_type: LaserScan, topic: depthcamscan_node/scanXtion, marking: true, clearing: true, inf_is_valid: false, expected_update_rate: 0.8}
       
 
   inflation_layer:
