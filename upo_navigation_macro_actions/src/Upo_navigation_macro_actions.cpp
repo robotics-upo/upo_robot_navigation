@@ -1255,7 +1255,8 @@ void Upo_navigation_macro_actions::walkSideCB(const upo_navigation_macro_actions
 		setLedColor(BLUE);
 
 
-	ros::Time time_init = ros::Time::now(); 
+	ros::Time time_init = ros::Time::now();
+
 	//upo_msgs::PersonPoseUPO p = goal->it;
 	int id = goal->it;
 	
@@ -1295,13 +1296,17 @@ void Upo_navigation_macro_actions::walkSideCB(const upo_navigation_macro_actions
 		wsresult_.result = "Aborted. Walking sbs error 2";
 		wsresult_.value = 2;
 		WSActionServer_->setAborted(wsresult_, "Walking sbs aborted.");
+		return;
 	}
 	if(start_srv.response.error_code != 0) { //ERROR 
 		ROS_INFO("Setting ABORTED state. Error_code received: %u", start_srv.response.error_code);
 		wsresult_.result = "Aborted. Walking sbs error 2";
 		wsresult_.value = 2;
 		WSActionServer_->setAborted(wsresult_, "Walking sbs aborted.");
+		return;
 	}
+
+	ros::WallTime time_wsbs = ros::WallTime::now(); 
 
 	ros::Rate r(control_frequency_);	
 	
@@ -1323,13 +1328,14 @@ void Upo_navigation_macro_actions::walkSideCB(const upo_navigation_macro_actions
 					wsresult_.result = "Aborted. Walking sbs error while stopping";
 					wsresult_.value = 2;
 					WSActionServer_->setAborted(wsresult_, "Walking sbs aborted.");
+					return;
 				} 
-				if(stop_srv.response.error_code != 0) { //ERROR 
+				/*if(stop_srv.response.error_code != 0) { //ERROR 
 					ROS_INFO("Setting ABORTED state. Error code received: %u", stop_srv.response.error_code);
 					wsresult_.result = "Aborted. Walking sbs error while stopping";
 					wsresult_.value = 2;
 					WSActionServer_->setAborted(wsresult_, "Walking sbs aborted.");
-				}
+				}*/
 
 				//Now, start!
 				start_srv.request.target_id = id;
@@ -1342,13 +1348,16 @@ void Upo_navigation_macro_actions::walkSideCB(const upo_navigation_macro_actions
 					wsresult_.result = "Aborted. Walking sbs error 2";
 					wsresult_.value = 2;
 					WSActionServer_->setAborted(wsresult_, "Walking sbs aborted.");
+					return;
 				}
 				if(start_srv.response.error_code != 0) { //ERROR 					
 					ROS_INFO("Setting ABORTED state. Error code received: %u", start_srv.response.error_code);
 					wsresult_.result = "Aborted. Walking sbs error 2";
 					wsresult_.value = 2;
 					WSActionServer_->setAborted(wsresult_, "Walking sbs aborted.");
+					return;
 				}
+				time_wsbs = ros::WallTime::now(); 
 	
 			} else {
           		//if we've been preempted explicitly we need to shut things down
@@ -1376,33 +1385,39 @@ void Upo_navigation_macro_actions::walkSideCB(const upo_navigation_macro_actions
 
 		wsfeedback_.text = "WalkSideBySide running"; 
 
-		/*
-		WAITING_FOR_START    = 0, 
-		WAITING_FOR_ODOM     = 1, 
-		WAITING_FOR_LASER    = 2, 
-		WAITING_FOR_XTION    = 3,
-		WAITING_FOR_PEOPLE   = 4,
-		RUNNING              = 5, 
-		TARGET_LOST          = 6,
-		FINISHED             = 7,
-		ABORTED		     	 = 8
-		*/
-		if(status == 7) {
-			ROS_INFO("WalkSideBySide. Setting SUCCEEDED state");
-			wsresult_.result = "Succeeded";
-			wsresult_.value = 0;
-			WSActionServer_->setSucceeded(wsresult_, "Target goal reached");
-			wsfeedback_.text = "WalkSideBySide finished successfully";
-			exit = true;
-		} else if(status == 8) {
-			ROS_INFO("Setting ABORTED state. Status received: %u", status);
-			wsresult_.result = "Aborted. Walking sbs error 2";
-			wsresult_.value = 2;
-			WSActionServer_->setAborted(wsresult_, "Walking sbs aborted.");
-			wsfeedback_.text = "WalkSideBySide aborted";
-			exit = true;
-		}
+		double t_secs = (ros::WallTime::now() - time_wsbs).toSec();
 		
+
+		if(status == 5 || status == 6 || t_secs > 5.0)
+		{ 
+			/*
+			WAITING_FOR_START    = 0, 
+			WAITING_FOR_ODOM     = 1, 
+			WAITING_FOR_LASER    = 2, 
+			WAITING_FOR_XTION    = 3,
+			WAITING_FOR_PEOPLE   = 4,
+			RUNNING              = 5, 
+			TARGET_LOST          = 6,
+			FINISHED             = 7,
+			ABORTED		     	 = 8
+			*/
+			if(status == 7) {
+				ROS_INFO("WalkSideBySide. Setting SUCCEEDED state");
+				wsresult_.result = "Succeeded";
+				wsresult_.value = 0;
+				WSActionServer_->setSucceeded(wsresult_, "Target goal reached");
+				wsfeedback_.text = "WalkSideBySide finished successfully";
+				exit = true;
+			} else if(status == 8) {
+				ROS_INFO("Setting ABORTED state. Status received: %u", status);
+				wsresult_.result = "Aborted. Walking sbs error 2";
+				wsresult_.value = 2;
+				WSActionServer_->setAborted(wsresult_, "Walking sbs aborted.");
+				wsfeedback_.text = "WalkSideBySide aborted";
+				exit = true;
+			}
+		}
+
 		WSActionServer_->publishFeedback(wsfeedback_);
 		
 		if(exit) {
