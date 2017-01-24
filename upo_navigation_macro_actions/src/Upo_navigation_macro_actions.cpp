@@ -1430,6 +1430,8 @@ void Upo_navigation_macro_actions::walkSideCB(const upo_navigation_macro_actions
 	}
 	
 	ROS_INFO("Setting ABORTED state");
+	teresa_wsbs::stop stop_srv;
+	stop_client_.call(stop_srv);
 	WSActionServer_->setAborted(wsresult_, "WalkSideBySide aborted because the node has been killed");
 
 }
