@@ -86,36 +86,38 @@ namespace upo_local_planner {
 
       global_frame_ = costmap_ros_->getGlobalFrameID();
       robot_base_frame_ = costmap_ros_->getBaseFrameID();
+
+	  ros::NodeHandle nh("~/UpoPlanner");
      
 	  // Robot Configuration Parameters
-	  private_nh.param("max_trans_vel", max_vel_x_, 0.6);
-      private_nh.param("min_trans_vel", min_vel_x_, 0.1);
-	  private_nh.param("max_rot_vel", max_vel_th_, 0.8);
-      private_nh.param("min_rot_vel", min_vel_th_, 0.1);
-	  private_nh.param("max_trans_acc", max_trans_acc_, 1.0);
-      private_nh.param("max_rot_acc", max_rot_acc_, 1.0);
-	  private_nh.param("min_in_place_rot_vel", min_in_place_vel_th_, 0.4);
+	  nh.param("max_trans_vel", max_vel_x_, 0.6);
+      nh.param("min_trans_vel", min_vel_x_, 0.1);
+	  nh.param("max_rot_vel", max_vel_th_, 0.8);
+      nh.param("min_rot_vel", min_vel_th_, 0.1);
+	  nh.param("max_trans_acc", max_trans_acc_, 1.0);
+      nh.param("max_rot_acc", max_rot_acc_, 1.0);
+	  nh.param("min_in_place_rot_vel", min_in_place_vel_th_, 0.5);
 
 	  //Goal tolerance parameters
-	  private_nh.param("yaw_goal_tolerance", yaw_goal_tolerance_, 0.05);
-	  private_nh.param("xy_goal_tolerance", xy_goal_tolerance_, 0.10);
-  	  private_nh.param("wp_tolerance", wp_tolerance_, 0.5);
+	  nh.param("yaw_goal_tolerance", yaw_goal_tolerance_, 0.12);
+	  nh.param("xy_goal_tolerance", xy_goal_tolerance_, 0.20);
+  	  nh.param("wp_tolerance", wp_tolerance_, 0.5);
   	  
-	  private_nh.param("sim_time", sim_time_, 1.0);
-      private_nh.param("sim_granularity", sim_granularity_, 0.025);
-      private_nh.param("angular_sim_granularity", angular_sim_granularity_, sim_granularity_);
+	  nh.param("sim_time", sim_time_, 1.0);
+      nh.param("sim_granularity", sim_granularity_, 0.025);
+      nh.param("angular_sim_granularity", angular_sim_granularity_, sim_granularity_);
 
 	 
       //Assuming this planner is being run within the navigation stack, we can
       //just do an upward search for the frequency at which its being run. This
       //also allows the frequency to be overwritten locally.
-      private_nh.param("controller_freq", controller_freq_, 15.0);
+      nh.param("controller_freq", controller_freq_, 15.0);
 
 	  bool dwa;
-	  private_nh.param("dwa", dwa, true);
+	  nh.param("dwa", dwa, true);
 
 	  double r_radius;
-	  private_nh.param("robot_radius", r_radius, 0.345);      
+	  nh.param("robot_radius", r_radius, 0.345);      
 
       //world_model_ = new CostmapModel(*costmap_);
       
