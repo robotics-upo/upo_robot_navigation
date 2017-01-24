@@ -1,6 +1,7 @@
 #-----GENERAL PARAMS FOR UPO_NAVIGATION -------------------------
 base_global_planner: navfn/NavfnROS
-base_local_planner: simple_local_planner/PurePlannerROS
+base_local_planner: simple_local_planner/PurePlannerROS #upo_local_planner/UpoPlannerROS
+
 recovery_behaviors: [{
     name: conservative_reset, 
     type: clear_costmap_recovery/ClearCostmapRecovery
