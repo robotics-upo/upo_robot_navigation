@@ -90,11 +90,11 @@ namespace upo_local_planner {
 	  // Robot Configuration Parameters
 	  private_nh.param("max_trans_vel", max_vel_x_, 0.6);
       private_nh.param("min_trans_vel", min_vel_x_, 0.1);
-	  private_nh.param("max_rot_vel", max_vel_th_, 0.5);
+	  private_nh.param("max_rot_vel", max_vel_th_, 0.8);
       private_nh.param("min_rot_vel", min_vel_th_, 0.1);
 	  private_nh.param("max_trans_acc", max_trans_acc_, 1.0);
       private_nh.param("max_rot_acc", max_rot_acc_, 1.0);
-	  private_nh.param("min_in_place_rot_vel", min_in_place_vel_th_, 0.3);
+	  private_nh.param("min_in_place_rot_vel", min_in_place_vel_th_, 0.4);
 
 	  //Goal tolerance parameters
 	  private_nh.param("yaw_goal_tolerance", yaw_goal_tolerance_, 0.05);
@@ -115,7 +115,7 @@ namespace upo_local_planner {
 	  private_nh.param("dwa", dwa, true);
 
 	  double r_radius;
-	  private_nh.param("robot_radius", r_radius, 0.4);      
+	  private_nh.param("robot_radius", r_radius, 0.345);      
 
       //world_model_ = new CostmapModel(*costmap_);
       
