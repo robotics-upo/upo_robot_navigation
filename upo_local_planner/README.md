@@ -30,7 +30,7 @@ The controller follows the structure of the standard base local planner of ROS. 
 	- number_of_lasers. Integer value to indicate the number of laser sources. Values allowed are 1 or 2.
 	- laser1_topic. Name of the topic where the first laser sensor is publishing. The type of the ROS message required is sensor_msgs/LaserScan.
 	- laser2_topic. Name of the topic where the second laser sensor is publishing, if it is employed. The type of the ROS message required is sensor_msgs/LaserScan.
-	- laser_uncertainty. Double value to indicate a uncertainty range in the measures of the laser sensor received. Default value: 0.025 meters.
+	- laser_uncertainty. Value to indicate an uncertainty range in the measures of the laser sensors received. Default value: 0.025 meters.
 
 
 The package is a **work in progress** used in research prototyping. Pull requests and/or issues are highly encouraged.
