@@ -11,6 +11,8 @@ This metapackage contains the following packages:
 
 * **navigation_features**. Package that calculates the feature functions employed by the cost function of the RRT*.
 
+* **upo_local_planner**. A local controller that sends the velocity commands to the robot in order to follow a path. It is based on a pure pursuit controller that has been extended to perform collision detection based on DWA. The collision detection is perfomed based on laser range subscription (it does not use the ROS local costmap). It follows the structure of the standard base local planner of ROS.
+
 * **simple_local_planner**. A local controller that sends the velocity commands to the robot in order to follow a path. It is based on a pure pursuit controller and follows the structure of the standard base local planner of ROS.
 
 * **upo_msgs**. Custom messages.
