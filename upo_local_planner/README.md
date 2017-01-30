@@ -1,7 +1,7 @@
 # upo_local_planner 
 A controller based on pure pursuit and DWA path tracking has been extended to command velocities to the differential robot so as to follow the path smoothly.
 This path tracker has been extended to perform a collision detection checking similar to the Dynamic Windows Approach algorithm. If the forward projection of the robot movement given by the control law is detected as a possible collision, a valid command is tried to be found by sampling variations of the given linear and angular velocities. 
-The controller follows the structure of the standard base local planner of ROS. However it does not use the local costmap or ROS and the collision detection is performed based on subscriptions to laser range finder sources (sensor_msgs/LaserScan ROS message type). It admits up to two different laser sources. 
+The controller follows the structure of the standard base local planner of ROS. However it does not use the local costmap of ROS and the collision detection is performed based on subscriptions to laser range finder sources (sensor_msgs/LaserScan ROS message type). It admits up to two different laser sources. 
 
 ## Parameters
 
