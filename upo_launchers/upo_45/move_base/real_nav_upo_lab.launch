@@ -1,0 +1,83 @@
+<!-- -*- mode: XML -*- -->
+
+<launch>
+  <master auto="start"/>
+
+
+  <!--turn on the laser and launch them-->
+   <include file="$(find teresa_common)/launch/upo_lab/teresa_robot_upo/lasers.launch" />
+
+   <include file="$(find teresa_common)/launch/upo_lab/teresa_robot_upo/xtionNav.launch" />
+ 	
+  <!--laser generated from the navigation xtion-->
+  <include file="$(find teresa_common)/launch/upo_lab/teresa_robot_upo/depthcamscan.launch"/>
+  
+  <!-- Run the map server -->
+  <node pkg="map_server" type="map_server" name="map_server" args="$(find upo_launchers)/upo_lab/maps/upo_lab.yaml" />
+
+
+
+  <!--- amcl -->
+  <node pkg="amcl" type="amcl" name="amcl" args="scan:=/scan360">
+	<param name="use_map_topic" value="true" />
+    <param name="odom_model_type" value="diff"/>
+    <param name="transform_tolerance" value="0.9" /> 
+    <param name="gui_publish_rate" value="10.0"/>
+    <param name="laser_max_beams" value="50"/>
+    <param name="min_particles" value="200"/> 
+    <param name="max_particles" value="1000"/> 
+    <param name="kld_err" value="0.05"/>
+    <param name="kld_z" value="0.99"/>
+    <param name="odom_alpha1" value="0.2"/>
+    <param name="odom_alpha2" value="0.1"/>
+    <!-- translation std dev, m -->
+    <param name="odom_alpha3" value="0.2"/>
+    <param name="odom_alpha4" value="0.1"/>
+    <param name="odom_alpha5" value="0.0"/>
+    <param name="laser_max_range" value="10"/> 
+    <param name="laser_min_range" value="0.5"/> 
+    <param name="laser_z_hit" value="0.85"/> 
+    <param name="laser_z_short" value="0.05"/>
+    <param name="laser_z_max" value="0.05"/>
+    <param name="laser_z_rand" value="0.05"/> 
+    <param name="laser_sigma_hit" value="0.05"/>
+    <param name="laser_lambda_short" value="0.1"/>
+    <param name="laser_model_type" value="likelihood_field"/>
+    <!-- <param name="laser_model_type" value="beam"/> -->
+    <param name="laser_likelihood_max_dist" value="2.0"/>
+    <param name="update_min_d" value="0.3"/>
+    <param name="update_min_a" value="0.2"/>
+    <param name="odom_frame_id" value="/odom"/>
+    <param name="base_frame_id" value="/base_link"/>
+    <param name="global_frame_id" value="/map"/>
+    <param name="resample_interval" value="2"/>
+    <param name="recovery_alpha_slow" value="0"/> 
+    <param name="recovery_alpha_fast" value="0"/> 
+    <param name="initial_pose_x" value="12.99" /> 
+    <param name="initial_pose_y" value="17.69" /> 
+    <param name="initial_pose_a" value="-2.344" />
+  </node>
+
+   <!--Rviz tool visualizer -->
+   <!--node pkg="rviz" type="rviz" name="rviz" args="-d $(find upo_launchers)/upo_lab/move_base/navigation_move_base.rviz" /-->
+
+
+	 <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+		<rosparam file="$(find upo_launchers)/upo_lab/move_base/params_nav/costmap_common_params.yaml" command="load" ns="global_costmap" />
+	<rosparam file="$(find upo_launchers)/upo_lab/move_base/params_nav/costmap_common_params.yaml" command="load" ns="local_costmap" />
+	<rosparam file="$(find upo_launchers)/upo_lab/move_base/params_nav/local_costmap_params.yaml" command="load" />
+	<rosparam file="$(find upo_launchers)/upo_lab/move_base/params_nav/global_costmap_params.yaml" command="load" />
+		<rosparam file="$(find upo_launchers)/upo_lab/move_base/params_nav/navigation_params.yaml" command="load" />
+		<param name="recovery_behavior_enabled" type="bool" value="true" /> 
+		<param name="clearing_rotation_allowed" type="bool" value="true" /><!--default=true--> 
+		<param name="shutdown_costmaps" value="false" /> 
+		<param name="restore_defaults" value="false" />	
+		<param name="oscillation_timeout" type="double" value="0.0" /> <!--default=0.0-->
+		<param name="oscillation_distance" type="double" value="0.5" /> <!--default=0.5-->	
+  </node>
+
+
+
+  
+
+</launch>
