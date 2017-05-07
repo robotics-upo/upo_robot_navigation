@@ -1,0 +1,192 @@
+include "map.inc"
+
+# this is very helpful if you have multiple CPU cores
+threads 4
+
+#----- BLOQUE --------------------------------------------------------
+define block model
+(
+  size [0.200 0.450 1.700]	
+  gui_nose 0
+  laser_return 1
+  ranger_return 0.500
+  obstacle_return 1
+  blob_return 1
+  fiducial_return 1
+  gui_move 1		
+)
+
+
+
+#----- HOKUYO LASER -----------------------------------------------------------
+define hokuyolaser ranger
+(
+  sensor( 			
+    # laser-specific properties
+    # factory settings for LMS200	
+    range [ 0.0  10.0 ]
+    fov 200.0 #180
+    samples 320 #270
+  )
+  # generic model properties
+  color "purple"
+  size [ 0.070 0.070 0.050 ] # dimensions from LMS200 data sheet	
+)
+
+#----- FIDUCIAL -----------------------------------------------------------
+define fidu fiducial
+(
+  color "purple"
+  size [ 0.070 0.070 0.050 ]
+  range_min 0.1   #meters
+  range_max 10    #meters
+  range_max_id 10 #meters
+  fov 350.0       #field of view degrees	
+  ignore_zloc 1	
+)
+
+
+
+
+#------- GIRAFF BASE ------------------------------------------------------
+define giraff_base position 
+(
+  color "blue"			# Default color.
+  drive "diff"		 	# Differential steering model.
+  gui_nose 1                  	# Draw a nose on the robot so we can see which way it points
+  obstacle_return 1           	# Can hit things.
+  ranger_return 0.500            	# reflects sonar beams
+  blob_return 1               	# Seen by blobfinders  
+  fiducial_return 2           	# Seen as "1" fiducial finders
+
+  localization "gps"         	  
+  #localization_origin [0 0 0 0] 	# Start odometry at (0, 0, 0).
+
+  # alternative odometric localization with simple error model
+  #localization "odom"        # Change to "gps" to have impossibly perfect, global odometry
+  #odom_error [ 0.05 0.05 0.0 0.01 ]   	# Odometry error or slip in X, Y, Z and Theta
+                                   	# (Uniform random distribution)   
+
+   # four DOF kinematics limits
+  # [ xmin xmax ymin ymax zmin zmax amin amax ]				
+  velocity_bounds [-0.4 0.4 0 0 0 0 -28.65 28.65 ]					
+  acceleration_bounds [-1.0 1.0 0 0 0 0 -57.3 57.3 ]
+)
+
+# ----------------- The TERESA standard configuration -----------------------------------
+define teresa giraff_base
+(
+  # Actual size
+  size [0.488 0.488 1.600]
+
+  # The pioneer's center of rotation is offset from its center of area
+  #origin [-0.045 0.000 0.000 0.000]
+
+  # Estimated mass in KG
+  mass 30.0 
+
+  # Body shape:
+  #block( 
+  #  points 8
+  #  point[0] [-0.18 0.313]
+  #  point[1] [0.18 0.313]
+  #  point[2] [0.2525 0.18]
+  #  point[3] [0.2525 -0.18]
+  #  point[4] [0.18 -0.313]
+  #  point[5] [-0.18 -0.313]
+  #  point[6] [-0.2525 -0.18]
+  #  point[7] [-0.2525 0.18]
+  #)
+
+  # sensors 
+  hokuyolaser(pose [0.226 0.000 -1.400 0.000]) #pose[x y z yaw]
+  hokuyolaser(pose [-0.226 0.000 -1.400 180.000])
+  #cam(pose [0.000 0.000 0.300 0.000])
+  fidu()	
+)
+
+
+#----------- MAPA DE FONDO -----------------------------------------------------
+define floorplan model
+(
+  # sombre, sensible, artistic
+  color "gray30"
+
+  # most maps will need a bounding box
+  boundary 0
+
+  gui_nose 0
+  gui_grid 0
+  gui_move 0
+
+  gui_outline 0
+  gripper_return 0
+  fiducial_return 0
+  laser_return 1
+  ranger_return 1.000
+  obstacle_return 1		
+)
+
+# set the resolution of the underlying raytrace model in meters
+resolution 0.05  # meters/pix?
+
+interval_sim 100  # simulation timestep in milliseconds
+
+
+#------ VENTANA DE STAGE -----------------------------------------------------------
+window
+( 
+  size [ 761 438 ]           	# in pixels
+  # camera options
+  center [ 13.515 14.068 ]
+  rotate [ 0.000 46.000 ]
+  #scale 20			# pixels per meter
+  scale 35.432
+
+  # perspective camera options
+  pcam_loc [ -32.981 27.945 33.200 ]
+  pcam_angle [ 0.000 -3093.972 ]
+
+  # GUI options
+  show_data 1
+  show_flags 1
+  show_blocks 1
+  show_clock 1
+  show_footprints 0
+  show_grid 0
+  show_trailarrows 0
+  show_trailrise 0
+  show_trailfast 0
+  show_occupancy 0
+  show_tree 0
+  pcam_on 0
+  screenshots 0 
+)
+
+
+#---- load an environment bitmap -------------------------------------------------
+floorplan
+( 
+  name "upo_45"
+  bitmap "maps/upo_45.pgm"  #494x572pix
+  size [24.700 28.600 2.500]  # x pix*0,05 m/pix = metros
+  pose [ 12.350 14.300 0.000 0.000]
+)
+
+#---------throw in the pioneer --------------------------------
+
+teresa( pose [8.1 15.25 0.000 0 ] name "teresa" localization_origin [8.1 15.25 0 0]) 
+
+block( pose [10.250 15.000 0.000 0.000] color "purple" name "person1" fiducial_return 1)
+block( pose [10.000 7.500 0.000 0.000 ] color "purple" name "person2" fiducial_return 2)
+block( pose [11.000 6.700 0.000 0.000 ] color "red" name "target" fiducial_return 3)
+
+#uses fiducial_return values > 10 for persons with ctrl behaviors
+#person( pose [ 102 61 0.000 0 ] name "person2" ctrl "wander_single_ranger" fiducial_return 10)
+#person( 
+#	pose [ 101 60 0.000 41.298 ]
+#	name "person3"
+#	fiducial_return 11
+#	ctrl "goal_directed 0.8 repeat 121 58 30 101 60 30" 
+	# goal_directed 'cruise_velocity' 'repeat or once' x_goal' 'y_goal' 'waitduration'
+#)
