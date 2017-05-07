@@ -1,0 +1,11 @@
+<!-- -*- mode: XML -*- -->
+
+<launch>
+  
+  <!-- Run gmm_sampling -->
+   <node pkg="gmm_sampling" type="gmm_sampling_ros" name="gmm_sampling_ros" output="screen" >
+    <param name="gmm_tasks_directory" value="$(find gmm_sampling)/tasks/"/> 
+	<param name="publish_gmm_markers" value="true" />
+  </node>
+  
+</launch>

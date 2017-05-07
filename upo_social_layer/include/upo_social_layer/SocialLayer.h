@@ -19,6 +19,7 @@
 #include <upo_social_layer/Features.h>
 #include <upo_social_layer/Cost.h>
 #include <upo_social_layer/SetGoal.h>
+#include <upo_social_layer/SetDemoPath.h>
 
 //navigation features calculation
 #include <navigation_features/nav_features.h>
@@ -51,6 +52,8 @@ namespace social_layer
 		  bool getPointFeatures(upo_social_layer::Features::Request  &req, upo_social_layer::Features::Response &res);
 		  bool getPointCost(upo_social_layer::Cost::Request  &req, upo_social_layer::Cost::Response &res);
 		  bool setGoalForFeatureCalculation(upo_social_layer::SetGoal::Request  &req, upo_social_layer::SetGoal::Response &res);
+		  bool setLossFunc(upo_social_layer::SetDemoPath::Request  &req, upo_social_layer::SetDemoPath::Response &res);
+		  
 
 		private:
 		  dynamic_reconfigure::Server<upo_social_layer::SocialPluginConfig> *dsrv_;
@@ -74,6 +77,7 @@ namespace social_layer
 		  ros::ServiceServer feat_srv;
 		  ros::ServiceServer cost_srv;
 		  ros::ServiceServer goal_srv;
+		  ros::ServiceServer loss_srv;
 		
 	};
 }

@@ -1,0 +1,32 @@
+home:
+        x: 39.7
+        y: 17.45
+        theta: 1.75
+lab_corridor:
+        x: 36.29
+        y: 25.625
+        theta: 1.75
+automatic_door:
+        x: 28.0
+        y: 21.4
+        theta: 0.4
+hall:
+        x: 37.4
+        y: 22.7
+        theta: -1.4
+narrow_corridor:
+        x: 26.5
+        y: 14.5
+        theta: 0.4
+student_corridor:
+        x: 44.25
+        y: 12.25
+        theta: 1.75
+glass_wall:
+        x: 43.55
+        y: 20.20
+        theta: -3.0
+#printer:
+#        x: 11.45
+#        y: 16.15
+#        theta: 0.4

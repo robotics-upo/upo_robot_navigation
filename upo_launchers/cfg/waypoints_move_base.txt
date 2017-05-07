@@ -1,0 +1,149 @@
+home:
+-------------------------
+rostopic pub /move_base_simple/goal geometry_msgs/PoseStamped "header:
+  seq: 0
+  stamp:
+    secs: 0
+    nsecs: 0
+  frame_id: 'map'
+pose:
+  position:
+    x: 12.9903
+    y: 17.6948
+    z: 0.0
+  orientation:
+    x: 0.0
+    y: 0.0
+    z: -0.921529059
+    w: 0.388309404"
+
+
+
+wp1:
+-------------------------
+rostopic pub /move_base_simple/goal geometry_msgs/PoseStamped "header:
+  seq: 0
+  stamp:
+    secs: 0
+    nsecs: 0
+  frame_id: 'map'
+pose:
+  position:
+    x: 9.2027
+    y: 14.3288
+    z: 0.0
+  orientation:
+    x: 0.0
+    y: 0.0
+    z: -0.385730993
+    w: 0.922611295"
+
+
+
+wp2:
+-------------------------
+rostopic pub /move_base_simple/goal geometry_msgs/PoseStamped "header:
+  seq: 0
+  stamp:
+    secs: 0
+    nsecs: 0
+  frame_id: 'map'
+pose:
+  position:
+    x: 11.8
+    y: 15.067
+    z: 0.0
+  orientation:
+    x: 0.0
+    y: 0.0
+    z: -0.385730993
+    w: 0.922611295"
+
+
+wp3:
+-------------------------
+rostopic pub /move_base_simple/goal geometry_msgs/PoseStamped "header:
+  seq: 0
+  stamp:
+    secs: 0
+    nsecs: 0
+  frame_id: 'map'
+pose:
+  position:
+    x: 12.2683
+    y: 12.0161
+    z: 0.0
+  orientation:
+    x: 0.0
+    y: 0.0
+    z: 0.38157535
+    w: 0.924337737"
+
+
+
+wp4:
+---------------------------
+rostopic pub /move_base_simple/goal geometry_msgs/PoseStamped "header:
+  seq: 0
+  stamp:
+    secs: 0
+    nsecs: 0
+  frame_id: 'map'
+pose:
+  position:
+    x: 10.3542
+    y: 5.6311
+    z: 0.0
+  orientation:
+    x: 0.0
+    y: 0.0
+    z: 0.677604182
+    w: 0.735426796"
+
+
+
+wp5:
+---------------------------
+rostopic pub /move_base_simple/goal geometry_msgs/PoseStamped "header:
+  seq: 0
+  stamp:
+    secs: 0
+    nsecs: 0
+  frame_id: 'map'
+pose:
+  position:
+    x: 9.9458
+    y: 13.5393
+    z: 0.0
+  orientation:
+    x: 0.0
+    y: 0.0
+    z: 0.923459079
+    w: 0.383696924"
+
+
+
+
+
+wp6:
+---------------------------
+rostopic pub /move_base_simple/goal geometry_msgs/PoseStamped "header:
+  seq: 0
+  stamp:
+    secs: 0
+    nsecs: 0
+  frame_id: 'map'
+pose:
+  position:
+    x: 10.8870
+    y: 15.5389
+    z: 0.0
+  orientation:
+    x: 0.0
+    y: 0.0
+    z: 0.39539697
+    w: 0.918510335"
+
+
+
+

@@ -58,6 +58,7 @@ find_package(catkin REQUIRED COMPONENTS
    Features.srv
    Cost.srv
    SetGoal.srv
+   SetDemoPath.srv
  )
 
 ## Generate actions in the 'action' folder

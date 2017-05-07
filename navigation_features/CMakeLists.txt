@@ -19,7 +19,7 @@ find_package(catkin REQUIRED COMPONENTS
   upo_msgs
   nav_msgs
   visualization_msgs
-  #message_generation
+  message_generation
   dynamic_reconfigure
 )
 
@@ -67,10 +67,11 @@ find_package(OpenCV REQUIRED)
 # )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   SetWeights.srv
-#)
+ add_service_files(
+   FILES
+   #SetWeights.srv
+   SetLossCost.srv
+)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -80,10 +81,10 @@ find_package(OpenCV REQUIRED)
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   geometry_msgs   std_msgs   upo_msgs
-# )
+ generate_messages(
+   DEPENDENCIES
+   geometry_msgs   std_msgs   upo_msgs
+ )
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -131,7 +132,7 @@ catkin_package(
 	upo_msgs 
 	nav_msgs 
 	visualization_msgs
-	#message_runtime
+	message_runtime
 	dynamic_reconfigure
 #  DEPENDS system_lib
 )
@@ -158,7 +159,7 @@ add_definitions(${EIGEN_DEFINITIONS})
 ## Declare a C++ library
  add_library(nav_features
    src/nav_features.cpp
-   src/uva_features.cpp
+   #src/uva_features.cpp
  )
 
 ## Add cmake target dependencies of the library

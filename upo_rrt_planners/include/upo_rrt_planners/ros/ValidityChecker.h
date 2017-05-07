@@ -83,6 +83,11 @@ namespace upo_RRT_ros
 		
 		
 		void setWeights(std::vector<float> we);
+		
+		void setUseLossFunc(bool l, std::vector<geometry_msgs::PoseStamped> path) {
+			navfeatures_->set_use_loss_func(l);
+			navfeatures_->set_demo_path(path);
+		}
 			
 		//Pre-computations needed just before starting planning
 		void preplanning_computations();

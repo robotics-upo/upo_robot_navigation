@@ -1,0 +1,25 @@
+#This message encodes control events that are internal to the robot or
+#directly related to the execution of its macro-actions
+
+#standard header, can include frame information
+time stamp
+
+#The type of the event that was detected
+uint8 type
+
+uint8 NAV_GOAL_REACHED=0
+uint8 CALL_OVER=1
+uint8 LOW_BATT=2
+uint8 NAV_TO_WAYPOINT_REQUESTED=3
+uint8 NAV_TO_PERSON_REQUESTED=4
+uint8 INTERACTION_TARGET_AT_UNSAFE_RANGE=5
+uint8 INTERACTION_TARGET_AT_PERSONAL_RANGE=6
+uint8 INTERACTION_TARGET_AT_SOCIAL_RANGE=7
+uint8 INTERACTION_TARGET_AT_PUBLIC_RANGE=8
+uint8 INTERACTION_TARGET_OUT_OF_RANGE=9
+uint8 LOST_TRACK_OF_INTERACTION_TARGET=10
+uint8 NEW_INTERACTION_TARGET=11
+uint8 WALK_WITH_PERSON_REQUESTED=12
+uint8 MANUAL_CONTROLLING=13
+uint8 HEARING_PROBLEMS_INDICATED=14
+uint8 REGAINED_TRACK_OF_INTERACTION_TARGET=15

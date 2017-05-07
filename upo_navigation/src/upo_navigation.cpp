@@ -1098,7 +1098,7 @@ namespace upo_nav {
 			new_rrt_plan_ = true;
 			//run_rrt_ = false; //---
 			local_plan_ = &rrt_plan; //odom coordinates
-			printf("RRT thread. Local plan of size:%u\n", (unsigned int)local_plan_->size());
+			//printf("RRT thread. Local plan of size:%u\n", (unsigned int)local_plan_->size());
 			rrt_mutex_.unlock();
 			got_plan = false;
 		}
@@ -1887,6 +1887,15 @@ namespace upo_nav {
 
 		tf::poseStampedTFToMsg(global_pose, current_position);
 		return current_position;
+  }
+  
+  
+  
+  
+  
+  bool UpoNavigation::set_approaching_gmm_sampling(float orientation, int num_samp, geometry_msgs::PoseStamped person)
+  {
+	  return rrt_planner_->set_approaching_gmm_sampling(orientation, num_samp, person);
   }
   
   

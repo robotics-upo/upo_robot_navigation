@@ -80,6 +80,9 @@ RRT_ros_wrapper:
   full_path_stddev:           0.9
   full_path_bias:             0.8 
 
+  gmm_biasing:                true
+  gmm_bias:                   0.95  
+
   #get the RRT* costs from a costmap
   use_fc_in_costmap:          false
 
@@ -166,7 +169,7 @@ Navigation_features:
   stddev_person_aside:        0.8
   stddev_person_right:        0.8
 
-  enable_grouping:            true  
+  enable_grouping:            false  
   stddev_group:               0.8
   grouping_distance:          1.5
 

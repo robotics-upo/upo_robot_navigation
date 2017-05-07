@@ -125,7 +125,17 @@ std::vector<upo_RRT::Node> upo_RRT::SimpleRRTstar::solve(float secs)
 				//if(randState)
 				//	delete randState;
 				
-				if(fullBiasing_ && !first_path_.empty())
+				if(gmm_sampling_ && !gmm_samples_.empty() && space_->sampleUniform() < gmm_bias_) {
+					int i = (int)round(space_->sampleUniform()*(unsigned int)(gmm_samples_.size()-1));
+					std::pair<float,float> c = gmm_samples_[i]; //gmm_samples_.front();
+					//gmm_samples_.pop();
+					randState.setX(c.first);
+					randState.setY(c.second);
+					randState.setYaw(0.0);
+					randState.setLv(0.0);
+					randState.setAv(0.0);
+				
+				} else if(fullBiasing_ && !first_path_.empty() && space_->sampleUniform() < pathBias_)
 				{
 					randState = *space_->samplePathBiasing(&first_path_, pathBias_stddev_);
 					
@@ -136,7 +146,6 @@ std::vector<upo_RRT::Node> upo_RRT::SimpleRRTstar::solve(float secs)
 				
 				} else { // Regular state sampling
 					randState = *space_->sampleState();
-					
 				}
 				cont++;
 				if(cont>1)

@@ -1,0 +1,17 @@
+home:
+        x: 25.95
+        y: 25.75
+        theta: 0.79
+lab1:
+        x: 22.25
+        y: 21.55
+        theta: 0.79
+coffee:
+        x: 28.25
+        y: 28.95
+        theta: 0.79
+corridor:
+        x: 21.7
+        y: 16.85
+        theta: -0.60
+

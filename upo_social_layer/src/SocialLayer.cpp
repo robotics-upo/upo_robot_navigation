@@ -98,6 +98,7 @@ void SocialLayer::onInitialize()
 	feat_srv = n.advertiseService("point_features", &SocialLayer::getPointFeatures, this);
 	cost_srv = n.advertiseService("point_cost", &SocialLayer::getPointCost, this);
 	goal_srv = n.advertiseService("set_goal_feature", &SocialLayer::setGoalForFeatureCalculation, this);
+	loss_srv = n.advertiseService("set_use_loss", &SocialLayer::setLossFunc, this);
 
 }
 
@@ -153,6 +154,18 @@ bool SocialLayer::setGoalForFeatureCalculation(upo_social_layer::SetGoal::Reques
 	return true;
 }
 
+//service
+bool SocialLayer::setLossFunc(upo_social_layer::SetDemoPath::Request  &req, upo_social_layer::SetDemoPath::Response &res)
+{
+	std::vector<geometry_msgs::PoseStamped> p = req.demo;
+	bool use_loss = req.use_loss_func;
+	
+	navfeatures_->set_use_loss_func(use_loss); 
+	navfeatures_->set_demo_path(p);
+
+	return true;
+}
+
 
 
 //service
@@ -160,6 +173,8 @@ bool SocialLayer::getPointFeatures(upo_social_layer::Features::Request  &req, up
 {
 	geometry_msgs::PoseStamped pose;
 	pose.header.frame_id = global_frame_;
+	if(global_frame_.empty() || global_frame_.length() < 3)
+		printf("\n¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡getPointFeatures. global_frame invalid!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n");
 	pose.header.stamp = ros::Time::now();
 	pose.pose.position.x = req.x;
 	pose.pose.position.y = req.y;
@@ -231,6 +246,8 @@ void SocialLayer::updateCosts(costmap_2d::Costmap2D& master_grid, int min_i, int
 			mapToWorld(i, j, wx, wy);
 			geometry_msgs::PoseStamped rpose;
 			rpose.header.frame_id = global_frame_;
+			if(global_frame_.empty() || global_frame_.length() < 3)
+				printf("\n¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡updateCosts. global_frame invalid!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n");
 			rpose.header.stamp = time;
 			rpose.pose.position.x = wx;
 			rpose.pose.position.y = wy;
@@ -245,6 +262,8 @@ void SocialLayer::updateCosts(costmap_2d::Costmap2D& master_grid, int min_i, int
 			else
 				cost = navfeatures_->proxemicsFeature(&rpose);
 			wmutex_.unlock();
+			if(cost > 1.0)
+				cost = 1.0;
 			int c = (int)round(cost*254.0);
 			//printf("C:%i  \t", c);
 	  		int index = getIndex(i, j);

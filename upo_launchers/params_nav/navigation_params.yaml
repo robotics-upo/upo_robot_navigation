@@ -81,6 +81,9 @@ RRT_ros_wrapper:
   full_path_stddev:           0.9
   full_path_bias:             0.8 
 
+  gmm_biasing:                true
+  gmm_bias:                   0.95
+
   #get the RRT* costs from a costmap
   use_fc_in_costmap:          false
 

@@ -81,19 +81,6 @@
 	</node>
 
 
-	<param name="robot_description"
-    command="$(find xacro)/xacro.py '$(find teresa_gazebo)/urdf/teresa_idmind.urdf.xacro'" />
-
-  	<!-- send fake joint values -->
-  	<node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
-    	<param name="use_gui" value="FALSE"/>
-  	</node>
-
-  	<!-- Combine joint values -->
-  	<node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher"/>
-
-  <!-- <param name="waypoint_defs" value="$(find upo_launchers)/$(arg scenario)/maps/waypoint_defs.yaml"/>-->
-
   <param name="/waypoint_defs" value="cfg/$(arg scenario)_waypoint_defs.yaml"/>
 
 </launch>

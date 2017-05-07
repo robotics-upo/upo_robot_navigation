@@ -1,0 +1,16 @@
+interaction room:
+        x: 16.63
+        y: 11.41
+        theta: 0.0
+home:
+        x: 8.35
+        y: 11.08
+        theta: 0.0
+#home:
+#        x: 7.65
+#        y: 9.0
+#        theta: 1.57
+hall:
+        x: 26.07
+        y: 10.65
+        theta: 0.0

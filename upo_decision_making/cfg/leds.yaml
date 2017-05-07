@@ -1,0 +1,15 @@
+nav_plan: [50,250,50]
+selected_it: [29, 82, 255]
+interaction_mode_color: [29, 90,255]
+seek_interaction_color: [200,30,200]
+other_it: [6, 216, 255]
+manual: [200,200, 200]
+nav_home: [255,13,0]
+navigate_it_color: [70,26,160]
+wsbs_color: [255,124, 0]
+wait_color: [140,50,255]
+yield_color: [200,160,20] 
+state_width: 5
+state_index: 45
+
+

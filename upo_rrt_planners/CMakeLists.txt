@@ -84,6 +84,7 @@ catkin_package(
   		visualization_msgs
   		upo_msgs
 		navigation_features
+		gmm_sampling
 		dynamic_reconfigure
 	#DEPENDS system_lib
 )
@@ -129,12 +130,14 @@ add_dependencies(upo_rrt_planners_ros upo_msgs_gencpp)
 add_dependencies(upo_rrt_planners_ros geometry_msgs_gencpp)
 add_dependencies(upo_rrt_planners_ros nav_msgs_gencpp)
 add_dependencies(upo_rrt_planners_ros navigation_features_gencpp)
+add_dependencies(upo_rrt_planners_ros gmm_sampling_gencpp)
 
 target_link_libraries(upo_rrt_planners_ros
     ${catkin_LIBRARIES}
     ${Boost_LIBRARIES}
     ${Eigen_LIBRARIES}
 	nav_features
+	gmm_sampling
 	upo_rrt_planners
     )
 

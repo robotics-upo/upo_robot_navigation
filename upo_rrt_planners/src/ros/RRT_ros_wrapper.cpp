@@ -134,6 +134,10 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 	full_path_bias_ = (float)aux;
 	printf("RRT_ros_wrapper. full_path_bias_ = %.2f\n",  full_path_bias_);
 	
+	private_nh.param<bool>("gmm_biasing", gmm_biasing_, false);
+	private_nh.param<double>("gmm_bias", aux, 0.95);
+	gmm_bias_ = (float)aux;
+	
 	
 	//if RRT or RRT* are kinodynamics
 	//float kino_linAcc, kino_angAcc;
@@ -227,6 +231,10 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 		printf("Visualize_costmap = true, initializing costmap_pub\n");
 		costmap_pub_ = n.advertise<nav_msgs::OccupancyGrid>("rrt_costmap", 5);
 	}
+	
+	gmm_costmap_pub_ = n.advertise<nav_msgs::OccupancyGrid>("gmm_costmap", 5);
+	
+	
 	if(visualize_tree_) {
 		printf("Visualize_tree = true, initializing tree_pub\n");
 		tree_pub_ = n.advertise<visualization_msgs::Marker>("rrt_tree", 5);
@@ -254,11 +262,15 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 	
 	inscribed_radius_  = (float)robot_radius;
 	circumscribed_radius_ = (float)robot_radius;
-	printf("Before initializing checker!!\n");
+	//printf("Before initializing checker!!\n");
 	checker_ = new ValidityChecker(use_fc_costmap_, tf_, local_costmap_, global_costmap_, &footprint_, inscribed_radius_, size_x_, size_y_, dimensions_, distanceType_);
-	printf("After initializing checker!!\n");
+	//printf("After initializing checker!!\n");
 	
 
+	//GMM sampling service client
+	gmm_samples_client_ = n.serviceClient<gmm_sampling::GetApproachGMMSamples>("/gmm_sampling/GetApproachGMMSamples");
+	//GMM probs service client
+	gmm_probs_client_ = n.serviceClient<gmm_sampling::GetApproachGMMProbs>("/gmm_sampling/GetApproachGMMProbs");
 	
 	
 	switch(rrt_planner_type_)
@@ -488,6 +500,11 @@ void upo_RRT_ros::RRT_ros_wrapper::setup_controller(float controller_freq, float
 	private_nh.param<int>("smoothing_samples", smoothing_samples_, 10);
 	
 	
+	private_nh.param<bool>("gmm_biasing", gmm_biasing_, false);
+	private_nh.param<double>("gmm_bias", aux, 0.95);
+	gmm_bias_ = (float)aux;
+	
+	
 	//if the planner is an RRT, the nav costmap can not be visualized
 	if(rrt_planner_type_ == 1 || rrt_planner_type_ == 3)
 		visualize_costmap_ = false;
@@ -500,6 +517,9 @@ void upo_RRT_ros::RRT_ros_wrapper::setup_controller(float controller_freq, float
 		tree_pub_ = n.advertise<visualization_msgs::Marker>("rrt_tree", 1);
 	}
 	
+	gmm_costmap_pub_ = n.advertise<nav_msgs::OccupancyGrid>("gmm_costmap", 5);
+	
+	
 	rrt_goal_pub_ = n.advertise<geometry_msgs::PoseStamped>("rrt_goal", 1);
 		
 	local_goal_pub_ = n.advertise<visualization_msgs::Marker>("rrt_goal_marker", 1);
@@ -511,6 +531,11 @@ void upo_RRT_ros::RRT_ros_wrapper::setup_controller(float controller_freq, float
 		return;
 	}
 
+
+	//GMM sampling service client
+	gmm_samples_client_ = n.serviceClient<gmm_sampling::GetApproachGMMSamples>("/gmm_sampling/GetApproachGMMSamples");
+	//GMM probs service client
+	gmm_probs_client_ = n.serviceClient<gmm_sampling::GetApproachGMMProbs>("/gmm_sampling/GetApproachGMMProbs");
 
 
 	//This is not working properly-------------
@@ -634,8 +659,11 @@ void upo_RRT_ros::RRT_ros_wrapper::setup_controller(float controller_freq, float
 		full_path_biasing_ = config.full_path_biasing;
 		full_path_bias_ = config.full_path_bias;
 		full_path_stddev_ = config.full_path_stddev;
+		
+		gmm_biasing_ = config.gmm_biasing;
+		gmm_bias_ = config.gmm_bias;
 
-		if(full_path_biasing_ && rrtstar_first_path_biasing_)
+		if(full_path_biasing_ && rrtstar_first_path_biasing_ && !gmm_biasing_)
 			rrtstar_first_path_biasing_ = false;
 
 		rrt_planner_->setFullBiasing(full_path_biasing_);
@@ -706,11 +734,114 @@ void upo_RRT_ros::RRT_ros_wrapper::setup_controller(float controller_freq, float
 
 
 
+bool upo_RRT_ros::RRT_ros_wrapper::set_approaching_gmm_sampling(float orientation, int num_samp, geometry_msgs::PoseStamped person)
+{
+	std::vector< std::pair<float,float> > samples;
+	
+	printf("set_approaching_gmm_sampling. num_samp: %i\n", num_samp);
+	
+	//if num_samp == -1, disable gmm_sampling
+	if(num_samp == -1){
+		gmm_biasing_ = false;
+		gmm_mutex_.lock();
+		gmm_samples_.clear();
+		gmm_mutex_.unlock();
+	} else {
+		
+		gmm_biasing_ = true;
+		
+		gmm_person_ = person;
+		gmm_person_ori_ = orientation;
+		
+		
+		//Call the gmm_sampling service and pass the samples to the planner
+		gmm_sampling::GetApproachGMMSamples gmm_srv;
+		gmm_srv.request.person_orientation = orientation;
+		gmm_srv.request.num_samples = num_samp;
+
+		if(!gmm_samples_client_.call(gmm_srv))
+		{
+			ROS_ERROR("RRT_ros_wrapper. Error calling service 'GetApproachGMMSamples'");
+			return false;
+		}
+		
+		//Polar coordinates in the person frame
+		std::vector<float> dist = gmm_srv.response.distances;
+		std::vector<float> ori = gmm_srv.response.orientations;
+		
+		for(unsigned int i=0; i<dist.size(); i++) {
+			std::pair<float,float> p;
+			p.first = dist[i]*cos(ori[i]); //x
+			p.second = dist[i]*sin(ori[i]); //y
+			samples.push_back(p);
+		}
+		gmm_mutex_.lock();
+		gmm_samples_.clear();
+		gmm_samples_ = samples;
+		gmm_mutex_.unlock();
+		
+		publish_gmm_costmap(person);
+		
+	}
+	return true;
+}
+
+
+
+
+
+
 
 
 
 std::vector<geometry_msgs::PoseStamped> upo_RRT_ros::RRT_ros_wrapper::RRT_plan(geometry_msgs::Pose2D start, geometry_msgs::Pose2D goal, float start_lin_vel, float start_ang_vel)
 {
+	
+	gmm_mutex_.lock();
+	std::vector< std::pair<float,float> > samples2 = gmm_samples_;
+	gmm_mutex_.unlock();
+	
+	//std::queue< std::pair<float,float> > new_samples;
+	std::vector< std::pair<float,float> > new_samples;
+	
+	//If we use gmm_sampling, now we have to transform the x,y coordinates
+	//from person frame to robot frame
+	//printf("gmm_biasing_ = %i, samples2.size = %u\n", (int)gmm_biasing_, (unsigned int)samples2.size());
+	if(gmm_biasing_ && !samples2.empty())
+	{
+		//Transform person pose into robot frame 
+		geometry_msgs::PoseStamped pr = checker_->transformPoseTo(gmm_person_, "base_link", false);
+		float xp = pr.pose.position.x;
+		float yp = pr.pose.position.y;
+		float thp = tf::getYaw(pr.pose.orientation);
+		float xs, ys;
+		//Then, transform each sample into robot frame
+		for(unsigned int i=0; i<samples2.size(); i++)
+		{
+			/*
+			Transform the sample into robot frame:
+			 
+				|xn	|	|xp |	|cos(thp) -sin(thp)  0|   |xs |
+				|yn	| = |yp | +	|sin(thp) cos(thp)   0| * |ys |
+				|thn|	|thp|	|  0         0       1|   |ths|
+					                     
+			xn = xp + xs*cos(thp) + ys*(-sin(thp)) 
+			yn = yp + xs*sin(thp) + ys*cos(thp) 			
+			*/		
+			xs = samples2[i].first;
+			ys = samples2[i].second;
+			//printf("xs: %.2f, ys: %.2f\n", xs, ys);
+			
+			float xn = xp + xs*cos(thp) + ys*(-sin(thp)); 
+			float yn = yp + xs*sin(thp) + ys*cos(thp);
+			//new_samples.push(std::make_pair(xn,yn));
+			new_samples.push_back(std::make_pair(xn,yn));
+		}
+		//publish_gmm_costmap(gmm_person_);
+	}
+	printf("RRT_plan. GMMBiasing: %i. Setting samples in RRTplanner. size: %u\n", gmm_biasing_, (unsigned int)new_samples.size());
+	rrt_planner_->set_gmm_sampling(gmm_biasing_, gmm_bias_, new_samples);	
+	
 	
 	if(!rrt_planner_->setStartAndGoal(start.x, start.y, start.theta, goal.x, goal.y, goal.theta)){
 		ROS_ERROR("RRT_plan. Goal state is not valid!!!");
@@ -1572,6 +1703,120 @@ void upo_RRT_ros::RRT_ros_wrapper::publish_feature_costmap(ros::Time t)
 		cmap.data = data;
 		costmap_pub_.publish(cmap);
   }
+  
+  
+  
+  
+  void upo_RRT_ros::RRT_ros_wrapper::publish_gmm_costmap(geometry_msgs::PoseStamped person)
+  {
+	    //Transform person to odom frame
+	    geometry_msgs::PoseStamped pr = checker_->transformPoseTo(person, "odom", false);
+	    //printf("person frame: %s\n", person.header.frame_id.c_str());
+	    float px = pr.pose.position.x;
+	    float py = pr.pose.position.y;
+	    float pth  = tf::getYaw(pr.pose.orientation);
+	  
+		//Get the robot coordinates in odom frame
+		tf::StampedTransform transform;
+		try{
+			tf_->waitForTransform("/odom", "/base_link", ros::Time(0), ros::Duration(1.0));
+			tf_->lookupTransform("/odom", "/base_link",  ros::Time(0), transform);
+		}
+		catch (tf::TransformException ex){
+			ROS_ERROR("Publish_gmm_costmap. TF exception: %s",ex.what());
+		}
+	  
+		float sizex = 4.0;
+		float sizey = 4.0;
+	  
+		nav_msgs::OccupancyGrid cmap;
+		cmap.header.frame_id = "odom"; //"base_link";
+		cmap.header.stamp = ros::Time::now();
+		//time map_load_time. The time at which the map was loaded
+		cmap.info.map_load_time = ros::Time::now();
+		double cell_size = 0.05; //0.25; // m/cell
+		//float32 resolution. The map resolution [m/cell]
+		cmap.info.resolution = cell_size;  
+		//uint32 width. Map width [cells]
+		cmap.info.width = (sizex*2.0)/cell_size;
+		//uint32 height. Map height [cells]
+		cmap.info.height = (sizey*2.0)/cell_size;
+		//geometry_msgs/Pose origin. The origin of the map [m, m, rad].  This is the real-world pose of the
+		// cell (0,0) in the map.
+		geometry_msgs::Pose p;
+		p.position.x = transform.getOrigin().x()-sizex; //size_x_
+		p.position.y = transform.getOrigin().y()-sizey; //size_y_
+		p.position.z = 0.0;
+		p.orientation = tf::createQuaternionMsgFromYaw(0.0); //robot_odom_h
+		cmap.info.origin = p;
+		
+		std::vector<float> x_person;
+		std::vector<float> y_person;
+		
+		float d, o;
+		float ox, oy;
+		float nx, ny;
+		for(int i=0; i<cmap.info.height; i++) 
+		{
+			for(unsigned int j=0; j<cmap.info.width; j++)
+			{
+					ox = (transform.getOrigin().x()-sizex + cell_size*j) + (cell_size/2.0); //odom
+					oy = (transform.getOrigin().y()-sizey + cell_size*i) + (cell_size/2.0); //odom
+					
+					/*Transform the points from odom coordinates to person frame 
+												|cos(th)  sin(th)  0|
+						Rotation matrix R(th)= 	|-sin(th) cos(th)  0|
+												|  0        0      1|
+													 
+						x' = (xr-xp)*cos(th_p)+(yr-yp)*sin(th_p)
+						y' = (xr-xp)*(-sin(th_p))+(yr-yp)*cos(th_p)
+					*/
+					nx = (ox - px)*cos(pth) + (oy - py)*sin(pth);
+					ny = (ox - px)*(-sin(pth)) + (oy - py)*cos(pth);
+					x_person.push_back(nx);
+					y_person.push_back(ny);
+			}
+		}
+		
+		//Call the gmm service to get the costs of the samples
+		geometry_msgs::PoseStamped per = checker_->transformPoseTo(person, "base_link", false);
+		float xp = per.pose.position.x;
+		float yp = per.pose.position.y;
+		float thp = tf::getYaw(per.pose.orientation); 
+		//Now transform the robot (0,0) into person frame to get the orientation
+		float xx = (0.0-xp)*cos(thp) + (0.0-yp)*sin(thp);
+		float yy = (0.0-xp)*(-sin(thp)) + (0.0-yp)*cos(thp);
+		float thh = atan2(yy, xx);
+		gmm_sampling::GetApproachGMMProbs gmm_probs_srv;
+		gmm_probs_srv.request.person_orientation = thh; 
+		gmm_probs_srv.request.x = x_person;
+		gmm_probs_srv.request.y = y_person;
+
+		if(!gmm_probs_client_.call(gmm_probs_srv))
+		{
+			ROS_ERROR("RRT_ros_wrapper. Error calling service 'GetApproachGMMProbs'");
+			return;
+		}
+		
+		//int8[] cmap.data. The map data, in row-major order, starting with (0,0).  Occupancy
+		// probabilities are in the range [0,100].  Unknown is -1.
+		std::vector<signed char> data; // size =(cmap.info.width*cmap.info.height)
+		double cost = 0.0;
+		for(int i=0; i<gmm_probs_srv.response.probs.size(); i++) 
+		{
+			cost = gmm_probs_srv.response.probs[i];
+			if(cost < 0.01)
+				cost = 0.01;
+			if(cost > 1.0) {
+				//printf("Publish_gmm_costmap. Cost higher than 1: %.3f\n", cost); 
+				cost = 1.0;
+			}
+			data.push_back((int)round(cost*100.0)); //*100.0 
+		}
+		cmap.data = data;
+		gmm_costmap_pub_.publish(cmap);
+  }
+  
 
 
 
@@ -1694,8 +1939,11 @@ std::vector<float> upo_RRT_ros::RRT_ros_wrapper::get_feature_counts(geometry_msg
 				printf("¡¡¡¡¡¡QUATERNION NO VALID!!!!!. Changing yaw to zero.\n");
 			}
 			
-			upo_msgs::PersonPoseArrayUPO p = people->at(i);
-			checker_->setPeople(p);
+			if(!people->empty()) {
+				upo_msgs::PersonPoseArrayUPO p = people->at(i);
+				checker_->setPeople(p);
+			}
+			
 			checker_->preplanning_computations();
 			
 			upo_RRT::State* robot1;

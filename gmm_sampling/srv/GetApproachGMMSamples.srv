@@ -1,0 +1,5 @@
+float32 person_orientation  #orientation in the robot frame
+int32 num_samples
+---
+float32[] distances
+float32[] orientations

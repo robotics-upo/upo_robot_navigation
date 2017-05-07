@@ -96,6 +96,10 @@ namespace upo_nav {
       
       //----Noé-----------
       void setFeaturesWeights(std::vector<float> w);
+      
+      void setUseLossFunc(bool l, std::vector<geometry_msgs::PoseStamped> path) {
+		  rrt_planner_->setUseLossFunc(l, path);
+	  }
     
 	  
 	  bool clearCostmaps();
@@ -123,6 +127,9 @@ namespace upo_nav {
       void stopRRTPlanning();
       
       void publish_rrt_path(std::vector<geometry_msgs::PoseStamped>* path);
+      
+      
+      bool set_approaching_gmm_sampling(float orientation, int num_samp, geometry_msgs::PoseStamped person);
 
 	  //---------------
 	  

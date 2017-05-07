@@ -1,0 +1,24 @@
+home:
+        x: -24.179
+        y: -2.617
+        theta: -0.592
+Base:
+        x: -24.179
+        y: -2.617
+        theta: -0.592
+Couloir:
+        x: -19.15
+        y: -3.52
+        theta: -2.062
+Salle:
+        x: -23.54
+        y: -9.52
+        theta: -0.508
+Salle d'expositions:
+        x: -30.63
+        y: -15.57
+        theta: -2.068
+Coin cafe:
+        x: -16.40
+        y: -19.31
+        theta: -2.036

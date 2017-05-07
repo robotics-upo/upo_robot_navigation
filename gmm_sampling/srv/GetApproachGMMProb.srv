@@ -1,0 +1,5 @@
+float32 x
+float32 y
+float32 person_orientation  #orientation in the robot frame
+---
+float32 prob

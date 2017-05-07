@@ -10,6 +10,7 @@
 
 //C++
 #include <vector>
+#include <queue>
 #include <cmath>
 #include <stdio.h>
 #include <iostream>
@@ -27,6 +28,10 @@
 #include <tf/transform_listener.h>
 #include <nav_msgs/OccupancyGrid.h>
 #include <upo_msgs/PersonPoseArrayUPO.h>
+
+//GMM sampling services
+#include <gmm_sampling/GetApproachGMMSamples.h>
+#include <gmm_sampling/GetApproachGMMProbs.h>
 
 //RRT library
 #include <upo_rrt_planners/planners/Planner.h>
@@ -77,9 +82,15 @@ namespace upo_RRT_ros {
 			void visualizeTree(ros::Time t);
 			
 			void publish_feature_costmap(ros::Time t);
+			
+			void publish_gmm_costmap(geometry_msgs::PoseStamped person);
 
 			void setWeights(std::vector<float> w) {
 				checker_->setWeights(w);
+			}
+			
+			void setUseLossFunc(bool l, std::vector<geometry_msgs::PoseStamped> path) {
+				checker_->setUseLossFunc(l, path);
 			}
 			
 			//For full path biasing using the kinodynamic RRT local controller
@@ -109,6 +120,9 @@ namespace upo_RRT_ros {
 				max_ang_vel = max_ang_vel_;
 				min_ang_vel = min_ang_vel_;
 			};
+			
+			
+			bool set_approaching_gmm_sampling(float orientation, int num_samp, geometry_msgs::PoseStamped person);
 			
 			
 			inline float normalizeAngle(float val, float min, float max) {
@@ -181,6 +195,17 @@ namespace upo_RRT_ros {
 			bool							path_smoothing_;
 			int								smoothing_samples_;
 			
+			//GMM biasing
+			bool							gmm_biasing_;
+			float 							gmm_bias_;
+			ros::ServiceClient 				gmm_samples_client_;
+			ros::ServiceClient 				gmm_probs_client_;
+			std::vector< std::pair<float,float> > gmm_samples_;
+			geometry_msgs::PoseStamped		gmm_person_;
+			float 							gmm_person_ori_;
+			boost::mutex 					gmm_mutex_;
+			ros::Publisher					gmm_costmap_pub_;
+			
 			
 			//-------------------------------------------
 			bool							use_uva_lib_;
@@ -195,6 +220,7 @@ namespace upo_RRT_ros {
 			bool							full_path_biasing_;
 			float 							full_path_stddev_;
 			float 							full_path_bias_;
+			
 			int 							kino_minControlSteps_;
 			int 							kino_maxControlSteps_;
 			float 							kino_linAcc_;

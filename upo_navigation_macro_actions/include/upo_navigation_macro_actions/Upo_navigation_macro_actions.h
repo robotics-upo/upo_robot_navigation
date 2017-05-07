@@ -169,6 +169,7 @@
 			// NavigateInteractionTarget
 			int social_approaching_type_;
 			int target_counter_;
+			ros::ServiceClient gmm_sampling_;
 			
 			
 			// Yield
@@ -198,6 +199,13 @@
 
 			//Assisted steering
 			bool manual_control_;
+			
+			
+			//GMM sampling for approaching
+			geometry_msgs::PoseStamped gmm_person_;
+			float 		gmm_orientation_;
+			int			gmm_num_samples_;
+			bool		gmm_change_;
 
 
 			//Leds service

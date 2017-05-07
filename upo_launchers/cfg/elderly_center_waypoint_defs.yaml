@@ -1,0 +1,13 @@
+home:
+        x: 8.45
+        y: 17.09
+        theta: -1.57
+cafeteria:
+        x: 13.61
+        y: 11.5
+        theta: 0.0
+couloir:
+        x: 20.84
+        y: 10.98
+        theta: -3.13
+

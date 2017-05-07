@@ -48,9 +48,9 @@ Upo_navigation_macro_actions::Upo_navigation_macro_actions(tf::TransformListener
 	n.param<bool>("use_leds", use_leds_, false);
 	n.param<int>("leds_number", leds_number_, 60);
 	
-	n.param<string>("yield_map", yieldmap_, std::string(""));
+	n.param<std::string>("yield_map", yieldmap_, std::string(""));
 	std::string yieldpoint_file;
-	n.param<string>("yield_points", yieldpoint_file, std::string(""));
+	n.param<std::string>("yield_points", yieldpoint_file, std::string(""));
 	n.param<double>("secs_to_yield", secs_to_yield_, 8.0);
 	
 	if(yieldmap_.empty()) {
@@ -67,6 +67,11 @@ Upo_navigation_macro_actions::Upo_navigation_macro_actions(tf::TransformListener
 	manual_control_ = false;
 
 	target_counter_ = 0;
+	
+	//GMMs
+	gmm_orientation_ = 0.0;
+	gmm_num_samples_ = 1000;
+	gmm_change_ = false;
 
 	//Dynamic reconfigure
 	//dsrv_ = new dynamic_reconfigure::Server<upo_navigation_macro_actions::NavigationMacroActionsConfig>(n);
@@ -646,11 +651,6 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 	if(use_leds_) 
 		setLedColor(BLUE);
 	
-	//Disable uva_features if it is active
-	ros::NodeHandle n("/upo_navigation_macro_actions/Navigation_features");
-	bool uva_feat;
-	n.param<bool>("use_uva_features", uva_feat, false);
-	
 	//upo_msgs::PersonPoseUPO p = goal->it;
 	int id_it = goal->it;
 	
@@ -666,16 +666,32 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 		nitresult_.value = 2;
 		NITActionServer_->setAborted(nitresult_, "Navigation aborted because of IT was lost");
 		reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
+		UpoNav_->set_approaching_gmm_sampling(0.0, -1, goal_pose);
 		if(use_leds_) 
 			setLedColor(WHITE);
 		return;
 	}
+	
+	//-------- Adapt the Gaussian costs in Navigation features according to the
+	//-------- type of approaching ---------------------------------------------
 	//If we take into account the orientation, adapt the gaussian of the IT
 	if(social_approaching_type_ != 1) {
 		std::string str = std::to_string(id_it);
 		reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), str, INT_TYPE);
 	}
-
+	//GMM approach. Remove the gaussian costs
+	if(social_approaching_type_ == 3) {
+		
+		//Activate GMM sampling
+		UpoNav_->set_approaching_gmm_sampling(gmm_orientation_, gmm_num_samples_, gmm_person_);
+		
+		std::string str = "1";
+		reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("it_remove_gaussian"), str, BOOL_TYPE);
+	} else {
+		std::string str = "0";
+		reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("it_remove_gaussian"), str, BOOL_TYPE);
+	}
+	//---------------------------------------------------------------------------
 
 	//Enviar goal 
 	bool ok = UpoNav_->executeNavigation(goal_pose); 
@@ -699,6 +715,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 			NITActionServer_->setAborted(nitresult_, "Navigation aborted");
 			UpoNav_->stopRRTPlanning();
 			reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
+			UpoNav_->set_approaching_gmm_sampling(0.0, -1, goal_pose);
 			if(use_leds_) 
 				setLedColor(WHITE);
 			return;
@@ -732,14 +749,34 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 					NITActionServer_->setAborted(nitresult_, "Navigation aborted because of IT was lost");
 					UpoNav_->stopRRTPlanning();
 					reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
+					UpoNav_->set_approaching_gmm_sampling(0.0, -1, goal_pose);
 					if(use_leds_) 
 						setLedColor(WHITE);
 					return;
 				}
-				if(social_approaching_type_ != 1){
+				
+				//-------- Adapt the Gaussian costs in Navigation features according to the
+				//-------- type of approaching ---------------------------------------------
+				//If we take into account the orientation, adapt the gaussian of the IT
+				if(social_approaching_type_ != 1) {
 					std::string str = std::to_string(id_it);
 					reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), str, INT_TYPE);
 				}
+				//GMM approach. Remove the gaussian costs
+				if(social_approaching_type_ == 3) {
+					
+					//Activate GMM sampling
+					UpoNav_->set_approaching_gmm_sampling(gmm_orientation_, gmm_num_samples_, gmm_person_);
+					
+					std::string str = "1";
+					reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("it_remove_gaussian"), str, BOOL_TYPE);
+				} else {
+					std::string str = "0";
+					reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("it_remove_gaussian"), str, BOOL_TYPE);
+				}
+				//---------------------------------------------------------------------------
+				
+				
 				//Enviar a new goal 
 				bool ok = UpoNav_->executeNavigation(goal_pose); 
 				if(!ok)
@@ -760,6 +797,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 						NITActionServer_->setAborted(nitresult_, "Navigation aborted");
 						UpoNav_->stopRRTPlanning();
 						reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
+						UpoNav_->set_approaching_gmm_sampling(0.0, -1, goal_pose);
 						if(use_leds_) 
 							setLedColor(WHITE);
 						return;
@@ -777,6 +815,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 				nitresult_.value = 1;
 				NITActionServer_->setPreempted(nitresult_, "Navigation preempted");
 				reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
+				UpoNav_->set_approaching_gmm_sampling(0.0, -1, goal_pose);
 				if(use_leds_) 
 					setLedColor(WHITE);
           		//we'll actually return from execute after preempting
@@ -794,6 +833,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 			NITActionServer_->setAborted(nitresult_, "Navigation aborted because of IT was lost");
 			UpoNav_->stopRRTPlanning();
 			reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
+			UpoNav_->set_approaching_gmm_sampling(0.0, -1, goal_pose);
 			if(use_leds_) 
 				setLedColor(WHITE);
 			return;
@@ -803,7 +843,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 			new_g = goal_pose;
 
 		//This has been included for a quicker transition to conversation mode
-		if(social_approaching_type_ == 1)
+		/*if(social_approaching_type_ == 1)
 		{
 			//If the distance from the base link to the goal is short enough
 			//We can stopt the action in order to transition to conversation
@@ -823,7 +863,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 					setLedColor(WHITE);
 				return;
 			}
-		}
+		}*/
 		
 
 		if(new_g.header.frame_id != "continue") {
@@ -831,13 +871,30 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 			float min_dist = 0.60;
 			float dist = sqrt((goal_pose.pose.position.x-new_g.pose.position.x)*(goal_pose.pose.position.x-new_g.pose.position.x) 
 					+ (goal_pose.pose.position.y-new_g.pose.position.y)*(goal_pose.pose.position.y-new_g.pose.position.y));
-			if(dist >= min_dist){
+			if(dist >= min_dist || gmm_change_){
+				gmm_change_ = false;
 				//Send new goal
 				goal_pose = new_g; 
-				if(social_approaching_type_ != 1){
+				//-------- Adapt the Gaussian costs in Navigation features according to the
+				//-------- type of approaching ---------------------------------------------
+				//If we take into account the orientation, adapt the gaussian of the IT
+				if(social_approaching_type_ != 1) {
 					std::string str = std::to_string(id_it);
 					reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), str, INT_TYPE);
 				}
+				//GMM approach. Remove the gaussian costs
+				if(social_approaching_type_ == 3) {
+					
+					//Activate GMM sampling
+					UpoNav_->set_approaching_gmm_sampling(gmm_orientation_, gmm_num_samples_, gmm_person_);
+					
+					std::string str = "1";
+					reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("it_remove_gaussian"), str, BOOL_TYPE);
+				} else {
+					std::string str = "0";
+					reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("it_remove_gaussian"), str, BOOL_TYPE);
+				}
+				//---------------------------------------------------------------------------
 			
 				bool ok = UpoNav_->executeNavigation(goal_pose); 
 				if(!ok)
@@ -858,6 +915,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 						NITActionServer_->setAborted(nitresult_, "Navigation aborted");
 						UpoNav_->stopRRTPlanning();
 						reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
+						UpoNav_->set_approaching_gmm_sampling(0.0, -1, goal_pose);
 						if(use_leds_) 
 							setLedColor(WHITE);
 						return;
@@ -885,6 +943,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 				nitresult_.value = 3;
 				NITActionServer_->setAborted(nitresult_, "Approaching aborted");
 				reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
+				UpoNav_->set_approaching_gmm_sampling(0.0, -1, goal_pose);
 				exit = true;
 				break;
 
@@ -903,6 +962,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 				NITActionServer_->setSucceeded(nitresult_, "IT Reached");
 				nitfeedback_.text = "Succeeded";
 				reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
+				UpoNav_->set_approaching_gmm_sampling(0.0, -1, goal_pose);
 				exit = true;
 				break;
 
@@ -914,6 +974,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 				nitresult_.value = 3;
 				NITActionServer_->setAborted(nitresult_, "Navigation aborted because an unexpected pursue value was received");
 				reconfigureParameters(std::string("/upo_navigation_macro_actions/Navigation_features"), std::string("interaction_target_id"), std::string("-1"), INT_TYPE);
+				UpoNav_->set_approaching_gmm_sampling(0.0, -1, goal_pose);
 				exit = true;
 				break;
 		}
@@ -932,7 +993,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 		//changeParametersNarrowPlaces();
 		changeParametersNarrowPlaces2();
 		
-		//Check the yield situation
+		//------ Check the yield situation -----------------------------------
 		pinzone_mutex_.lock();
 		bool p_in = person_inzone_;
 		//bool p_in2 = person_inzone2_;
@@ -952,13 +1013,14 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 			nitfeedback_.text = "No social path available";
 			NITActionServer_->publishFeedback(nitfeedback_);
 			UpoNav_->stopRRTPlanning();
+			UpoNav_->set_approaching_gmm_sampling(0.0, -1, goal_pose);
 			if(use_leds_) 
 				setLedColor(WHITE);
 			return;
-
+		//----------------------------------------------------------------------
 		} else {
 		
-			//check the blocked situation.
+		//------- check the blocked situation ----------------------------------
 			double time = (ros::Time::now() - time_init).toSec();
 			//printf("now: %.2f, init: %.2f, time: %.2f secs\n", ros::Time::now().toSec(), time_init.toSec(), time);
 			if(time > secs_to_check_block_) {
@@ -980,6 +1042,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 					nitfeedback_.text = "Blocked";
 					NITActionServer_->publishFeedback(nitfeedback_);
 					UpoNav_->stopRRTPlanning();
+					UpoNav_->set_approaching_gmm_sampling(0.0, -1, goal_pose);
 					if(use_leds_) 
 						setLedColor(WHITE);
 					return;
@@ -989,6 +1052,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 				}
 			} 	
 		}
+		//----------------------------------------------------------------------
 		
 		//ros::WallDuration dur = ros::WallTime::now() - startt;
 		//printf("Loop time: %.4f secs\n", dur.toSec());
@@ -997,6 +1061,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 	}
 
 	ROS_INFO("NavigateToInteractionTarget. Setting ABORTED state because the node has been killed");
+	UpoNav_->set_approaching_gmm_sampling(0.0, -1, goal_pose);
 	nitresult_.result = "Aborted. System is shuting down";
 	nitresult_.value = 6;
 	NITActionServer_->setAborted(nitresult_, "Navigation aborted because the node has been killed");
@@ -1009,7 +1074,7 @@ void Upo_navigation_macro_actions::navigateInteractionTargetCB(const upo_navigat
 geometry_msgs::PoseStamped Upo_navigation_macro_actions::approachIT(int id)
 {
 	
-	double safe_dist = 1.3;
+	double safe_dist = 1.0; //ver la distancia correcta de los ejemplos!!!
 	
 	//Look for the person in the vector
 	std::vector<upo_msgs::PersonPoseUPO> people;
@@ -1055,17 +1120,19 @@ geometry_msgs::PoseStamped Upo_navigation_macro_actions::approachIT(int id)
 		}
 	}*/
 	
-	
-	/*float min_dist = 1.5; //1.5 meter
+
+	//float min_dist = 1.5; //1.5 meters
 	for(unsigned int i=0; i<people.size(); i++)
 	{
 		//Firstly look for the ID
-		if(p->id != -1 && p->id == people.at(i).id) {
+		if(id != -1 && id == people.at(i).id) {
 			//printf("Person with ID %i found!\n", p->id);
 			newp = people.at(i);
+			++target_counter_;
+			if(target_counter_ > 1000) //100
+				target_counter_ = 1000;
 			break;
-			
-		} else {  //Look for someone closer than 'min_dist' meters
+		} /*else{  //Look for someone closer than 'min_dist' meters
 			
 			float dist = sqrt((p->position.x-people.at(i).position.x)*(p->position.x-people.at(i).position.x) 
 				+ (p->position.y-people.at(i).position.y)*(p->position.y-people.at(i).position.y) );
@@ -1075,27 +1142,14 @@ geometry_msgs::PoseStamped Upo_navigation_macro_actions::approachIT(int id)
 				newp = people.at(i);
 			}
 			
-		}
-	}*/
-
-	for(unsigned int i=0; i<people.size(); i++)
-	{
-		//Firstly look for the ID
-		if(id != -1 && id == people.at(i).id) {
-			//printf("Person with ID %i found!\n", p->id);
-			newp = people.at(i);
-			++target_counter_;
-			if(target_counter_ > 10)
-				target_counter_ = 10;
-			break;
-		}
+		}*/
 	}
 
 	//No person found
 	if(newp.id == -100) {
 		--target_counter_;
 		if(target_counter_ < 0) {
-			printf("Person not found!\n");
+			printf("Person not found!!!!!!!\n");
 			return goal_pose;
 		} else {
 			goal_pose.header.frame_id = "continue";
@@ -1105,30 +1159,31 @@ geometry_msgs::PoseStamped Upo_navigation_macro_actions::approachIT(int id)
 	
 
 	
-
-	
-	if(social_approaching_type_ == 1)  //Person orientation is NOT taken into account
-	{
-		geometry_msgs::PoseStamped in;
-		
+	geometry_msgs::PoseStamped out;
+	geometry_msgs::PoseStamped in;
+	double x, y;
+	float yaw;
+	double orientation, distance;
+	if(social_approaching_type_ == 1)
+	{ 					//Person orientation is NOT taken into account
+			
 		in.header = newp.header;
 		in.pose.position = newp.position;
 		in.pose.orientation = newp.orientation; 
 		in.header.stamp = ros::Time();
-		
-		geometry_msgs::PoseStamped out;
+			
 		try {
 			tf_listener_->transformPose("base_link", in, out);	
 		}catch (tf::TransformException ex){
 			ROS_WARN("ApproachWaypointSimple. TransformException: %s",ex.what());
 			return goal_pose;
 		}
-		double x = out.pose.position.x;
-		double y = out.pose.position.y;
+		x = out.pose.position.x;
+		y = out.pose.position.y;
 		//double yaw = tf::getYaw(out.pose.orientation);
-		double orientation = atan2(y,x); 
+		orientation = atan2(y,x); 
 		orientation = normalizeAngle(orientation, -M_PI, M_PI);
-		double distance = sqrt((x*x)+(y*y));
+		distance = sqrt((x*x)+(y*y));
 		if(distance <= safe_dist) { 		
 			x = 0.0;
 			y = 0.0;
@@ -1136,7 +1191,7 @@ geometry_msgs::PoseStamped Upo_navigation_macro_actions::approachIT(int id)
 			x = x - safe_dist * cos(fabs(orientation));
 			y = y - safe_dist * sin(fabs(orientation)); 
 		}		
-				
+					
 		goal_pose.header.stamp = ros::Time::now();
 		goal_pose.header.frame_id = "base_link";
 		goal_pose.pose.position.x = x;
@@ -1144,46 +1199,89 @@ geometry_msgs::PoseStamped Upo_navigation_macro_actions::approachIT(int id)
 		goal_pose.pose.position.z = 0.0;
 		goal_pose.pose.orientation = tf::createQuaternionMsgFromYaw(orientation);
 		//printf("goal_pose x:%.2f, y:%.2f, th:%.2f\n", x, y, orientation);
-		
+			
 		out = transformPoseTo(goal_pose, "odom");
 		return out;
-			
 		
-	} else {  //Orientation is taken into account
-		
+	} else {  	//Orientation is taken into account
+	
 		//1. Calculate goal in front of the person
-		float yaw = 0.0;
-		
+		yaw = 0.0;
+			
 		goal_pose.header.frame_id = newp.header.frame_id;
 		goal_pose.pose.position = newp.position; 
 		goal_pose.pose.orientation = newp.orientation; 
 		yaw = tf::getYaw(newp.orientation); 
-		
+			
 		goal_pose.header.stamp = ros::Time::now();
 		goal_pose.pose.position.x = goal_pose.pose.position.x + safe_dist*cos(yaw);
 		goal_pose.pose.position.y = goal_pose.pose.position.y + safe_dist*sin(yaw);
 		yaw = normalizeAngle((yaw+M_PI), -M_PI, M_PI);
 		goal_pose.pose.orientation = tf::createQuaternionMsgFromYaw(yaw);
 		
-		//2. Activate the id of the target to adapt the gaussian
-		/*char buf[10];
-		sprintf(buf, "%i", p->id);
-		std::string st = std::string(buf);
-		std::string cad = std::string("rosrun dynamic_reconfigure dynparam set_from_parameters /upo_navigation_macro_actions/Navigation_features _interaction_target_id:=");
-		cad = cad + st;
-		system(cad.c_str());
-		*/
-		
-		//3. If social_approaching_type_ == 3
-		// Indicar al planificador que realice sampleo de la gmm indicada (servicio?)
-		// Modificar el tanto por ciento de sampleo de la GMM y normal
-		// de acuerdo a la distancia entre el robot y la persona.
-		
-		geometry_msgs::PoseStamped out;
 		out = transformPoseTo(goal_pose, "odom");
 		
+	
+		if(social_approaching_type_ == 3) {		//Use GMM sampling
+			
+			//Transform person into robot local frame
+			in.header = newp.header;
+			in.pose.position = newp.position;
+			in.pose.orientation = newp.orientation; 
+			in.header.stamp = ros::Time();
+			geometry_msgs::PoseStamped out2;
+			try {
+				tf_listener_->transformPose("base_link", in, out2);	
+			}catch (tf::TransformException ex){
+				ROS_WARN("ApproachWaypointSimple. TransformException: %s",ex.what());
+				return goal_pose;
+			}
+			x = out2.pose.position.x;
+			y = out2.pose.position.y;
+			float yaw = tf::getYaw(out2.pose.orientation);
+			distance = sqrt((x*x)+(y*y));
+			float approach_dist = 3.15;
+			if(distance < approach_dist)
+			{
+				if(gmm_num_samples_ == -1)
+					gmm_change_ = true;
+					
+				//printf("Distance: %.3f < 3.15. Activating GMM sampling!!!!\n", distance);
+				/*
+				Transform the robot location into people location frame: 
+											|cos(th)  sin(th)  0|
+					Rotation matrix R(th)= 	|-sin(th) cos(th)  0|
+											|  0        0      1|
+												 
+					x' = (xr-xp)*cos(th_p)+(yr-yp)*sin(th_p)
+					y' = (xr-xp)*(-sin(th_p))+(yr-yp)*cos(th_p)
+				*/
+				float rx = (0.0 - x)*cos(yaw) + (0.0 - y)*sin(yaw);
+				float ry = (0.0 - x)*(-sin(yaw)) + (0.0 - y)*cos(yaw);
+				float orientation = atan2(ry,rx); 
+				//gmm_orientation_ = normalizeAngle(orientation, -M_PI, M_PI);
+				gmm_orientation_ = orientation;
+				
+				//Pass the person location because we don't have a tf
+				//geometry_msgs::PoseStamped p;
+				gmm_person_.header = newp.header;
+				gmm_person_.pose.position = newp.position;
+				gmm_person_.pose.orientation = newp.orientation;
+				
+				//Activate the GMM sampling
+				gmm_num_samples_ = 1000;
+				//UpoNav_->set_approaching_gmm_sampling(orientation, num_samples, p);
+			} else {
+				gmm_num_samples_ = -1;
+				
+			}
+			
+		}
+		
 		return out;
+		
 	}
+	
 }
 
 

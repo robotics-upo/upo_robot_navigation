@@ -16,7 +16,9 @@ features::NavFeatures::NavFeatures(tf::TransformListener* tf, float size_x, floa
 	max_planning_dist_ = sqrt((size_x_*2*size_x_*2)+(size_y_*2*size_y_*2));
 	insc_radius_robot_ = 0.40;
 	
-
+	use_loss_func_ = false;
+	demo_path_.clear();
+	
 	//Advertise service
 	//ros::NodeHandle n("navigation_features");
 	//weights_srv_ = n.advertiseService("setWeights", &features::NavFeatures::setWeightsService, this);
@@ -47,6 +49,9 @@ features::NavFeatures::NavFeatures(tf::TransformListener* tf, const costmap_2d::
 		use_global_costmap_ = false;
 	}
 	myfootprint_ = footprint;
+	
+	use_loss_func_ = false;
+	demo_path_.clear();
 
 	//Advertise service
 	//ros::NodeHandle n("navigation_features");
@@ -103,7 +108,7 @@ void features::NavFeatures::setParams()
 	int pc_type;
 	n.param<int>("pc_type", pc_type, 2); //1->PointCloud, 2->PointCloud2
 	
-	n.param<bool>("use_uva_features", use_uva_features_, false);
+	/*n.param<bool>("use_uva_features", use_uva_features_, false);
 	
 	if(use_uva_features_)
 	{
@@ -114,7 +119,7 @@ void features::NavFeatures::setParams()
 			setupProjection(pc_topic, pc_type);
 		}
 		
-	} else {
+	} else {*/
 		
 		//If we use the laser projection onto the static map
 		if(use_laser_projection_) {
@@ -122,7 +127,7 @@ void features::NavFeatures::setParams()
 			setupProjection(pc_topic, pc_type);
 		
 		}
-	}
+	//}
 	
 	double front;
 	n.param<double>("stddev_person_front", front, 1.2);
@@ -152,6 +157,9 @@ void features::NavFeatures::setParams()
 	approaching_angle_ = (float)aux;
 	
 	
+	it_remove_gauss_ = false;
+	
+	
 	//n.param<int>("goal_type", goal_type_, 1); //1->RRT, 2->A*
 	//if(goal_type_ == 1)
 		goal_sub_ = nh_.subscribe("/rrt_goal", 1, &NavFeatures::goalCallback, this);
@@ -163,7 +171,9 @@ void features::NavFeatures::setParams()
 	
 	pub_gaussian_markers_ = n.advertise<visualization_msgs::MarkerArray>("gaussian_markers", 5);
 	
-	//ros::ServiceServer service = nh_.advertiseService("setApproachingIT", setApproachingIT);
+	ros::NodeHandle nd("navigation_features");
+	//ros::ServiceServer service = nd.advertiseService("setApproachingIT", setApproachingIT);
+	loss_srv_ = nd.advertiseService("set_use_loss_func", &features::NavFeatures::setLossService, this);
 
 	//Dynamic reconfigure
 	dsrv_ = new dynamic_reconfigure::Server<navigation_features::nav_featuresConfig>(n); //ros::NodeHandle("~")
@@ -174,8 +184,8 @@ void features::NavFeatures::setParams()
 
 
 features::NavFeatures::~NavFeatures() {
-	if(use_uva_features_)
-		delete uva_features_;
+	//if(use_uva_features_)
+	//	delete uva_features_;
 }
 
 
@@ -183,10 +193,10 @@ features::NavFeatures::~NavFeatures() {
     boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
     
     upo_featureset_ = config.upo_featureset;
-    use_uva_features_ = config.use_uva_features;
+    /*use_uva_features_ = config.use_uva_features;
 	if(use_uva_features_ && uva_features_ == NULL) {
 		uva_features_ = new uva_cost_functions::UvaFeatures(tf_listener_);
-	}
+	}*/
 	use_laser_projection_ = config.use_laser_projection;
 	sigmas_[0] = config.stddev_person_front;
 	sigmas_[1] = config.stddev_person_aside;
@@ -198,6 +208,7 @@ features::NavFeatures::~NavFeatures() {
 	stddev_group_ = config.stddev_group;
 	grouping_distance_ = config.grouping_distance;
 	it_id_ = config.interaction_target_id;
+	it_remove_gauss_ = config.it_remove_gaussian;
 	//printf("upo_featureset. it_id:%i\n", it_id_);
 }
 
@@ -210,6 +221,86 @@ bool features::NavFeatures::setWeightsService(navigation_features::SetWeights::R
 	return true;
 }
 */
+
+
+//service
+bool features::NavFeatures::setLossService(navigation_features::SetLossCost::Request &req, navigation_features::SetLossCost::Response &res)
+{
+	set_use_loss_func(req.use_loss_func); 
+	set_demo_path(req.demo_path);
+
+	return true;
+}
+
+
+
+/**
+ * Calculate the loss function
+ * Input:
+ 	x, point coordinate
+	y, point coordinate
+	example_path, demonstration path
+ * Output:
+	loss_value in the range [0, 0.5]
+ */
+float features::NavFeatures::calculate_loss_function(geometry_msgs::PoseStamped* p)
+{
+	if(demo_path_.empty())
+	{
+		printf("\n	NavFeatures: ERRORRRRRRR! DEMONSTRATION PATH IS EMPTY!!!!!\n");
+		return 0.0; 
+	}
+	if(!p) {
+		printf("\n	NavFeatures: ERRORRRRRRR! point is null!!!!!\n");
+		return 0.0;
+	}
+	
+	geometry_msgs::PoseStamped point = *p;
+	//printf("calculate loss function. header: %s\n", point.header.frame_id.c_str());
+		
+	if(point.header.frame_id.empty() || point.header.frame_id.length() < 3)
+		printf("\n¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡calculate_loss_function. global_frame invalid!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n");
+					
+	//Just in case
+	if(point.header.frame_id.compare("/map") != 0 && point.header.frame_id.compare("map") != 0)
+	{
+		//printf("calculate loss function. header: %s x:%.2f y:%.2f, th:%2f\n", point.header.frame_id.c_str(), point.pose.position.x, point.pose.position.y, tf::getYaw(point.pose.orientation));
+		point = transformPoseTo(point, "map", true);
+	}
+	float x = point.pose.position.x;
+	float y = point.pose.position.y;
+	
+	
+	float min_dist = 9999.0;
+	for(unsigned int i=0; i<demo_path_.size(); i++)
+	{
+		geometry_msgs::PoseStamped ps = demo_path_[i];
+		//Just in case
+		if(ps.header.frame_id.compare("/map") != 0 && ps.header.frame_id.compare("map") != 0)
+		{
+			printf("calculate loss function. Demo path!! header: %s x:%.2f y:%.2f, th:%2f\n", ps.header.frame_id.c_str(), ps.pose.position.x, ps.pose.position.y, tf::getYaw(ps.pose.orientation));
+			ps = transformPoseTo(ps, "map", true);
+		}
+			
+		float xe = ps.pose.position.x;
+		float ye = ps.pose.position.y;
+		float d = sqrt((x-xe)*(x-xe) + (y-ye)*(y-ye));
+		if(d < min_dist)
+			min_dist = d; 
+	}
+	
+	if(min_dist > 1.0)
+		min_dist = 1.0;
+
+	return min_dist;
+	
+	//The cost decreases linearly from 1 to 0 in a distance of 1 meter
+	//return (float)(1-min_dist)/2.0;
+	
+}
+
+
+
 
 
 
@@ -269,10 +360,10 @@ void features::NavFeatures::peopleCallback(const upo_msgs::PersonPoseArrayUPO::C
 {
 	boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
 	
-	if(use_uva_features_) {
+	/*if(use_uva_features_) {
 		uva_features_->setPeople(*msg);
 
-	} else {
+	} else {*/
 	
 		peopleMutex_.lock();
 		people_ = msg->personPoses;
@@ -281,7 +372,7 @@ void features::NavFeatures::peopleCallback(const upo_msgs::PersonPoseArrayUPO::C
 		}
 		peopleMutex_.unlock();
 	
-	}
+	//}
 	
 }
 
@@ -422,13 +513,13 @@ void features::NavFeatures::updateDistTransform(){
 
 	//boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
 
-	if(use_uva_features_) {
+	/*if(use_uva_features_) {
 		uva_features_->setDistanceTransform(dt);
-	} else {
+	} else {*/
 		dtMutex_.lock();
 		distance_transform_ = dt.clone();
 		dtMutex_.unlock(); 
-	}
+	//}
 
 	//gettimeofday(&stop, NULL);
 	//printf("took %lu\n", stop.tv_usec - start.tv_usec);
@@ -454,9 +545,9 @@ void features::NavFeatures::setGoal(geometry_msgs::PoseStamped g) {
 	boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
 
 	//printf("NavFeatures. Setting new goal for feature calculation\n");
-	if(use_uva_features_)
+	/*if(use_uva_features_)
 		uva_features_->setGoal(g);
-	else
+	else*/
 		goal_ = g;
 }
 
@@ -744,8 +835,8 @@ float features::NavFeatures::getCost(geometry_msgs::PoseStamped* s)
 {
 	boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
 	
-	if(use_uva_features_)
-		return uva_features_->getCost(s);	
+	//if(use_uva_features_)
+	//	return uva_features_->getCost(s);	
 	
 	
 	std::vector<float> features;
@@ -798,8 +889,6 @@ float features::NavFeatures::getCost(geometry_msgs::PoseStamped* s)
 			return 1.0;
 	}
 	
-	
-	
 
 	//if(prox_cost == 0.0 && obs_cost != 0.0)
 	//	return (0.5*dist_cost + 0.5*obs_cost);	
@@ -812,8 +901,24 @@ float features::NavFeatures::getCost(geometry_msgs::PoseStamped* s)
 	for(unsigned int i=0; i<w_.size(); i++)
 		cost += w_[i]*features[i];
 	
-	//if(cost > 1.0)
-	//	printf("RRT* COST OUT OF RANGE!!! %.3f\n", cost);
+	//This is used for learning algorithms (MMP and RTL)
+	loss_mutex_.lock();
+	if(use_loss_func_ && !demo_path_.empty())
+	{
+		float l = calculate_loss_function(s);
+		l = (float)(1-l); // /2.0;
+		cost += l;
+		
+		//Two options:
+		// 1. Saturate value
+		//if(cost > 1.0)
+		//	cost = 1.0;
+		// 2. Normalize
+		cost = cost/2.0;
+		
+	}
+	loss_mutex_.unlock();
+	
 	return cost;	
 }
 
@@ -823,8 +928,8 @@ std::vector<float> features::NavFeatures::getFeatures(geometry_msgs::PoseStamped
 {
 	//boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
 
-	if(use_uva_features_)
-		return uva_features_->getFeatures(s);
+	//if(use_uva_features_)
+	//	return uva_features_->getFeatures(s);
 
 	std::vector<float> features;
 	
@@ -842,15 +947,17 @@ std::vector<float> features::NavFeatures::getFeatures(geometry_msgs::PoseStamped
 		float prox_cost = proxemicsFeature(s);
 		features.push_back(prox_cost);
 		
-		return features;
+		
 		
 	} else { //split the proxemics cost (featureset 1 and 2)
 		std::vector<float> prox_costs = gaussianFeatures(s);
 		for(unsigned int i=0; i<prox_costs.size(); i++) {
 			features.push_back(prox_costs[i]);
 		}
-		return features;
+		
 	}
+	
+	return features;
 }
 
 
@@ -1157,6 +1264,11 @@ void features::NavFeatures::calculateGaussians()
 		
 		for(unsigned int i=0; i<people_aux.size(); i++)
 		{
+			if(people_aux.at(i).id == it_id_ && it_remove_gauss_)
+			{
+				continue;
+			}
+			
 			gaussian f;
 			f.type = FRONT;
 			f.x = people_aux.at(i).position.x;

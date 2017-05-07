@@ -10,6 +10,7 @@
 #include <upo_rrt_planners/NearestNeighbors.h>
 
 #include <vector>
+#include <queue>
 #include <cmath>
 #include <stdio.h>
 #include <iostream>
@@ -149,6 +150,12 @@ namespace upo_RRT
 				init_action_state_ = new Action(vx, vy, vth, steps);
 			}
 			
+			void inline set_gmm_sampling(bool gmm_sampling, float gmm_bias, std::vector< std::pair<float,float> > samples) {
+				gmm_sampling_ = gmm_sampling;
+				gmm_bias_ = gmm_bias;
+				gmm_samples_ = samples;
+			}
+			
 			
 		protected:
 
@@ -178,6 +185,11 @@ namespace upo_RRT
 			float				pathBias_;
 			float 				pathBias_stddev_;
 			
+			//GMM sampling
+			bool				gmm_sampling_;
+			float 				gmm_bias_;
+			//std::queue< std::pair<float,float> > gmm_samples_;
+			std::vector< std::pair<float,float> > gmm_samples_;
 			
 
 	};

@@ -42,10 +42,11 @@
 #include "opencv2/imgproc/imgproc.hpp"
 
 //UVA features
-#include <navigation_features/uva_features.h>
+//#include <navigation_features/uva_features.h>
 
 //Service msg
 //#include <navigation_features/SetWeights.h>
+#include <navigation_features/SetLossCost.h>
 
 //Dynamic reconfigure
 #include <dynamic_reconfigure/server.h>
@@ -122,6 +123,8 @@ namespace features {
 			float gaussian_function(float x, float y, float sx, float sy);
 			
 			std::vector<float> gaussianFeatures(geometry_msgs::PoseStamped* s);
+			
+			float calculate_loss_function(geometry_msgs::PoseStamped* p);
 
 			geometry_msgs::PoseStamped transformPoseTo(geometry_msgs::PoseStamped pose_in, std::string frame_out, bool usetime);
 		
@@ -131,7 +134,7 @@ namespace features {
 			
 			void setUpoFeatureSet(int s) {
 				upo_featureset_ = s;
-				use_uva_features_ = false;
+				//use_uva_features_ = false;
 			}
 		
 			void setWeights(std::vector<float> we);
@@ -140,6 +143,24 @@ namespace features {
 
 			//Service
 			//bool setWeightsService(navigation_features::SetWeights::Request  &req, navigation_features::SetWeights::Response &res);
+			bool setLossService(navigation_features::SetLossCost::Request &req, navigation_features::SetLossCost::Response &res);
+			
+			void set_use_loss_func(bool s) { 
+				loss_mutex_.lock();
+				use_loss_func_ = s; 
+				loss_mutex_.unlock();
+			}
+			void set_demo_path(std::vector<geometry_msgs::PoseStamped>* p) {
+				loss_mutex_.lock();
+				demo_path_ = *p;
+				loss_mutex_.unlock();
+			}
+			void set_demo_path(std::vector<geometry_msgs::PoseStamped> p) {
+				loss_mutex_.lock();
+				demo_path_ = p;
+				loss_mutex_.unlock();
+				printf("Setting use_loss: %i. Demo path with size: %u\n", use_loss_func_, (unsigned int)demo_path_.size());
+			}
 			
 			
 			//For laser projection
@@ -190,8 +211,8 @@ namespace features {
 			float 								max_cost_obs_;
 			
 			
-			bool 								use_uva_features_;
-			uva_cost_functions::UvaFeatures*	uva_features_;
+			//bool 								use_uva_features_;
+			//uva_cost_functions::UvaFeatures*	uva_features_;
 
 			bool 								no_costmaps_;
 		
@@ -218,6 +239,7 @@ namespace features {
 			
 			//Id of the interaction target (if he/she exists)
 			int									it_id_;
+			bool								it_remove_gauss_;
 			float 								approaching_angle_;
 			
 			ros::Subscriber 					goal_sub_;
@@ -236,10 +258,16 @@ namespace features {
 			std::vector<float> 					w_;
 
 			//service
-			//ros::ServiceServer 					weights_srv_;
+			//ros::ServiceServer 				weights_srv_;
 			
 			//upo feature set to be used
 			int 								upo_featureset_;
+			
+			//Only for learning algorithms
+			ros::ServiceServer					loss_srv_;
+			bool								use_loss_func_;
+			std::vector<geometry_msgs::PoseStamped> demo_path_;
+			boost::mutex						loss_mutex_;
 			
 			//Dynamic reconfigure
 			boost::recursive_mutex configuration_mutex_;

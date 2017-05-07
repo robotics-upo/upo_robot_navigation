@@ -74,6 +74,14 @@
    <!--Rviz tool visualizer -->
    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find upo_launchers)/rrt_navigation.rviz" />
 
+
+	<!-- GMM sampling -->
+	<node pkg="gmm_sampling" type="gmm_sampling_ros" name="gmm_sampling_ros" output="screen" >
+    	<param name="gmm_tasks_directory" value="$(find gmm_sampling)/tasks/"/> 
+		<param name="publish_gmm_markers" value="true" />
+  	</node> 
+
+
      <!-- launch-prefix="xterm -e gdb (doble hyphen)args"-->
 	 <node pkg="upo_navigation_macro_actions" type="upo_navigation_macro_actions" name="upo_navigation_macro_actions" output="screen" >
 
@@ -90,7 +98,7 @@
 
 
 		<!-- Take into account the person orientation or group orientation to perform an approach -->
-		<param name="social_approaching_type" value="2" />
+		<param name="social_approaching_type" value="3" />
 		
 		<!-- frequency of the macro actions -->
 		<param name="control_frequency" value="15.0" />
@@ -112,24 +120,24 @@
 	</node>
 
 
-	<param name="robot_description"
-    command="$(find xacro)/xacro.py '$(find teresa_gazebo)/urdf/teresa_idmind.urdf.xacro'" />
+	<!--param name="robot_description"
+    command="$(find xacro)/xacro.py '$(find teresa_gazebo)/urdf/teresa_idmind.urdf.xacro'" /-->
 
   	<!-- send fake joint values -->
-  	<node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
+  	<!--node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
     	<param name="use_gui" value="FALSE"/>
-  	</node>
+  	</node-->
 
   	<!-- Combine joint values -->
-  	<node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher"/>
+  	<!--node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher"/-->
 
   <!-- <param name="waypoint_defs" value="$(find upo_launchers)/$(arg scenario)/maps/waypoint_defs.yaml"/>-->
 
   <param name="/waypoint_defs" value="cfg/$(arg scenario)_waypoint_defs.yaml"/>
 
-  <node pkg="decision_making_uva" name="upo_event_manager" type="event_manager.py" output="screen"/>
-  <node pkg="decision_making_uva" name="upo_pilot_interface_bridge" type="pilot_interface_bridge.py" output="screen"/>
-  <node pkg="decision_making_uva" name="upo_navigation_behavior_fsm" type="upo_navigation_behavior_fsm.py" output="screen" />
+  <node pkg="upo_decision_making" name="upo_event_manager" type="event_manager.py" output="screen"/>
+  <node pkg="upo_decision_making" name="upo_pilot_interface_bridge" type="pilot_interface_bridge.py" output="screen"/>
+  <node pkg="upo_decision_making" name="upo_navigation_behavior_fsm" type="upo_navigation_behavior_fsm.py" output="screen" />
 
-  <node pkg="smach_viewer" name="smach_viewer" type="smach_viewer.py"/>
+  <!--node pkg="smach_viewer" name="smach_viewer" type="smach_viewer.py"/-->
 </launch>
