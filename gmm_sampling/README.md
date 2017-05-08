@@ -1,6 +1,6 @@
 # gmm_sampling
 A library and its ROS wrapper that loads a set of GMMs defined through text files. Then these GMMs can be consulted trough ROS services to draw samples and costs from them.
-Currently, the GMMs included are employed in the macro-action "approaching to a person target".
+Currently, the GMMs included are employed in the macro-action "approaching a target person".
 
 ## Parameters
 
