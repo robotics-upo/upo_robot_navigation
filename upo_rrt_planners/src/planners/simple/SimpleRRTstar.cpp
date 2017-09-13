@@ -58,7 +58,7 @@ std::vector<upo_RRT::Node> upo_RRT::SimpleRRTstar::solve(float secs)
 				E <- (E\{(Xparent, Xnear)}) U {(Xnew, Xnear)};
 	return G=(V,E);
 	***********************************************************************************************/
-
+	
 
 	//Clear datastructure and initilize it
 	//nn_->clear();
@@ -69,10 +69,12 @@ std::vector<upo_RRT::Node> upo_RRT::SimpleRRTstar::solve(float secs)
 	ini->setAccCost(singleCost);
 	nn_->add(ini);
 	
+	
 	calculateParamsNearest();
 
 	tree_.clear();
-	first_path_.clear();
+	//first_path_.clear();
+	
 	
 	//Statistics
 	unsigned int total_samples = 0;
@@ -90,12 +92,17 @@ std::vector<upo_RRT::Node> upo_RRT::SimpleRRTstar::solve(float secs)
 	Node* approxSolution = NULL;
 	float approxDist = std::numeric_limits<float>::max();
 	
+	
 	//Goal node
 	Node* goalNode = new Node(*goal_);
 	goalNode->setCost(space_->getCost(goal_));
 	
+	//if(first_path_.empty())
+	//	printf("\nSimpleRRTStar. first path is empty!!!!!!!!\n\n");
 	
 	//Node* randNode = NULL;
+
+	
 	
 	unsigned int cont_null = 0;
 	
@@ -117,6 +124,7 @@ std::vector<upo_RRT::Node> upo_RRT::SimpleRRTstar::solve(float secs)
 			goal_samples++;
 			valid_samples++;
 			total_samples++;
+			
 		} else {
 			//Sample a random valid state
 			unsigned int cont = 0;
@@ -134,13 +142,14 @@ std::vector<upo_RRT::Node> upo_RRT::SimpleRRTstar::solve(float secs)
 					randState.setYaw(0.0);
 					randState.setLv(0.0);
 					randState.setAv(0.0);
-				
+					
 				} else if(fullBiasing_ && !first_path_.empty() && space_->sampleUniform() < pathBias_)
 				{
 					randState = *space_->samplePathBiasing(&first_path_, pathBias_stddev_);
+					//printf("SimpleRRTPlanner. sampling state x: %.2f, y:%.2f\n", randState.getX(), randState.getY());
 					
 				} else if(useFirstPathBiasing_ && !first_sol && space_->sampleUniform() < pathBias_) { //First RRT Path biasing
-					
+				
 					randState = *space_->samplePathBiasing(&first_path_, pathBias_stddev_);
 					
 				
@@ -283,7 +292,6 @@ std::vector<upo_RRT::Node> upo_RRT::SimpleRRTstar::solve(float secs)
 			end = true;
 		}
 	}
-
 
 	if(solution == NULL)
 	{

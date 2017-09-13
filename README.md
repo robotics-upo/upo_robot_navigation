@@ -24,7 +24,7 @@ This metapackage contains the following packages:
 * **upo_decision_making**. A set of Python scripts that contains the finite state machine for the navigation macro-actions and the interaction with the corresponding actions defined through the ROS actionlib library.
 
 * **gmm_sampling**. A library and its ROS wrapper that loads a set of GMMs defined through text files. Then these GMMs can be consulted trough ROS services to draw samples and costs from them.
-Currently, the GMMs included are employed in the macro-action "approaching to a person target".
+Currently, the GMMs included are employed in the macro-action "approaching a target person".
 
 * **upo_social_layer**. This package contains a layer that can be used in the costmap_2d of ROS as a plugin. The layer is built by using the social functions of the navigation features package related to people. This way, a social cost related to the distance and orientation to people can be included in a costmap for robot navigation.
 

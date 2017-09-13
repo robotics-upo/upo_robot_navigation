@@ -84,6 +84,7 @@ bool upo_RRT::Planner::setStartAndGoal(float start_x, float start_y, float start
 
 void upo_RRT::Planner::setBiasingPath(std::vector<upo_RRT::State>* path)
 {
+	//printf("Planner. SetBiasingPath. path size: %u\n", (unsigned int)path->size());
 	first_path_ = *path;
 }
 

@@ -42,12 +42,14 @@
 #include <geometry_msgs/Point.h>
 #include <visualization_msgs/MarkerArray.h>
 
-//Service 
+//Services 
 #include <upo_navigation/FeatureCounts.h>
 #include <upo_navigation/SetWeights.h>
 
 //****New RRT package
 #include <upo_rrt_planners/ros/RRT_ros_wrapper.h>
+//For navigation with FCN prediction
+#include <upo_rrt_planners/ros/RRT_ros_wrapper3.h>
 
 
 namespace upo_nav {
@@ -327,6 +329,10 @@ namespace upo_nav {
 
 	  //RRT planner
 	  upo_RRT_ros::RRT_ros_wrapper* rrt_planner_;
+
+	  //RRT planner with FCN prediction
+	  upo_RRT_ros::RRT_ros_wrapper3* rrt_planner3_;
+	  int rrt_planning_type_; //1->regular, 2->FCN prediction
 
 
       //boost::recursive_mutex configuration_mutex_;

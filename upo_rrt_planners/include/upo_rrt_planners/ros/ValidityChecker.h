@@ -20,10 +20,6 @@
 
 //ROS
 #include <ros/ros.h>
-#include <costmap_2d/costmap_2d.h>
-#include <costmap_2d/costmap_2d_ros.h>
-#include <costmap_2d/cost_values.h>
-#include <costmap_2d/costmap_2d_publisher.h>
 #include <visualization_msgs/Marker.h>
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/Pose2D.h>
@@ -37,8 +33,8 @@
 //Features for navigation cost functions
 #include <navigation_features/nav_features.h>
 
-//Boost
-#include <boost/thread.hpp>  /* Mutex */
+//Mutex
+#include <mutex> 
 
 
 namespace upo_RRT_ros
@@ -48,7 +44,7 @@ namespace upo_RRT_ros
 	{
 		public:
 		
-		ValidityChecker(bool use_fc_costmap, tf::TransformListener* tf, const costmap_2d::Costmap2D* loc_costmap, const costmap_2d::Costmap2D* glob_costmap, std::vector<geometry_msgs::Point>* footprint, float insc_radius, float size_x, float size_y, unsigned int dimensions, int distType); 
+		ValidityChecker(bool use_fc_costmap, tf::TransformListener* tf, std::vector<geometry_msgs::Point>* footprint, float insc_radius, float size_x, float size_y, float res, unsigned int dimensions, int distType); 
 
 		virtual ~ValidityChecker();
 		
@@ -101,9 +97,9 @@ namespace upo_RRT_ros
 		
 		features::NavFeatures* 				navfeatures_;
 		
-		const costmap_2d::Costmap2D* 		loc_costmap_;
-		const costmap_2d::Costmap2D* 		glo_costmap_;
-		bool 								use_global_costmap_;
+		//const costmap_2d::Costmap2D* 		loc_costmap_;
+		//const costmap_2d::Costmap2D* 		glo_costmap_;
+		//bool 								use_global_costmap_;
 		tf::TransformListener*				tf_;
 		
 		unsigned int 						dimensions_;

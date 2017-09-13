@@ -66,12 +66,12 @@
   </node>
 
    <!--Rviz tool visualizer -->
-   <node pkg="rviz" type="rviz" name="rviz" args="-d $(find upo_launchers)/upo_navigation.rviz" />
+   <node pkg="rviz" type="rviz" name="rviz" args="-d $(find upo_launchers)/rrt_navigation.rviz" />
 
      <!-- launch-prefix="xterm -e gdb (doble hyphen)args"-->
-	 <node pkg="upo_navigation" type="upo_navigation_node" name="upo_navigation_node" output="screen" launch-prefix="xterm -e gdb --args" >
+	 <node pkg="upo_rrt_planners" type="rrt_ros_wrapper_node" name="rrt_ros_wrapper_node" output="screen" launch-prefix="xterm -e gdb --args" >
 
-		<remap from="/upo_navigation_simple/goal" to="/move_base_simple/goal" />
+		<!--remap from="/upo_navigation_simple/goal" to="/move_base_simple/goal" /-->
 		<rosparam file="$(find upo_launchers)/params_sim/navigation_params.yaml" command="load"  />
 		<rosparam file="$(find upo_launchers)/params_sim/costmap_common_params.yaml" command="load" ns="global_costmap" />
 		<rosparam file="$(find upo_launchers)/params_sim/costmap_common_params.yaml" command="load" ns="local_costmap" />
@@ -81,6 +81,6 @@
 	</node>
 
 
-  <param name="/waypoint_defs" value="cfg/$(arg scenario)_waypoint_defs.yaml"/>
+  <!--param name="/waypoint_defs" value="cfg/$(arg scenario)_waypoint_defs.yaml"/-->
 
 </launch>

@@ -11,25 +11,14 @@
 
 
 
-upo_RRT_ros::RRT_ros_wrapper::RRT_ros_wrapper() :
-global_costmap_ros_(NULL), local_costmap_ros_(NULL), tf_(NULL) {}
+upo_RRT_ros::RRT_ros_wrapper::RRT_ros_wrapper() : tf_(NULL) {}
 
 
 
-upo_RRT_ros::RRT_ros_wrapper::RRT_ros_wrapper(tf::TransformListener* tf, costmap_2d::Costmap2DROS* global_costmap_ros, costmap_2d::Costmap2DROS* local_costmap_ros)
+upo_RRT_ros::RRT_ros_wrapper::RRT_ros_wrapper(tf::TransformListener* tf)
 {
 	tf_ = tf;
-	global_costmap_ros_ = global_costmap_ros;
-	local_costmap_ros_ = local_costmap_ros;
 	rrt_planner_ = NULL;
-
-  	//initialize the copy of the costmaps the RRT will be using
-  	if(global_costmap_ros_)
-		global_costmap_ = global_costmap_ros_->getCostmap();
-	else
-		global_costmap_ = NULL;
-		
-	local_costmap_ = local_costmap_ros_->getCostmap();
 
 	ros::NodeHandle n("~/RRT_ros_wrapper");
 	//Dynamic reconfigure
@@ -42,20 +31,10 @@ upo_RRT_ros::RRT_ros_wrapper::RRT_ros_wrapper(tf::TransformListener* tf, costmap
 }
 
 
-upo_RRT_ros::RRT_ros_wrapper::RRT_ros_wrapper(tf::TransformListener* tf, costmap_2d::Costmap2DROS* global_costmap_ros, costmap_2d::Costmap2DROS* local_costmap_ros, float controller_freq, float path_stddev, int planner_type)
+upo_RRT_ros::RRT_ros_wrapper::RRT_ros_wrapper(tf::TransformListener* tf, float controller_freq, float path_stddev, int planner_type)
 {
 	tf_ = tf;
-	global_costmap_ros_ = global_costmap_ros;
-	local_costmap_ros_ = local_costmap_ros;
 	rrt_planner_ = NULL;
-
-  	//initialize the copy of the costmaps the RRT will be using
-  	if(global_costmap_ros_)
-		global_costmap_ = global_costmap_ros_->getCostmap();
-	else
-		global_costmap_ = NULL;
-		
-	local_costmap_ = local_costmap_ros_->getCostmap();
 
 	ros::NodeHandle n("~/RRT_ros_wrapper");
 	//Dynamic reconfigure
@@ -87,7 +66,7 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 	printf("RRT_ros_wrapper. rrt_planner_type = %i\n",  rrt_planner_type_);
       	
    	private_nh.param<bool>("use_fc_in_costmap", use_fc_costmap_, false); 
-	printf("RRT_ros_wrapper. use_fc_in_costmap = %i\n",  use_fc_costmap_);
+	//printf("RRT_ros_wrapper. use_fc_in_costmap = %i\n",  use_fc_costmap_);
 	
 	//RRT 
 	double aux;
@@ -182,7 +161,7 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 	private_nh.param<double>("rrt_size_y", aux, 5.0);
 	size_y_ = (float)aux;
 	printf("RRT_ros_wrapper. size_y_ = %.2f\n",  size_y_);
-	private_nh.param<double>("rrt_xy_resolution", aux, 0.1);
+	private_nh.param<double>("rrt_xy_resolution", aux, 0.05);
 	xy_res_ = (float)aux;
 	private_nh.param<double>("rrt_yaw_resolution", aux, 0.02);
 	yaw_res_ = (float)aux;
@@ -211,8 +190,8 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
   	private_nh.param<bool>("visualize_rrt_tree", visualize_tree_, false);
    	private_nh.param<bool>("visualize_nav_costmap", visualize_costmap_, false);
 	private_nh.param<bool>("show_rrt_statistics", show_statistics_, false);
-	private_nh.param<double>("equal_path_percentage", aux, 0.5);
-	equal_path_percentage_ = (float)aux;
+	//private_nh.param<double>("equal_path_percentage", aux, 0.5);
+	//equal_path_percentage_ = (float)aux;
 	private_nh.param<double>("rrt_interpolate_path_dist", aux, 0.05);
 	interpolate_path_distance_ = (float)aux;
 	private_nh.param<bool>("show_intermediate_states", show_intermediate_states_, false);
@@ -263,7 +242,7 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 	inscribed_radius_  = (float)robot_radius;
 	circumscribed_radius_ = (float)robot_radius;
 	//printf("Before initializing checker!!\n");
-	checker_ = new ValidityChecker(use_fc_costmap_, tf_, local_costmap_, global_costmap_, &footprint_, inscribed_radius_, size_x_, size_y_, dimensions_, distanceType_);
+	checker_ = new ValidityChecker(use_fc_costmap_, tf_, &footprint_, inscribed_radius_, size_x_, size_y_, xy_res_, dimensions_, distanceType_);
 	//printf("After initializing checker!!\n");
 	
 
@@ -271,6 +250,7 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 	gmm_samples_client_ = n.serviceClient<gmm_sampling::GetApproachGMMSamples>("/gmm_sampling/GetApproachGMMSamples");
 	//GMM probs service client
 	gmm_probs_client_ = n.serviceClient<gmm_sampling::GetApproachGMMProbs>("/gmm_sampling/GetApproachGMMProbs");
+	
 	
 	
 	switch(rrt_planner_type_)
@@ -363,6 +343,10 @@ void upo_RRT_ros::RRT_ros_wrapper::setup()
 		rrt_planner_->setPathBias_stddev(full_path_stddev_);
 		//rrt_planner_->setGoalBias(0.0);
 	}
+	
+	//Planning server
+	ros::NodeHandle nhandle("RRT_ros_wrapper");
+	plan_srv_ = nhandle.advertiseService("makeRRTPlan", &upo_RRT_ros::RRT_ros_wrapper::makePlanService, this);
 	
 }
 
@@ -489,8 +473,8 @@ void upo_RRT_ros::RRT_ros_wrapper::setup_controller(float controller_freq, float
   	private_nh.param<bool>("visualize_rrt_tree", visualize_tree_, false);
    	private_nh.param<bool>("visualize_nav_costmap", visualize_costmap_, false);
 	private_nh.param<bool>("show_rrt_statistics", show_statistics_, false);
-	private_nh.param<double>("equal_path_percentage", aux, 0.5);
-	equal_path_percentage_ = (float)aux;
+	//private_nh.param<double>("equal_path_percentage", aux, 0.5);
+	//equal_path_percentage_ = (float)aux;
 	private_nh.param<double>("rrt_interpolate_path_dist", aux, 0.05);
 	interpolate_path_distance_ = (float)aux;
 	private_nh.param<bool>("show_intermediate_states", show_intermediate_states_, false);
@@ -547,7 +531,7 @@ void upo_RRT_ros::RRT_ros_wrapper::setup_controller(float controller_freq, float
 	inscribed_radius_  = (float)robot_radius;
 	circumscribed_radius_ = (float)robot_radius;
 
-	checker_ = new ValidityChecker(use_fc_costmap_, tf_, local_costmap_, global_costmap_, &footprint_, inscribed_radius_, size_x_, size_y_, dimensions_, distanceType_);
+	checker_ = new ValidityChecker(use_fc_costmap_, tf_, &footprint_, inscribed_radius_, size_x_, size_y_, xy_res_, dimensions_, distanceType_);
 	
 	switch(rrt_planner_type_)
 	{
@@ -608,6 +592,8 @@ void upo_RRT_ros::RRT_ros_wrapper::setup_controller(float controller_freq, float
 	rrt_planner_->setPathBias_stddev(full_path_stddev_);
 	//rrt_planner_->setGoalBias(0.0);
 	
+	//Planning server
+	plan_srv_ = private_nh.advertiseService("makeRRTPlan", &upo_RRT_ros::RRT_ros_wrapper::makePlanService, this);
 	
 }
 
@@ -796,7 +782,6 @@ bool upo_RRT_ros::RRT_ros_wrapper::set_approaching_gmm_sampling(float orientatio
 
 std::vector<geometry_msgs::PoseStamped> upo_RRT_ros::RRT_ros_wrapper::RRT_plan(geometry_msgs::Pose2D start, geometry_msgs::Pose2D goal, float start_lin_vel, float start_ang_vel)
 {
-	
 	gmm_mutex_.lock();
 	std::vector< std::pair<float,float> > samples2 = gmm_samples_;
 	gmm_mutex_.unlock();
@@ -839,8 +824,9 @@ std::vector<geometry_msgs::PoseStamped> upo_RRT_ros::RRT_ros_wrapper::RRT_plan(g
 		}
 		//publish_gmm_costmap(gmm_person_);
 	}
-	printf("RRT_plan. GMMBiasing: %i. Setting samples in RRTplanner. size: %u\n", gmm_biasing_, (unsigned int)new_samples.size());
+	//printf("RRT_plan. GMMBiasing: %i. Setting samples in RRTplanner. size: %u\n", gmm_biasing_, (unsigned int)new_samples.size());
 	rrt_planner_->set_gmm_sampling(gmm_biasing_, gmm_bias_, new_samples);	
+	
 	
 	
 	if(!rrt_planner_->setStartAndGoal(start.x, start.y, start.theta, goal.x, goal.y, goal.theta)){
@@ -906,7 +892,6 @@ std::vector<geometry_msgs::PoseStamped> upo_RRT_ros::RRT_ros_wrapper::RRT_plan(g
 	
 
 	//-------- GET THE RRT PATH ------------------------------
-
 	boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
 	//reconf_mutex_.lock();
 
@@ -1115,6 +1100,68 @@ std::vector<geometry_msgs::PoseStamped> upo_RRT_ros::RRT_ros_wrapper::RRT_plan(g
 
 	return rrt_plan_;
 }
+
+
+
+bool upo_RRT_ros::RRT_ros_wrapper::makePlanService(upo_rrt_planners::MakePlan::Request &req, upo_rrt_planners::MakePlan::Response &res)
+{
+	geometry_msgs::PoseStamped p = req.goal;
+	//printf("makePlanService. x:%.2f, y:%.2f, z:%.2f, w:%.2f\n", p.pose.orientation.x, p.pose.orientation.y, p.pose.orientation.z, p.pose.orientation.w);
+	p = checker_->transformPoseTo(p, "base_link", false);
+	
+	geometry_msgs::Pose2D start;
+	start.x = 0.0;
+	start.y = 0.0;
+	start.theta = 0.0;
+	geometry_msgs::Pose2D goal;
+	goal.x = p.pose.position.x;
+	goal.y = p.pose.position.y;
+	goal.theta = tf::getYaw(p.pose.orientation);	
+	
+	std::vector<geometry_msgs::PoseStamped> path = RRT_plan(start, goal, 0.0, 0.0);
+	
+	
+	//Visualize the tree nodes of the resulting path
+	if(!path.empty())
+	{
+		visualization_msgs::Marker points;
+		  
+		points.header.frame_id = "base_link"; //robot_base_frame_; 
+		points.header.stamp = ros::Time::now();
+		points.ns = "basic_shapes";
+		points.id = 0;
+		points.type = visualization_msgs::Marker::SPHERE_LIST;
+		points.action = visualization_msgs::Marker::ADD;
+		points.pose.position.x = 0.0;
+		points.pose.position.y = 0.0;
+		points.pose.position.z = 0.1; 
+		points.scale.x = 0.12;
+		points.scale.y = 0.12;
+		points.color.r = 0.0f;
+		points.color.g = 1.0f;
+		points.color.b = 0.0f;
+		points.color.a = 1.0;
+		points.lifetime = ros::Duration();
+			
+		for(unsigned int i=0; i<path.size(); i++)
+		{
+			geometry_msgs::Point p = path[i].pose.position;
+			points.points.push_back(p);
+		}
+		path_points_pub_.publish(points);
+	}
+	
+	
+	res.ok = true;
+	res.path = path;
+	return true;
+}
+
+
+
+
+
+
 
 
 /**
@@ -1648,8 +1695,8 @@ void upo_RRT_ros::RRT_ros_wrapper::publish_feature_costmap(ros::Time t)
 		//Get the robot coordinates in odom frame
 		tf::StampedTransform transform;
 		try{
-			tf_->waitForTransform("/odom", "/base_link", ros::Time(0), ros::Duration(1.0));
-			tf_->lookupTransform("/odom", "/base_link",  t, transform);
+			tf_->waitForTransform("/odom", "/base_link", ros::Time(0), ros::Duration(2.0));
+			tf_->lookupTransform("/odom", "/base_link",  ros::Time(0), transform); //t
 		}
 		catch (tf::TransformException ex){
 			ROS_ERROR("Publish_feature_costmap. TF exception: %s",ex.what());
@@ -1657,10 +1704,10 @@ void upo_RRT_ros::RRT_ros_wrapper::publish_feature_costmap(ros::Time t)
 	  
 		nav_msgs::OccupancyGrid cmap;
 		cmap.header.frame_id = "odom"; //"base_link";
-		cmap.header.stamp = t;
+		cmap.header.stamp = ros::Time::now(); //t;
 		//time map_load_time. The time at which the map was loaded
-		cmap.info.map_load_time = t;
-		double cell_size = 0.25; // m/cell
+		cmap.info.map_load_time = ros::Time::now(); //t;
+		double cell_size = 0.10; // m/cell 0.25
 		//float32 resolution. The map resolution [m/cell]
 		cmap.info.resolution = cell_size;  //0.25 m/cell
 		//uint32 width. Map width [cells]
@@ -1689,9 +1736,10 @@ void upo_RRT_ros::RRT_ros_wrapper::publish_feature_costmap(ros::Time t)
 					robotp.pose.position.x = (transform.getOrigin().x()-size_x_ + cell_size*j) + (cell_size/2.0); //i
 					robotp.pose.position.y = (transform.getOrigin().y()-size_y_ + cell_size*i) + (cell_size/2.0); //j
 					robotp.pose.position.z = 0.0;
-					tf::quaternionTFToMsg(transform.getRotation(), robotp.pose.orientation);
+					//tf::quaternionTFToMsg(transform.getRotation(), robotp.pose.orientation);
+					robotp.pose.orientation = tf::createQuaternionMsgFromYaw(tf::getYaw(transform.getRotation()));
 					
-					geometry_msgs::PoseStamped robot_frame_pose = checker_->transformPoseTo(robotp, "base_link", true);
+					geometry_msgs::PoseStamped robot_frame_pose = checker_->transformPoseTo(robotp, "base_link", true); //true
 					upo_RRT::State* s = new upo_RRT::State(robot_frame_pose.pose.position.x, robot_frame_pose.pose.position.y, tf::getYaw(robot_frame_pose.pose.orientation)); 
 					cost = checker_->getCost(s);
 					//printf("publish_feature_map. x:%.2f, y:%.2f, cost:%.2f\n", robotp.pose.position.x, robotp.pose.position.y, cost);

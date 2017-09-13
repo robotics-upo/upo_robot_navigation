@@ -6,10 +6,7 @@
 
 //ROS
 #include <ros/ros.h>
-#include <costmap_2d/costmap_2d.h>
-#include <costmap_2d/costmap_2d_ros.h>
-#include <costmap_2d/cost_values.h>
-#include <costmap_2d/costmap_2d_publisher.h>
+#include <ros/package.h>
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
 #include <geometry_msgs/PointStamped.h>
@@ -32,8 +29,8 @@
 #include "pcl_ros/transforms.h"
 #include <pcl/register_point_struct.h>
 
-//Boost
-#include <boost/thread.hpp>  // Mutex 
+//Mutex
+#include <mutex>  
 
 //OpenCV
 #include <opencv2/opencv.hpp>
@@ -41,17 +38,22 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 
-//UVA features
-//#include <navigation_features/uva_features.h>
+
 
 //Service msg
-//#include <navigation_features/SetWeights.h>
+#include <navigation_features/SetWeights.h>
 #include <navigation_features/SetLossCost.h>
+#include <navigation_features/SetScenario.h>
+#include <navigation_features/PoseValid.h>
+#include <navigation_features/GetFeatureCount.h>
+#include <navigation_features/InitWeights.h>
 
 //Dynamic reconfigure
 #include <dynamic_reconfigure/server.h>
 #include <navigation_features/nav_featuresConfig.h>
 
+
+using namespace std;
 
 
 namespace features {
@@ -74,9 +76,11 @@ namespace features {
 
 			NavFeatures();
 			
-			NavFeatures(tf::TransformListener* tf, float size_x, float size_y);
+			NavFeatures(tf::TransformListener* tf, float size_x, float size_y, float res);
 			
-			NavFeatures(tf::TransformListener* tf, const costmap_2d::Costmap2D* loc_costmap, const costmap_2d::Costmap2D* glob_costmap, std::vector<geometry_msgs::Point>* footprint, float insc_radius, float size_x, float size_y);
+			//NavFeatures(tf::TransformListener* tf, const costmap_2d::Costmap2D* loc_costmap, const costmap_2d::Costmap2D* glob_costmap, std::vector<geometry_msgs::Point>* footprint, float insc_radius, float size_x, float size_y);
+
+			NavFeatures(tf::TransformListener* tf, vector<geometry_msgs::Point>* footprint, float insc_radius, float size_x, float size_y, float res);
 
 			~NavFeatures();
 
@@ -84,11 +88,13 @@ namespace features {
 
 			bool poseValid(geometry_msgs::PoseStamped* pose);
 
-			bool poseValid_projection(geometry_msgs::PoseStamped* pose);
+			//bool poseValid_projection(geometry_msgs::PoseStamped* pose);
 
 			float getCost(geometry_msgs::PoseStamped* s);
 		
 			std::vector<float> getFeatures(geometry_msgs::PoseStamped* s);
+
+			std::vector<float> getPathFeatureCount(vector<geometry_msgs::PoseStamped>* path);
 			
 			void goalCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
 			
@@ -107,8 +113,6 @@ namespace features {
 
 			//Implemented for learning purposes
 			void setPeople(upo_msgs::PersonPoseArrayUPO p);
-
-			float costmapPointCost(float x, float y) const;
 		
 			//Feature: Distance to the goal
 			float goalDistFeature(geometry_msgs::PoseStamped* s);
@@ -134,16 +138,24 @@ namespace features {
 			
 			void setUpoFeatureSet(int s) {
 				upo_featureset_ = s;
-				//use_uva_features_ = false;
 			}
 		
 			void setWeights(std::vector<float> we);
 
 			void setGoal(geometry_msgs::PoseStamped g); 
 
-			//Service
-			//bool setWeightsService(navigation_features::SetWeights::Request  &req, navigation_features::SetWeights::Response &res);
+			void setObstacles(sensor_msgs::PointCloud2 obs);
+
+			void setScenario(sensor_msgs::PointCloud2 obs, upo_msgs::PersonPoseArrayUPO people, geometry_msgs::PoseStamped goal);
+
+
+			//Services
+			bool setWeightsService(navigation_features::SetWeights::Request  &req, navigation_features::SetWeights::Response &res);
+			bool initializeWeightsService(navigation_features::InitWeights::Request  &req, navigation_features::InitWeights::Response &res);
 			bool setLossService(navigation_features::SetLossCost::Request &req, navigation_features::SetLossCost::Response &res);
+			bool setScenarioService(navigation_features::SetScenario::Request  &req, navigation_features::SetScenario::Response &res);
+			bool isPoseValidService(navigation_features::PoseValid::Request &req, navigation_features::PoseValid::Response &res);
+			bool getFeatureCountService(navigation_features::GetFeatureCount::Request &req, navigation_features::GetFeatureCount::Response &res);
 			
 			void set_use_loss_func(bool s) { 
 				loss_mutex_.lock();
@@ -164,10 +176,12 @@ namespace features {
 			
 			
 			//For laser projection
-			void setupProjection(std::string topic, int pc_type);
+			void setupMapProjection();
+			void setupNoMapProjection();
 			float distance_functions(const float distance, const dist_type type);
 			void updateDistTransform();
-			std::vector<int> worldToMap(geometry_msgs::Point32* world_point,nav_msgs::MapMetaData* map_metadata);
+			vector<int> worldToMap(geometry_msgs::Point32* world_point,nav_msgs::MapMetaData* map_metadata);
+			vector<int> BaseLinkWorldToImg(geometry_msgs::Point32* point);
 
 
 		private:
@@ -192,36 +206,28 @@ namespace features {
 			
 			ros::Publisher 						pub_gaussian_markers_;
 			
-			std::vector<gaussian> 				gaussians_;
-			boost::mutex 						gaussianMutex_;
+			vector<gaussian> 					gaussians_;
+			mutex 								gaussianMutex_;
 
 			//For laser projection
-			bool 								use_laser_projection_;
 			ros::Subscriber 					sub_pc_;
 			cv::Mat 							map_image_;
 			cv::Mat 							distance_transform_;
 			nav_msgs::MapMetaData 				map_metadata_;
 			double 								resolution_;
-			std::vector<float> 					origin_;
+			vector<float>	 					origin_;
 			laser_geometry::LaserProjection 	projector_;
 			sensor_msgs::PointCloud2 			laser_cloud_;
-			boost::mutex 						laserMutex_;
-			boost::mutex 						dtMutex_;
+			mutex 								laserMutex_;
+			mutex 								dtMutex_;
 			int 								people_paint_area_; // the amount of pixels to be painted over at the presence of people
 			float 								max_cost_obs_;
 			
-			
-			//bool 								use_uva_features_;
-			//uva_cost_functions::UvaFeatures*	uva_features_;
+			bool 								use_global_map_;
 
-			bool 								no_costmaps_;
-		
 			
-			bool 								use_global_costmap_;
-			const costmap_2d::Costmap2D* 		costmap_local_;
-			const costmap_2d::Costmap2D* 		costmap_global_;
 			tf::TransformListener* 				tf_listener_;
-			std::vector<geometry_msgs::Point>* 	myfootprint_;
+			vector<geometry_msgs::Point>* 		myfootprint_;
 			float 								insc_radius_robot_;
 			geometry_msgs::PoseStamped 			goal_;
 			int 								goal_type_;
@@ -232,10 +238,10 @@ namespace features {
 			ros::NodeHandle 					nh_;
 		
 			// list of person objects	
-			std::vector<upo_msgs::PersonPoseUPO> people_;
+			vector<upo_msgs::PersonPoseUPO> people_;
 			ros::Subscriber 					sub_people_;
-			boost::mutex 						peopleMutex_;
-			std::string 						people_frame_id_;
+			mutex 								peopleMutex_;
+			string		 						people_frame_id_;
 			
 			//Id of the interaction target (if he/she exists)
 			int									it_id_;
@@ -252,13 +258,12 @@ namespace features {
 		
 			//parameters of the Gaussian functions
 			float 								amp_;
-			std::vector<float> 					sigmas_;
+			vector<float>	 					sigmas_;
 		
 			//Weights to balance the costs
-			std::vector<float> 					w_;
+			vector<float>	 					w_;
 
-			//service
-			//ros::ServiceServer 				weights_srv_;
+			
 			
 			//upo feature set to be used
 			int 								upo_featureset_;
@@ -266,15 +271,24 @@ namespace features {
 			//Only for learning algorithms
 			ros::ServiceServer					loss_srv_;
 			bool								use_loss_func_;
-			std::vector<geometry_msgs::PoseStamped> demo_path_;
-			boost::mutex						loss_mutex_;
+			vector<geometry_msgs::PoseStamped> 	demo_path_;
+			mutex								loss_mutex_;
+			
+			//Service for point validity checking
+			ros::ServiceServer					valid_srv_;
+
+			//services
+			ros::ServiceServer 					weights_srv_;
+			ros::ServiceServer					init_weights_srv_;
+			ros::ServiceServer					scenario_srv_;
+			ros::ServiceServer					features_srv_;
 			
 			//Dynamic reconfigure
 			boost::recursive_mutex configuration_mutex_;
+			//mutex								configuration_mutex_;
 			dynamic_reconfigure::Server<navigation_features::nav_featuresConfig> *dsrv_;
 			void reconfigureCB(navigation_features::nav_featuresConfig &config, uint32_t level);
-			//NavFeatures::nav_featuresConfig last_config_;
-			//NavFeatures::nav_featuresConfig default_config_;
+			
 
 	};
 

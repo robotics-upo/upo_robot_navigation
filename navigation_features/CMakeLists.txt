@@ -1,12 +1,14 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(navigation_features)
 
+## Add support for C++11, supported in ROS Kinetic and newer
+add_definitions(-std=c++11)
+
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   cmake_modules
-  costmap_2d
   geometry_msgs
   laser_geometry
   pcl_conversions
@@ -24,7 +26,7 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 ## System dependencies are found with CMake's conventions
-find_package(Boost REQUIRED COMPONENTS system)
+#find_package(Boost REQUIRED COMPONENTS system)
 find_package(Eigen3 REQUIRED)
 find_package(PCL REQUIRED)
 find_package(OpenCV REQUIRED)
@@ -69,8 +71,12 @@ find_package(OpenCV REQUIRED)
 ## Generate services in the 'srv' folder
  add_service_files(
    FILES
-   #SetWeights.srv
+   SetWeights.srv
    SetLossCost.srv
+   PoseValid.srv
+   SetScenario.srv
+   GetFeatureCount.srv
+   InitWeights.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -119,8 +125,7 @@ catkin_package(
   LIBRARIES 
 	nav_features
   CATKIN_DEPENDS 
-	cmake_modules 
-	costmap_2d 
+	cmake_modules  
 	geometry_msgs 
 	laser_geometry 
 	pcl_conversions 
@@ -159,7 +164,6 @@ add_definitions(${EIGEN_DEFINITIONS})
 ## Declare a C++ library
  add_library(nav_features
    src/nav_features.cpp
-   #src/uva_features.cpp
  )
 
 ## Add cmake target dependencies of the library

@@ -6,22 +6,22 @@
 #include <sys/time.h>
 
 
+using namespace std;
+
 features::NavFeatures::NavFeatures() {}
 
-features::NavFeatures::NavFeatures(tf::TransformListener* tf, float size_x, float size_y) 
+features::NavFeatures::NavFeatures(tf::TransformListener* tf, float size_x, float size_y, float res) 
 {
 	tf_listener_ = tf;
-	size_x_ = size_x;
-	size_y_ = size_y;
-	max_planning_dist_ = sqrt((size_x_*2*size_x_*2)+(size_y_*2*size_y_*2));
+	size_x_ = size_x*2.0;  	//m
+	size_y_ = size_y*2.0;  	//m	
+	resolution_ = res;		//m/cell	
+	max_planning_dist_ = sqrt((size_x_*size_x_)+(size_y_*size_y_));
 	insc_radius_robot_ = 0.40;
 	
 	use_loss_func_ = false;
 	demo_path_.clear();
 	
-	//Advertise service
-	//ros::NodeHandle n("navigation_features");
-	//weights_srv_ = n.advertiseService("setWeights", &features::NavFeatures::setWeightsService, this);
 
 	setParams();
 
@@ -30,33 +30,20 @@ features::NavFeatures::NavFeatures(tf::TransformListener* tf, float size_x, floa
 
 
 
-features::NavFeatures::NavFeatures(tf::TransformListener* tf, const costmap_2d::Costmap2D* loc_costmap, const costmap_2d::Costmap2D* glob_costmap, std::vector<geometry_msgs::Point>* footprint, float insc_radius, float size_x, float size_y)
+features::NavFeatures::NavFeatures(tf::TransformListener* tf, vector<geometry_msgs::Point>* footprint, float insc_radius, float size_x, float size_y, float res)
 {
 	
 	tf_listener_ = tf;
 	insc_radius_robot_ = insc_radius;
-	size_x_ = size_x;
-	size_y_ = size_y;
-	max_planning_dist_ = sqrt((size_x_*2*size_x_*2)+(size_y_*2*size_y_*2));
-	//max_dist_2_ = (size_x_*2*size_x_*2)+(size_y_*2*size_y_*2);
+	size_x_ = size_x*2.0;  	//m
+	size_y_ = size_y*2.0;  	//m	
+	resolution_ = res;		//m/cell	
+	max_planning_dist_ = sqrt((size_x_*size_x_)+(size_y_*size_y_));
 	
-	costmap_local_ = loc_costmap;
-	if(glob_costmap) {
-		costmap_global_ = glob_costmap;
-		use_global_costmap_ = true;
-	} else {
-		costmap_global_ = NULL;
-		use_global_costmap_ = false;
-	}
 	myfootprint_ = footprint;
 	
 	use_loss_func_ = false;
 	demo_path_.clear();
-
-	//Advertise service
-	//ros::NodeHandle n("navigation_features");
-	//weights_srv_ = n.advertiseService("setWeights", &features::NavFeatures::setWeightsService, this);
-	
 	
 	setParams();
 
@@ -84,7 +71,7 @@ void features::NavFeatures::setParams()
 	{
 		char buf[10];
 		sprintf(buf, "w%u", i);
-		std::string st = std::string(buf);
+		string st = string(buf);
 				
 		if(n.hasParam(st.c_str())){
 			double wg = 0.0;
@@ -100,34 +87,20 @@ void features::NavFeatures::setParams()
 	
 	n.param<int>("upo_featureset", upo_featureset_, 0);
 	
-	n.param<bool>("no_costmaps", no_costmaps_, false);
+	n.param<bool>("use_global_map", use_global_map_, false);
 	
-	n.param<bool>("use_laser_projection", use_laser_projection_, true);
-	std::string pc_topic;
-	n.param<std::string>("pc_topic", pc_topic, std::string("/scan360/point_cloud")); 
+	string pc_topic;
+	n.param<string>("pc_topic", pc_topic, string("/scan360/point_cloud")); 
 	int pc_type;
 	n.param<int>("pc_type", pc_type, 2); //1->PointCloud, 2->PointCloud2
 	
-	/*n.param<bool>("use_uva_features", use_uva_features_, false);
+		
+	max_cost_obs_ = distance_functions(0.0, INVERSE_DEC); //EXP_DEC //INVERSE_DEC
+	if(use_global_map_)
+		setupMapProjection();
+	else
+		setupNoMapProjection();
 	
-	if(use_uva_features_)
-	{
-		use_laser_projection_ = true;
-		uva_features_ = new uva_cost_functions::UvaFeatures(tf_listener_);
-		if(use_laser_projection_) {
-			max_cost_obs_ = distance_functions(0.0, INVERSE_DEC); //EXP_DEC //INVERSE_DEC
-			setupProjection(pc_topic, pc_type);
-		}
-		
-	} else {*/
-		
-		//If we use the laser projection onto the static map
-		if(use_laser_projection_) {
-			max_cost_obs_ = distance_functions(0.0, INVERSE_DEC); //EXP_DEC //INVERSE_DEC
-			setupProjection(pc_topic, pc_type);
-		
-		}
-	//}
 	
 	double front;
 	n.param<double>("stddev_person_front", front, 1.2);
@@ -159,14 +132,21 @@ void features::NavFeatures::setParams()
 	
 	it_remove_gauss_ = false;
 	
-	
+	//Goal subscription
 	//n.param<int>("goal_type", goal_type_, 1); //1->RRT, 2->A*
 	//if(goal_type_ == 1)
 		goal_sub_ = nh_.subscribe("/rrt_goal", 1, &NavFeatures::goalCallback, this);
 	//else
 		//goal_sub_ = nh_.subscribe("/move_base/current_goal", 1, &NavFeatures::goalAstarCallback, this);
 	
+	//People subscription
 	sub_people_ = nh_.subscribe("/people/navigation", 1, &NavFeatures::peopleCallback, this); 
+
+	//Obstacles subscription
+	if(pc_type == 1) 	//pointCloud
+		sub_pc_ = nh_.subscribe(pc_topic, 1, &NavFeatures::pcCallback, this);
+	else   				//pointCloud2
+		sub_pc_ = nh_.subscribe(pc_topic, 1, &NavFeatures::pc2Callback, this);
 	
 	
 	pub_gaussian_markers_ = n.advertise<visualization_msgs::MarkerArray>("gaussian_markers", 5);
@@ -174,6 +154,12 @@ void features::NavFeatures::setParams()
 	ros::NodeHandle nd("navigation_features");
 	//ros::ServiceServer service = nd.advertiseService("setApproachingIT", setApproachingIT);
 	loss_srv_ = nd.advertiseService("set_use_loss_func", &features::NavFeatures::setLossService, this);
+	valid_srv_ = nd.advertiseService("is_pose_valid", &features::NavFeatures::isPoseValidService, this);
+	weights_srv_ = nd.advertiseService("setWeights", &features::NavFeatures::setWeightsService, this);
+	init_weights_srv_ = nd.advertiseService("initWeights", &features::NavFeatures::initializeWeightsService, this);
+	scenario_srv_ = nd.advertiseService("setScenario", &features::NavFeatures::setScenarioService, this);
+	features_srv_ = nd.advertiseService("getPathFeatureCount", &features::NavFeatures::getFeatureCountService, this);
+
 
 	//Dynamic reconfigure
 	dsrv_ = new dynamic_reconfigure::Server<navigation_features::nav_featuresConfig>(n); //ros::NodeHandle("~")
@@ -184,20 +170,17 @@ void features::NavFeatures::setParams()
 
 
 features::NavFeatures::~NavFeatures() {
-	//if(use_uva_features_)
-	//	delete uva_features_;
+	
 }
 
 
  void features::NavFeatures::reconfigureCB(navigation_features::nav_featuresConfig &config, uint32_t level){
+
     boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
+	//configuration_mutex_.lock();
     
     upo_featureset_ = config.upo_featureset;
-    /*use_uva_features_ = config.use_uva_features;
-	if(use_uva_features_ && uva_features_ == NULL) {
-		uva_features_ = new uva_cost_functions::UvaFeatures(tf_listener_);
-	}*/
-	use_laser_projection_ = config.use_laser_projection;
+	//use_global_map_ = config.use_global_map;
 	sigmas_[0] = config.stddev_person_front;
 	sigmas_[1] = config.stddev_person_aside;
 	sigmas_[2] = sigmas_[1];
@@ -210,27 +193,112 @@ features::NavFeatures::~NavFeatures() {
 	it_id_ = config.interaction_target_id;
 	it_remove_gauss_ = config.it_remove_gaussian;
 	//printf("upo_featureset. it_id:%i\n", it_id_);
+
+	//configuration_mutex_.unlock();
 }
 
 
-/*
+//Service
 bool features::NavFeatures::setWeightsService(navigation_features::SetWeights::Request  &req, navigation_features::SetWeights::Response &res)
 {
 	setWeights(req.weights);
-
 	return true;
 }
-*/
 
 
-//service
+
+//Service
 bool features::NavFeatures::setLossService(navigation_features::SetLossCost::Request &req, navigation_features::SetLossCost::Response &res)
 {
+	printf("NavFeatures. Enabling loss function: %i\n", (int)req.use_loss_func);
 	set_use_loss_func(req.use_loss_func); 
 	set_demo_path(req.demo_path);
 
 	return true;
 }
+
+//Service
+bool features::NavFeatures::isPoseValidService(navigation_features::PoseValid::Request &req, navigation_features::PoseValid::Response &res)
+{
+	geometry_msgs::PoseStamped p = req.pose;
+	res.ok = poseValid(&p);
+}
+
+//Service
+bool features::NavFeatures::setScenarioService(navigation_features::SetScenario::Request &req, navigation_features::SetScenario::Response &res)
+{
+	setScenario(req.obstacles, req.people, req.goal); 
+
+	return true;
+}
+
+//Service
+bool features::NavFeatures::getFeatureCountService(navigation_features::GetFeatureCount::Request &req, navigation_features::GetFeatureCount::Response &res)
+{ 
+	res.fc = getPathFeatureCount(&req.path);
+	return true;
+}
+
+//Service
+bool features::NavFeatures::initializeWeightsService(navigation_features::InitWeights::Request &req, navigation_features::InitWeights::Response &res)
+{
+	vector<float> w;
+	if(req.random) {
+		srand(time(NULL));
+		for(int i=0; i<w_.size(); i++){
+			float v = rand() % 10 + 2;
+			w.push_back(v);
+		}
+	} else {
+		w.assign((int)w_.size(), 0.0);
+	}
+
+	//Normalize weights
+	if(req.normalize && req.random) {	
+		float total = accumulate(w.begin(), w.end(), 0);
+		for(unsigned int i=0; i<w.size(); i++) 
+			w[i] = w[i]/total;
+	}
+	w_ = w;
+	res.weights = w;
+	return true;
+}
+
+
+
+
+void features::NavFeatures::setScenario(sensor_msgs::PointCloud2 obs, upo_msgs::PersonPoseArrayUPO people, geometry_msgs::PoseStamped goal)
+{
+	setGoal(goal);
+	setPeople(people);
+	setObstacles(obs);
+}
+
+
+
+void features::NavFeatures::setObstacles(sensor_msgs::PointCloud2 obs)
+{
+	//printf("NavFeatures. Setting obstacles!\n");
+	sensor_msgs::PointCloud2 lcloud;
+	obs.header.stamp = ros::Time();
+	try{  
+		if(use_global_map_) {
+			if(!pcl_ros::transformPointCloud("/map", obs, lcloud, *tf_listener_))
+				ROS_WARN("TransformPointCloud failed!!!!!");
+		} else {
+			if(!pcl_ros::transformPointCloud("/base_link", obs, lcloud, *tf_listener_))
+				ROS_WARN("TransformPointCloud failed!!!!!");
+		}			
+
+	} catch (tf::TransformException ex){
+		ROS_WARN("NAV FEATURES. pcCallback. TransformException: %s", ex.what());
+	}
+	
+	laserMutex_.lock();
+	laser_cloud_ = lcloud;
+	laserMutex_.unlock();
+}
+
 
 
 
@@ -262,10 +330,10 @@ float features::NavFeatures::calculate_loss_function(geometry_msgs::PoseStamped*
 		printf("\n¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡calculate_loss_function. global_frame invalid!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n");
 					
 	//Just in case
-	if(point.header.frame_id.compare("/map") != 0 && point.header.frame_id.compare("map") != 0)
+	if(point.header.frame_id.compare("/odom") != 0 && point.header.frame_id.compare("odom") != 0)
 	{
 		//printf("calculate loss function. header: %s x:%.2f y:%.2f, th:%2f\n", point.header.frame_id.c_str(), point.pose.position.x, point.pose.position.y, tf::getYaw(point.pose.orientation));
-		point = transformPoseTo(point, "map", true);
+		point = transformPoseTo(point, "odom", false); //true
 	}
 	float x = point.pose.position.x;
 	float y = point.pose.position.y;
@@ -276,10 +344,10 @@ float features::NavFeatures::calculate_loss_function(geometry_msgs::PoseStamped*
 	{
 		geometry_msgs::PoseStamped ps = demo_path_[i];
 		//Just in case
-		if(ps.header.frame_id.compare("/map") != 0 && ps.header.frame_id.compare("map") != 0)
+		if(ps.header.frame_id.compare("/odom") != 0 && ps.header.frame_id.compare("odom") != 0)
 		{
 			printf("calculate loss function. Demo path!! header: %s x:%.2f y:%.2f, th:%2f\n", ps.header.frame_id.c_str(), ps.pose.position.x, ps.pose.position.y, tf::getYaw(ps.pose.orientation));
-			ps = transformPoseTo(ps, "map", true);
+			ps = transformPoseTo(ps, "odom", false); //true
 		}
 			
 		float xe = ps.pose.position.x;
@@ -304,7 +372,7 @@ float features::NavFeatures::calculate_loss_function(geometry_msgs::PoseStamped*
 
 
 
-void features::NavFeatures::setupProjection(std::string topic, int pc_type)
+void features::NavFeatures::setupMapProjection()
 {
 	
 	people_paint_area_ = 25;
@@ -320,8 +388,8 @@ void features::NavFeatures::setupProjection(std::string topic, int pc_type)
 	map_image_ = cv::Mat(srv.response.map.info.height, srv.response.map.info.width,CV_8UC1, cv::Scalar(0));
 	map_metadata_ =srv.response.map.info;
 	resolution_ = (double) map_metadata_.resolution;
-	origin_.push_back(map_metadata_.origin.position.x);
-	origin_.push_back(map_metadata_.origin.position.y);
+	origin_.push_back(map_metadata_.origin.position.x); //m
+	origin_.push_back(map_metadata_.origin.position.y); //m
 	origin_.push_back(tf::getYaw(map_metadata_.origin.orientation));
 	uint8_t *myData = map_image_.data;
 	for (int i=0;i<srv.response.map.data.size();i++){
@@ -337,17 +405,41 @@ void features::NavFeatures::setupProjection(std::string topic, int pc_type)
 	cv::distanceTransform(map_image_,distance_transform_,CV_DIST_L1,3);
 	dtMutex_.unlock();
  
-	if(pc_type == 1) 	//pointCloud
-		sub_pc_ = nh_.subscribe(topic, 1, &NavFeatures::pcCallback, this);
-	else   				//pointCloud2
-		sub_pc_ = nh_.subscribe(topic, 1, &NavFeatures::pc2Callback, this);
 }
+
+
+void features::NavFeatures::setupNoMapProjection()
+{
+	people_paint_area_ = 25;
+	
+	map_image_ = cv::Mat((int)size_x_/resolution_, (int)size_y_/resolution_, CV_8UC1, cv::Scalar(255));
+	origin_.push_back(size_x_/2.0);
+	origin_.push_back(size_y_/2.0);
+	origin_.push_back(0.0);
+
+	map_metadata_.resolution = resolution_;
+	map_metadata_.width = (int)size_x_/resolution_;   //Cells
+	map_metadata_.height = (int)size_y_/resolution_; //Cells
+	geometry_msgs::Pose orig;
+	orig.position.x = origin_[0];
+	orig.position.y = origin_[1];
+	orig.position.z = 0.0;
+	orig.orientation = tf::createQuaternionMsgFromYaw(origin_[2]);
+	map_metadata_.origin = orig; //m
+
+	dtMutex_.lock();
+	distance_transform_ = cv::Mat(map_image_.rows,map_image_.cols,CV_32FC1);
+	//cv::distanceTransform(map_image_,distance_transform_,CV_DIST_L1,3);
+	dtMutex_.unlock();
+ 
+}
+
 
 
 
 void features::NavFeatures::goalCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
 {
-	//printf("NavFeatures. RRT Goal received\n");
+	//printf("NavFeatures. Receiving goal!\n");
 	setGoal(*msg);
 }
 
@@ -358,27 +450,22 @@ void features::NavFeatures::goalCallback(const geometry_msgs::PoseStamped::Const
 
 void features::NavFeatures::peopleCallback(const upo_msgs::PersonPoseArrayUPO::ConstPtr& msg) 
 {
-	boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
-	
-	/*if(use_uva_features_) {
-		uva_features_->setPeople(*msg);
+	//boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
+	//printf("NavFeatures. Receiving people!\n");
+	peopleMutex_.lock();
+	people_ = msg->personPoses;
+	if(people_.size() > 0) {
+		people_frame_id_ = msg->header.frame_id;
+	}
+	peopleMutex_.unlock();
 
-	} else {*/
-	
-		peopleMutex_.lock();
-		people_ = msg->personPoses;
-		if(people_.size() > 0) {
-			people_frame_id_ = msg->header.frame_id;
-		}
-		peopleMutex_.unlock();
-	
-	//}
 	
 }
 
 
 void features::NavFeatures::setPeople(upo_msgs::PersonPoseArrayUPO p)
 {
+	//printf("NavFeatures. Setting People!\n");
 	peopleMutex_.lock();
     
     people_.clear();
@@ -392,61 +479,26 @@ void features::NavFeatures::setPeople(upo_msgs::PersonPoseArrayUPO p)
 
 
 
-//Point cloud callback
+//Point_cloud2 callback
 // Only used if laser projection is employed
 void features::NavFeatures::pc2Callback(const sensor_msgs::PointCloud2::ConstPtr& pc_in){
 	
-	sensor_msgs::PointCloud2 lcloud;
-	sensor_msgs::PointCloud2 in = *pc_in;
-	in.header.stamp = ros::Time();
-	try{  
-		//if(tf_listener_->waitForTransform(pc_in->header.frame_id, "/map", pc_in->header.stamp, ros::Duration(0.5))){
-			//laserMutex_.lock();
-			if(!pcl_ros::transformPointCloud("/map", in, lcloud, *tf_listener_))
-				ROS_WARN("TransformPointCloud failed!!!!!");
-			//laserMutex_.unlock();
-			//updateDT();
-		//} else {
-			//printf("waitForTransform  failed!\n");
-		//}
-	} catch (tf::TransformException ex){
-		ROS_WARN("NAV FEATURES. pcCallback. TransformException: %s", ex.what());
-	}
-	
-	laserMutex_.lock();
-	laser_cloud_ = lcloud;
-	laserMutex_.unlock();
+	setObstacles(*pc_in);
 }
 
 
-//Point cloud callback
+//Point_cloud callback
 // Only used if laser projection is employed
 void features::NavFeatures::pcCallback(const sensor_msgs::PointCloud::ConstPtr& pc_in){
 	
 	sensor_msgs::PointCloud2 pc2;
 	bool ok = sensor_msgs::convertPointCloudToPointCloud2(*pc_in, pc2);
-	if(!ok)
+	if(!ok) {
 		ROS_WARN("NavFeatures. Error transforming pointCloud to pointCloud2");
-	
-	sensor_msgs::PointCloud2 lcloud;
-	pc2.header.stamp = ros::Time();
-	try{  
-		//if(tf_listener_->waitForTransform(pc_in->header.frame_id, "/map", pc_in->header.stamp, ros::Duration(0.5))){
-			//laserMutex_.lock();
-			if(!pcl_ros::transformPointCloud("/map", pc2, lcloud, *tf_listener_))
-				ROS_WARN("TransformPointCloud failed!!!!!");
-			//laserMutex_.unlock();
-			//updateDT();
-		//} else {
-			//printf("waitForTransform  failed!\n");
-		//}
-	} catch (tf::TransformException ex){
-		ROS_WARN("NAV FEATURES. pcCallback. TransformException: %s", ex.what());
 	}
 	
-	laserMutex_.lock();
-	laser_cloud_ = lcloud;
-	laserMutex_.unlock();
+	setObstacles(pc2);
+	
 }
 
 
@@ -470,38 +522,50 @@ void features::NavFeatures::updateDistTransform(){
 		ROS_ERROR("\n\nNAV FEATURES. UPDATEDT. convertPointCloud2toPoingCloud!!!!!\n");
 	
 	//Add the laser readings (pointcloud) to the map
+	dtMutex_.lock();
 	cv::Mat map_copy = map_image_.clone();
-	for (int i =0;i<temp_pt_cloud.points.size();i++){
-		std::vector<int> pix = worldToMap(&(temp_pt_cloud.points[i]),&map_metadata_);
-	
-		if(pix[0] < 0.0 || pix[0] > map_metadata_.width || pix[1] < 0.0 || pix[1] > map_metadata_.height) {
+	dtMutex_.unlock();
+	for (int i =0;i<temp_pt_cloud.points.size();i++) {
+		vector<int> pix;
+		if(use_global_map_)
+			pix = worldToMap(&(temp_pt_cloud.points[i]),&map_metadata_);
+		else
+			pix = BaseLinkWorldToImg(&(temp_pt_cloud.points[i]));
+
+		if(pix[0] >= 0.0 && pix[0] < map_metadata_.width && pix[1] >= 0.0 && pix[1] < map_metadata_.height) 
+			map_copy.at<unsigned char>(pix[1],pix[0]) = 0;	
+		//else
 			//ROS_WARN("\n\nNAV FEATURES. UPDATEDT. pixel out of range!\n");
-		} else
-			map_copy.at<unsigned char>(pix[1],pix[0]) = 0;
 	}
+
 	
-	//Add the people detected to the map
+	//Remove the people detected from the map
 	peopleMutex_.lock();
-	std::vector<upo_msgs::PersonPoseUPO> per = people_;
+	vector<upo_msgs::PersonPoseUPO> per = people_;
 	peopleMutex_.unlock();
 	for (int i=0; i<per.size(); i++){
 		geometry_msgs::Point32 temp_point;
 		temp_point.x = per[i].position.x;
 		temp_point.y = per[i].position.y;
-		std::vector<int> pix = worldToMap(&temp_point,&map_metadata_);
-		if(pix[0] < 0.0 || pix[0] > map_metadata_.width || pix[1] < 0.0 || pix[1] > map_metadata_.height) {
-			//ROS_WARN("\n\nNAV FEATURES. UPDATEDT. person pixels out of range.\n");
-		} else {
+		vector<int> pix;
+		if(use_global_map_)
+			pix = worldToMap(&temp_point,&map_metadata_);
+		else
+			pix = BaseLinkWorldToImg(&temp_point);
+		
+		if (pix[0] >= 0.0 && pix[0] < map_metadata_.width && pix[1] >= 0.0 && pix[1] < map_metadata_.height)
+		{
 			for (int j = -floor(people_paint_area_/2);j<ceil(people_paint_area_/2);j++){
 				for (int k = -floor(people_paint_area_/2);k<ceil(people_paint_area_/2);k++){
 					if (pix[1]+k>=0 && pix[0]+j>=0){
-						map_copy.at<unsigned char>(pix[1]+k,pix[0]+j) =255;
+						map_copy.at<unsigned char>(pix[1]+k,pix[0]+j) = 255;
 					}
 				}
 
 			}
 		}
 	}
+
 	
 	cv::Mat dt;
 	try{
@@ -512,14 +576,11 @@ void features::NavFeatures::updateDistTransform(){
 	} 
 
 	//boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
-
-	/*if(use_uva_features_) {
-		uva_features_->setDistanceTransform(dt);
-	} else {*/
-		dtMutex_.lock();
-		distance_transform_ = dt.clone();
-		dtMutex_.unlock(); 
-	//}
+	
+	dtMutex_.lock();
+	distance_transform_ = dt.clone();
+	dtMutex_.unlock(); 
+	
 
 	//gettimeofday(&stop, NULL);
 	//printf("took %lu\n", stop.tv_usec - start.tv_usec);
@@ -527,35 +588,45 @@ void features::NavFeatures::updateDistTransform(){
 }
 
 
-std::vector<int> features::NavFeatures::worldToMap(geometry_msgs::Point32* world_point,nav_msgs::MapMetaData* map_metadata){
-	std::vector<int> pixels;
+
+vector<int> features::NavFeatures::worldToMap(geometry_msgs::Point32* world_point,nav_msgs::MapMetaData* map_metadata){
+	vector<int> pixels;
 	float x_map = world_point->x - map_metadata->origin.position.x;
 	float y_map = world_point->y - map_metadata->origin.position.y;
 	pixels.push_back((int)floor(x_map/map_metadata->resolution ));
 	pixels.push_back((int)floor(y_map/map_metadata->resolution));
 	return pixels;
+
 }
 
+/**
+* transform point in base link frame (m) to pixel
+*/
+vector<int> features::NavFeatures::BaseLinkWorldToImg(geometry_msgs::Point32* point)
+{ 
+	vector<int> pix;
+	float wx = origin_[0] + point->x;
+	float wy = origin_[1] + point->y; //-
+	pix.push_back((int)floor(wx/resolution_));
+	pix.push_back((int)floor(wy/resolution_));
+	return pix;
 
+}
 
 
 
 void features::NavFeatures::setGoal(geometry_msgs::PoseStamped g) {
 
-	boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
-
-	//printf("NavFeatures. Setting new goal for feature calculation\n");
-	/*if(use_uva_features_)
-		uva_features_->setGoal(g);
-	else*/
-		goal_ = g;
+	//boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
+	//printf("NavFeatures. Receiving goal point!\n");
+	goal_ = g;
 }
 
 
 
 
 
-void features::NavFeatures::setWeights(std::vector<float> we) {
+void features::NavFeatures::setWeights(vector<float> we) {
 	printf("NavFeatures. Setting weights: \n");
 	w_.clear();
 	for(unsigned int i=0; i<we.size(); i++) 
@@ -584,158 +655,59 @@ void features::NavFeatures::setWeights(std::vector<float> we) {
 
 
 
+
+
 bool features::NavFeatures::poseValid(geometry_msgs::PoseStamped* pose)
 {
+	
+	//Transform the coordinates
+	vector<int> pix;
+	geometry_msgs::PoseStamped sm;
+	if(use_global_map_) {
+		sm = transformPoseTo(*pose, string("/map"), false);
+		geometry_msgs::Point32 point;
+		point.x = sm.pose.position.x;
+		point.y = sm.pose.position.y;
+		point.z = 0.0;
+		pix = worldToMap(&point, &map_metadata_);
+	}else {
+		sm = transformPoseTo(*pose, string("/base_link"), false);
+		geometry_msgs::Point32 point;
+		point.x = sm.pose.position.x;
+		point.y = sm.pose.position.y;
+		point.z = 0.0;
+		pix = BaseLinkWorldToImg(&point);
+	}
+	//Distances to origin	
+	//float distance_x = sm.pose.position.x - (origin_)[0];
+	//float distance_y = sm.pose.position.y - (origin_)[1];
+	//float px = floor(distance_x/resolution_);
+	//float py =floor(distance_y/resolution_);
 
-	if(no_costmaps_)
-		return poseValid_projection(pose);
-
-
-	//Take the values of the state
-	float x_i = pose->pose.position.x;
-	float y_i = pose->pose.position.y;
-
-	geometry_msgs::PoseStamped p_in = *pose;
-
-	float local_cost = 0.0;
-	float global_cost = 0.0;
-	//used to put things into grid coordinates
-	unsigned int cell_x, cell_y;
-	unsigned char cost;
-
-	if(use_global_costmap_) {
-		//Global costmap ------------------------------------------
-		geometry_msgs::PoseStamped p_out_map;
-		try {					
-			tf_listener_->transformPose("map", p_in, p_out_map); 
+	float px = pix[0];
+	float py = pix[1];
+	float distance = 0.0;
+	dtMutex_.lock();
+	if (py<0 || px<0  || px > map_image_.cols || py > map_image_.rows) {
+		distance = 0.0;
+	} else{
+		try{
 			
-		}catch (tf::ExtrapolationException ex) {
-			p_in.header.stamp = ros::Time(0);
-			tf_listener_->transformPose("map", p_in, p_out_map); 
-		}	
-		catch (tf::TransformException ex){
-			ROS_WARN("isValid. x:%.2f, y:%.2f. TransformException: %s",x_i, y_i, ex.what());
-			return false;
-		}
-		//get the cell coord of the center point of the robot
-		if(!costmap_global_->worldToMap((double)p_out_map.pose.position.x, (double)p_out_map.pose.position.y, cell_x, cell_y))
-			return false;
-
-		//if number of points in the footprint is less than 3, we'll just assume a circular robot
-		//if(myfootprint->size() < 3){
-		cost = costmap_global_->getCost(cell_x, cell_y);
-		if(cost == costmap_2d::LETHAL_OBSTACLE || cost == costmap_2d::INSCRIBED_INFLATED_OBSTACLE || cost == costmap_2d::NO_INFORMATION || cost == -1)
-			return false;
-		//}
-	}
-
-	//Local costmap---------------------------------------------
-	geometry_msgs::PoseStamped p_out_odom;
-	try {					
-		tf_listener_->transformPose("odom", p_in, p_out_odom); 
-		
-	} catch (tf::ExtrapolationException ex) {
-		p_in.header.stamp = ros::Time(0);
-		tf_listener_->transformPose("odom", p_in, p_out_odom);  
-	}
-	catch (tf::TransformException ex){
-		ROS_WARN("isValid. x:%.2f, y:%.2f. TransformException: %s",x_i, y_i, ex.what());
-		return false;
-	}
-
-	//get the cell coord of the center point of the robot
-	if(!costmap_local_->worldToMap((double)p_out_odom.pose.position.x, (double)p_out_odom.pose.position.y, cell_x, cell_y))
-	  return false;
-
-	//if number of points in the footprint is less than 3, we'll just assume a circular robot
-	//if(myfootprint->size() < 3){
-	cost = costmap_local_->getCost(cell_x, cell_y);
-	if(cost == costmap_2d::LETHAL_OBSTACLE || cost == costmap_2d::INSCRIBED_INFLATED_OBSTACLE || cost == costmap_2d::NO_INFORMATION || cost == -1)
-		return false;
-	//}
-
-	/*
-	//now we really have to lay down the footprint in the local costmap grid
-	unsigned int x0, x1, y0, y1;
-	double line_cost = 0.0;
-	double footprint_cost = 0.0;
-
-	//we need to rasterize each line in the footprint
-	for(unsigned int i = 0; i < footprint->size() - 1; ++i){
-		//get the cell coord of the first point
-		if(!costmap_local->worldToMap(footprint->at(i).x, footprint->at(i).y, x0, y0))
-			return false;
-
-		//get the cell coord of the second point
-		if(!costmap_local->worldToMap(footprint->at(i+1).x, footprint->at(i+1).y, x1, y1))
-			return false;
-
-		line_cost = lineCost(x0, x1, y0, y1);
-		footprint_cost = std::max(line_cost, footprint_cost);
-
-		//if there is an obstacle that hits the line... we know that we can return false right away 
-		if(line_cost < 0)
-			return false;
-	}
-
-	//we also need to connect the first point in the footprint to the last point
-	//get the cell coord of the last point
-	if(!costmap_local->worldToMap(footprint->back().x, footprint->back().y, x0, y0))
-		return false;
-
-	//get the cell coord of the first point
-	if(!costmap_local->worldToMap(footprint->front().x, footprint->front().y, x1, y1))
-		return false;
-
-	line_cost = lineCost(x0, x1, y0, y1);
-	footprint_cost = std::max(line_cost, footprint_cost);
-
-	if(line_cost < 0)
-		return false;
-	*/
-
-	return true;
-}
-
-
-
-bool features::NavFeatures::poseValid_projection(geometry_msgs::PoseStamped* pose)
-{
-	if(use_laser_projection_) 
-	{
-		
-		//Transform to map coordinates
-		geometry_msgs::PoseStamped sm = transformPoseTo(*pose, std::string("/map"), false);
-		
-		// This functions transforms position of people to pixels on map, gets distance and then converts to meters
-		float distance_x = sm.pose.position.x - (origin_)[0];
-		float distance_y = sm.pose.position.y - (origin_)[1];
-
-		float px = floor(distance_x/resolution_);
-		//float py =distanceTransform->rows-floor(distance_y /resolution);
-		float py =floor(distance_y/resolution_);
-		//cout<<"px:"<<px<<"  py:"<<py<<std::endl;
-		float distance = 0.0;
-		if (py<0 || px<0  || px > map_image_.cols || py > map_image_.rows) {
+			distance = distance_transform_.at<float>(py,px)*resolution_;
+			
+		} catch(...)
+		{
+			ROS_ERROR("ERROR. POSE_VALID. px:%.2f, py:%.2f, distance:%.2f", px, py, distance);
 			distance = 0.0;
-		} else{
-			try{
-				dtMutex_.lock();
-				distance = distance_transform_.at<float>(py,px)*resolution_;
-				dtMutex_.unlock();
-			} catch(...)
-			{
-				ROS_ERROR("ERROR. OBSTACLE FEATURE. px:%.2f, py:%.2f, distance:%.2f", px, py, distance);
-				distance = 0.0;
-			}
 		}
-		// Take into account the robot radius 
-		if(distance <= insc_radius_robot_)
-			return false;
-		else
-			return true;
 	}
-	return false;
+	dtMutex_.unlock();
+	// Take into account the robot radius 
+	if(distance <= insc_radius_robot_)
+		return false;
+	else
+		return true;
+	
 }
 
 
@@ -770,80 +742,23 @@ bool features::NavFeatures::poseValid_projection(geometry_msgs::PoseStamped* pos
 
 
 
-float features::NavFeatures::costmapPointCost(float x, float y) const {
-			
-	//Coordinates X and Y are in the robot local frame (base_link), we transform them to odom
-	geometry_msgs::PointStamped p_in;
-	p_in.header.frame_id = "base_link"; 
-	p_in.header.stamp = ros::Time(0);
-	p_in.point.x = x;
-	p_in.point.y = y;
-			
-	float local_cost = 0.0;
-	float global_cost = 0.0;
-	//used to put things into grid coordinates
-	unsigned int cell_x, cell_y;
-	unsigned char cost;
-
-	if(use_global_costmap_) {
-		//Global costmap ------------------------------------------
-		geometry_msgs::PointStamped p_out_map;
-		try {					
-			tf_listener_->transformPoint("map", p_in, p_out_map); 
-		}catch (tf::TransformException ex){
-			ROS_WARN("CostmapPointCost1. x:%.2f, y:%.2f. TransformException: %s",x, y, ex.what());
-			return -100.0;
-		}
-		//get the cell coord of the center point of the robot
-		if(!costmap_global_->worldToMap((double)p_out_map.point.x, (double)p_out_map.point.y, cell_x, cell_y)) {
-			ROS_WARN("CostmapPointCost. Error in worldToMap conversion in costmap global!!! Returning highest cost");
-			return 255.0;
-		}
-		
-		global_cost = costmap_global_->getCost(cell_x, cell_y);
-	}
-	
-	//Local costmap---------------------------------------------
-	geometry_msgs::PointStamped p_out_odom;
-	try {					
-		tf_listener_->transformPoint("odom", p_in, p_out_odom); 
-	}catch (tf::TransformException ex){
-		ROS_WARN("CostmapPointCost2. x:%.2f, y:%.2f. TransformException: %s",x, y, ex.what());
-		-100.0;
-	}
-
-	//get the cell coord of the center point of the robot
-	if(!costmap_local_->worldToMap((double)p_out_odom.point.x, (double)p_out_odom.point.y, cell_x, cell_y)) {
-		ROS_WARN("CostmapPointCost. Error in worldToMap conversion in local costmap!!! Returning highest cost");
-		return 255.0;
-	}
-
-	local_cost = costmap_local_->getCost(cell_x, cell_y);
-	//printf("LC: %.1f \t", local_cost);
-			
-	if(local_cost > global_cost)
-		return local_cost;
-	else
-		return global_cost; 
-}
-
 
 
 
 
 float features::NavFeatures::getCost(geometry_msgs::PoseStamped* s)
 {
-	boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
+	//boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
 	
-	//if(use_uva_features_)
-	//	return uva_features_->getCost(s);	
+	//configuration_mutex_.lock();
 	
 	
-	std::vector<float> features;
+	vector<float> features;
 
-	if(upo_featureset_ != 2) { 
+	//if(upo_featureset_ != 2) { 
 		//Goal distance cost
 		float dist_cost = goalDistFeature(s);
+	
 		if(dist_cost > 1.0) {
 			//printf("GetCost. Dist_cost out of range > 1. returning 1!!!\n");
 			dist_cost = 1.0;
@@ -853,7 +768,7 @@ float features::NavFeatures::getCost(geometry_msgs::PoseStamped* s)
 			dist_cost = 0.0;
 		}	
 		features.push_back(dist_cost);
-	}
+	//}
 	
 	//Obstacle distance cost
 	float obs_cost = obstacleDistFeature(s);
@@ -861,6 +776,9 @@ float features::NavFeatures::getCost(geometry_msgs::PoseStamped* s)
 	if(obs_cost > 1.0 || obs_cost < 0.0) {
 		printf("GetCost. Obs_cost out of range!!! = %.2f\n", obs_cost);
 	}
+
+
+	boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
 	
 	if(upo_featureset_ == 0) {
 	
@@ -880,15 +798,15 @@ float features::NavFeatures::getCost(geometry_msgs::PoseStamped* s)
 		//	return (0.5*dist_cost + 0.5*obs_cost);	
 		
 	} else {  //split the proxemics cost (featureset 1 and 2)
-		
-		std::vector<float> prox_costs = gaussianFeatures(s);
+		vector<float> prox_costs = gaussianFeatures(s);
 		for(unsigned int i=0; i<prox_costs.size(); i++)
 			features.push_back(prox_costs[i]);
 			
 		if(obs_cost == 1.0)
 			return 1.0;
 	}
-	
+
+	//configuration_mutex_.unlock();	
 
 	//if(prox_cost == 0.0 && obs_cost != 0.0)
 	//	return (0.5*dist_cost + 0.5*obs_cost);	
@@ -918,26 +836,24 @@ float features::NavFeatures::getCost(geometry_msgs::PoseStamped* s)
 		
 	}
 	loss_mutex_.unlock();
-	
 	return cost;	
 }
 
 
 
-std::vector<float> features::NavFeatures::getFeatures(geometry_msgs::PoseStamped* s) 
+vector<float> features::NavFeatures::getFeatures(geometry_msgs::PoseStamped* s) 
 {
-	//boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
+	boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
 
-	//if(use_uva_features_)
-	//	return uva_features_->getFeatures(s);
+	//configuration_mutex_.lock();
 
-	std::vector<float> features;
+	vector<float> features;
 	
-	if(upo_featureset_ != 2) { //featureset 2 is for A*, so we don't need this feature
+	//if(upo_featureset_ != 2) { //featureset 2 is for A*, so we don't need this feature
 		//Goal distance cost
 		float dist_cost = goalDistFeature(s);
 		features.push_back(dist_cost);
-	}	
+	//}	
 	//Obstacle distance cost
 	float obs_cost = obstacleDistFeature(s);
 	features.push_back(obs_cost);
@@ -947,19 +863,62 @@ std::vector<float> features::NavFeatures::getFeatures(geometry_msgs::PoseStamped
 		float prox_cost = proxemicsFeature(s);
 		features.push_back(prox_cost);
 		
-		
-		
 	} else { //split the proxemics cost (featureset 1 and 2)
-		std::vector<float> prox_costs = gaussianFeatures(s);
+		vector<float> prox_costs = gaussianFeatures(s);
 		for(unsigned int i=0; i<prox_costs.size(); i++) {
 			features.push_back(prox_costs[i]);
 		}
 		
 	}
+
+	//configuration_mutex_.unlock();
 	
 	return features;
 }
 
+
+
+vector<float> features::NavFeatures::getPathFeatureCount(vector<geometry_msgs::PoseStamped>* path)
+{
+	printf("NavFeatures. Request of path feature count...\n");
+	vector<float> feature_counts;
+
+	for(int i=0; i<path->size()-1; i++)
+	{
+		//We have to transform the coordinates to robot frame (/base_link)
+		geometry_msgs::PoseStamped robot_pose = path->at(i);
+		if(robot_pose.header.frame_id.compare("/base_link") != 0 && robot_pose.header.frame_id.compare("base_link") != 0)
+			robot_pose = transformPoseTo(robot_pose, "/base_link", false);
+
+		geometry_msgs::PoseStamped robot_pose2 = path->at(i+1);
+		if(robot_pose2.header.frame_id.compare("/base_link") != 0 && robot_pose2.header.frame_id.compare("base_link") != 0)
+			robot_pose2 = transformPoseTo(robot_pose2, "/base_link", false);
+
+		double dx = robot_pose.pose.position.x - robot_pose2.pose.position.x;
+		double dy = robot_pose.pose.position.y - robot_pose2.pose.position.y;
+		double d = hypot(dx,dy);
+
+		if(!isQuaternionValid(robot_pose.pose.orientation)) {
+			robot_pose.pose.orientation = tf::createQuaternionMsgFromYaw(0.0);
+			printf("¡¡¡¡¡¡QUATERNION NO VALID!!!!!. Changing yaw to zero.\n");
+		}
+			
+		update();
+			
+		vector<float> features1 = getFeatures(&robot_pose);
+		vector<float> features2 = getFeatures(&robot_pose2);
+
+		if(i==0)
+			feature_counts.assign(features1.size(), 0);
+				
+		for(unsigned int j=0; j<features1.size(); j++)
+		{
+			feature_counts.at(j) = feature_counts.at(j) + (features1.at(j) + features2.at(j))*d/2.0;
+		}
+			
+	  }
+	  return feature_counts;
+}
 
 
 
@@ -986,62 +945,75 @@ float features::NavFeatures::goalDistFeature(geometry_msgs::PoseStamped* s)  {
 float features::NavFeatures::obstacleDistFeature(geometry_msgs::PoseStamped* s)  {
 	
 	boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
-	
-	if(use_laser_projection_) {
-		
-		//Transform to map coordinates
-		geometry_msgs::PoseStamped sm = transformPoseTo(*s, std::string("/map"), false);
-		
-		// This functions transforms position of people to pixels on map, gets distance and then converts to meters
-		float distance_x = sm.pose.position.x - (origin_)[0];
-		float distance_y = sm.pose.position.y - (origin_)[1];
+	//configuration_mutex_.lock();
 
-		float px = floor(distance_x/resolution_);
-		//float py =distanceTransform->rows-floor(distance_y /resolution);
-		float py =floor(distance_y/resolution_);
-		//cout<<"px:"<<px<<"  py:"<<py<<std::endl;
-		float distance = 0.0;
-		if (py<0 || px<0  || px > map_image_.cols || py > map_image_.rows) {
-			distance = 0.0;
-		} else{
-			try{
-				dtMutex_.lock();
-				distance = distance_transform_.at<float>(py,px)*resolution_;
-				dtMutex_.unlock();
-			} catch(...)
-			{
-				ROS_ERROR("ERROR. OBSTACLE FEATURE. px:%.2f, py:%.2f, distance:%.2f", px, py, distance);
-				distance = 0.0;
-			}
-		}
-		//cout << "after distance_trans" << std::endl;
-		// Take into account the robot radius 
-		if(distance <= insc_radius_robot_)
-			distance = 0.0;
-		else
-			distance = distance - insc_radius_robot_;
-			
-			
-		float d = distance_functions(distance, INVERSE_DEC); //EXP_DEC //INVERSE_DEC
-		//Normalize
-		//printf("Distance: %.4f, Obs cost: %.4f, norm: %.4f\n", distance, d, (d/max_cost_obs_));
-		d = d/max_cost_obs_;
-		if(d > 1.0) {
-			printf("NavFeatures. obstacle dist feature %.2f > 1.0\n", d);
-			d = 1.0;
-		}
-		return d;
-		
-	} else {
-		
-		float obs_cost = costmapPointCost((float)s->pose.position.x, (float)s->pose.position.y);
-		obs_cost = obs_cost/255.0; //Normalize
-		if(obs_cost > 1.0) {
-			printf("NavFeatures. obstacle dist feature %.2f > 1.0\n", obs_cost);
-			obs_cost = 1.0;
-		}
-		return obs_cost;
+	//Transform the coordinates
+	vector<int> pix;
+	geometry_msgs::PoseStamped sm;
+	if(use_global_map_) {
+		sm = transformPoseTo(*s, string("/map"), false);
+		geometry_msgs::Point32 point;
+		point.x = sm.pose.position.x;
+		point.y = sm.pose.position.y;
+		point.z = 0.0;
+		pix = worldToMap(&point, &map_metadata_);
+	}else {
+		sm = transformPoseTo(*s, string("/base_link"), false);
+		geometry_msgs::Point32 point;
+		point.x = sm.pose.position.x;
+		point.y = sm.pose.position.y;
+		point.z = 0.0;
+		pix = BaseLinkWorldToImg(&point);
 	}
+
+	float px = pix[0];
+	float py = pix[1];
+		
+	// This functions transforms position of people to pixels on map, gets distance and then converts to meters
+	//float distance_x = sm.pose.position.x - (origin_)[0];
+	//float distance_y = sm.pose.position.y - (origin_)[1];
+
+	//float px = floor(distance_x/resolution_);
+	//float py =distanceTransform->rows-floor(distance_y /resolution);
+	//float py =floor(distance_y/resolution_);
+	//cout<<"px:"<<px<<"  py:"<<py<<endl;
+	float distance = 0.0;
+	dtMutex_.lock();
+	if (py<0 || px<0  || px > map_image_.cols || py > map_image_.rows) {
+		distance = 0.0;
+	} else{
+		try{
+			
+			distance = distance_transform_.at<float>(py,px)*resolution_;
+			
+		} catch(...)
+		{
+			ROS_ERROR("ERROR. OBSTACLE FEATURE. px:%.2f, py:%.2f, distance:%.2f", px, py, distance);
+			distance = 0.0;
+		}
+	}
+	dtMutex_.unlock();
+	//cout << "after distance_trans" << endl;
+	// Take into account the robot radius 
+	if(distance <= insc_radius_robot_)
+		distance = 0.0;
+	else
+		distance = distance - insc_radius_robot_;
+			
+			
+	float d = distance_functions(distance, INVERSE_DEC); //EXP_DEC //INVERSE_DEC
+	//Normalize
+	//printf("Distance: %.4f, Obs cost: %.4f, norm: %.4f\n", distance, d, (d/max_cost_obs_));
+	d = d/max_cost_obs_;
+	if(d > 1.0) {
+		printf("NavFeatures. obstacle dist feature %.2f > 1.0\n", d);
+		d = 1.0;
+	}
+
+	//configuration_mutex_.unlock();
+	
+	return d;
+		
 }
 
 
@@ -1082,9 +1054,9 @@ float features::NavFeatures::distance_functions(const float distance, const dist
 void features::NavFeatures::calculateGaussians()
 {
 	
-	std::vector<upo_msgs::PersonPoseUPO> people_aux;
-	std::string frame;
-	// read the person list (thread safe)
+	vector<upo_msgs::PersonPoseUPO> people_aux;
+	string frame;
+	//read the person list (thread safe)
 	peopleMutex_.lock();
 	people_aux = people_;
 	frame = people_frame_id_;
@@ -1093,12 +1065,12 @@ void features::NavFeatures::calculateGaussians()
 	//printf("Frame %s\n", frame.c_str());
 	//printf("\n\ncalculateGaussians. People detected: %u\n\n", (unsigned int)people_aux.size());
 	
-	std::vector<gaussian> gauss_aux;
+	vector<gaussian> gauss_aux;
 	
 	if(grouping_) 
 	{
 		
-		std::vector<group_candidate> group_candidates;
+		vector<group_candidate> group_candidates;
 		for(unsigned int i=0; i<people_aux.size(); i++)
 		{
 			//If the person is moving, we  do not group for the moment
@@ -1150,7 +1122,7 @@ void features::NavFeatures::calculateGaussians()
 		}
 		
 		//check distance between the interaction points
-		std::vector<group_candidate> group;
+		vector<group_candidate> group;
 		int group_number = 1;
 		for(unsigned int i=0; i<group_candidates.size(); i++)
 		{
@@ -1318,7 +1290,7 @@ void features::NavFeatures::calculateGaussians()
 	gaussianMutex_.unlock();
 	
 	visualization_msgs::MarkerArray m;
-	std::vector<visualization_msgs::Marker> markers;
+	vector<visualization_msgs::Marker> markers;
 	visualization_msgs::Marker marker;
 	for(unsigned int i=0; i<gauss_aux.size(); i++)
 	{
@@ -1354,9 +1326,7 @@ void features::NavFeatures::update()
 {
 	boost::recursive_mutex::scoped_lock ecl(configuration_mutex_);
 	calculateGaussians();
-
-	if(use_laser_projection_)
-		updateDistTransform();
+	updateDistTransform();
 	
 }
 
@@ -1364,7 +1334,7 @@ void features::NavFeatures::update()
 
 float features::NavFeatures::proxemicsFeature(geometry_msgs::PoseStamped* s)  {
 	
-	std::vector<gaussian> gauss;
+	vector<gaussian> gauss;
 	gaussianMutex_.lock();
 	gauss = gaussians_;
 	gaussianMutex_.unlock();
@@ -1375,7 +1345,7 @@ float features::NavFeatures::proxemicsFeature(geometry_msgs::PoseStamped* s)  {
 	}
 	
 	peopleMutex_.lock();
-	std::string people_frame = people_frame_id_;
+	string people_frame = people_frame_id_;
 	peopleMutex_.unlock();
 	
 	//We need to transform the sample to the same frame of the people
@@ -1390,7 +1360,7 @@ float features::NavFeatures::proxemicsFeature(geometry_msgs::PoseStamped* s)  {
 	float ry = robot.pose.position.y;
 	
 	float prox_cost = 1.0;
-	for (std::vector<gaussian>::iterator it = gauss.begin(); it != gauss.end(); ++it)
+	for (vector<gaussian>::iterator it = gauss.begin(); it != gauss.end(); ++it)
 	{
 		//odom coordinates
 		float ph = it->th;
@@ -1456,14 +1426,14 @@ float features::NavFeatures::proxemicsFeature(geometry_msgs::PoseStamped* s)  {
 
 
 
-std::vector<float> features::NavFeatures::gaussianFeatures(geometry_msgs::PoseStamped* s)
+vector<float> features::NavFeatures::gaussianFeatures(geometry_msgs::PoseStamped* s)
 {
-	std::vector<gaussian> gauss;
+	vector<gaussian> gauss;
 	gaussianMutex_.lock();
 	gauss = gaussians_;
 	gaussianMutex_.unlock();
 	
-	std::vector<float> pcosts;
+	vector<float> pcosts;
 	pcosts.push_back(0.0); //Front
 	pcosts.push_back(0.0); //Back
 	pcosts.push_back(0.0); //Right side
@@ -1474,7 +1444,7 @@ std::vector<float> features::NavFeatures::gaussianFeatures(geometry_msgs::PoseSt
 	}
 	
 	peopleMutex_.lock();
-	std::string people_frame = people_frame_id_;
+	string people_frame = people_frame_id_;
 	peopleMutex_.unlock();
 	
 	//We need to transform the sample to the same frame of the people
@@ -1489,7 +1459,7 @@ std::vector<float> features::NavFeatures::gaussianFeatures(geometry_msgs::PoseSt
 	float ry = robot.pose.position.y;
 	
 	
-	for (std::vector<gaussian>::iterator it = gauss.begin(); it != gauss.end(); ++it)
+	for (vector<gaussian>::iterator it = gauss.begin(); it != gauss.end(); ++it)
 	{
 		//odom coordinates
 		float ph = it->th;
@@ -1563,7 +1533,7 @@ float features::NavFeatures::proxemicsFeature(geometry_msgs::PoseStamped* s)  {
 /*float features::NavFeatures::getProxemicsCost(float rx, float ry)  {
 
 	// read the person list (thread safe)
-	std::vector<upo_msgs::PersonPoseUPO> people_aux;
+	vector<upo_msgs::PersonPoseUPO> people_aux;
 	peopleMutex_.lock();
 	people_aux = people_;
 	peopleMutex_.unlock();
@@ -1577,7 +1547,7 @@ float features::NavFeatures::proxemicsFeature(geometry_msgs::PoseStamped* s)  {
 
 	float prox_cost = 1;
 	
-  	for (std::vector<upo_msgs::PersonPoseUPO>::iterator it = people_aux.begin(); it != people_aux.end(); ++it)
+  	for (vector<upo_msgs::PersonPoseUPO>::iterator it = people_aux.begin(); it != people_aux.end(); ++it)
   	{
 		//odom coordinates
 		float ph = tf::getYaw(it->orientation);
@@ -1687,7 +1657,7 @@ float features::NavFeatures::gaussian_function(float x, float y, bool fr)
 
 
 
-geometry_msgs::PoseStamped features::NavFeatures::transformPoseTo(geometry_msgs::PoseStamped pose_in, std::string frame_out, bool usetime)
+geometry_msgs::PoseStamped features::NavFeatures::transformPoseTo(geometry_msgs::PoseStamped pose_in, string frame_out, bool usetime)
 {
 	geometry_msgs::PoseStamped in = pose_in;
 	if(!usetime)

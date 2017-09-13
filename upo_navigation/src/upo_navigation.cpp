@@ -50,6 +50,8 @@ namespace upo_nav {
     private_nh.param("planner_frequency", planner_frequency_, 0.0);
     private_nh.param("controller_frequency", controller_frequency_, 20.0);
 	private_nh.param("thread_sleep_msecs", thread_sleep_msecs_, 200);
+
+	private_nh.param("rrt_planning_type", rrt_planning_type_, 1); //1->regular, 2->FCN prediction
 	
 	//printf("local_planner: %s, controller_freq: %.2f, thread_msec: %i\n", local_planner.c_str(), controller_frequency_, thread_sleep_msecs_);
 
@@ -135,7 +137,11 @@ namespace upo_nav {
     //create a semi-local RRT planner
 	//rrt_planner_ = new RRTPlannerROS(std::string("RRTPlannerROS"), &tf_, planner_costmap_ros_, controller_costmap_ros_);
 	//******new
-	rrt_planner_ = new upo_RRT_ros::RRT_ros_wrapper(&tf_, planner_costmap_ros_, controller_costmap_ros_);
+	if(rrt_planning_type_ == 1)
+		rrt_planner_ = new upo_RRT_ros::RRT_ros_wrapper(&tf_);  //regular planning
+	else if(rrt_planning_type_ == 2)
+		rrt_planner3_ = new upo_RRT_ros::RRT_ros_wrapper3(&tf_); //Planning with FCN
+
 	//set up the rrt planner's thread
 	run_rrt_ = false;
 	//rrt_sleep_ = true;
@@ -630,7 +636,10 @@ namespace upo_nav {
 
     planner_.reset();
     tc_.reset();
-	delete rrt_planner_;
+	if(rrt_planning_type_ == 1)
+		delete rrt_planner_;
+	else if(rrt_planning_type_ == 2)
+		delete rrt_planner3_; 
 
   }
   
@@ -776,7 +785,12 @@ namespace upo_nav {
 	
 	std::vector<geometry_msgs::PoseStamped> aux;
 	//Plan is in base_link coordinates
-	aux = rrt_planner_->RRT_plan(start, goal_rrt, lv, av); //(sx, sy, sh, lv, av, gx, gy, gh);
+	if(rrt_planning_type_ = 1)	
+		aux = rrt_planner_->RRT_plan(start, goal_rrt, lv, av); //(sx, sy, sh, lv, av, gx, gy, gh);
+	else if(rrt_planning_type_ == 2)
+		aux = rrt_planner3_->RRT_plan(start, goal_rrt, lv, av);
+		
+	
 	if(aux.empty())
 		return false;
     if(aux.size() == 1 && aux.at(0).pose.position.x == -100.0 && aux.at(0).pose.position.z == -100.0) {
@@ -1057,11 +1071,12 @@ namespace upo_nav {
 
 		bool use_new_path = true;
 		float new_path_cost = 0.0;
-		float prev_path_cost = rrt_planner_->get_path_cost();
+		//float prev_path_cost = rrt_planner_->get_path_cost();
 		
 		
 		if(run_rrt /*!rrt_sleep && (run_rrt || !(rrt_planner_->check_rrt_path(&rrt_plan)))*/)
 		{
+			
 			//---------
 			//rrt_mutex_.lock();
 			//rrt_goal = rrt_goal_; 
@@ -1150,7 +1165,11 @@ namespace upo_nav {
 	//Intermediate point in the A* path which we use as the RRT goal 
 	geometry_msgs::PoseStamped intermediate_goal = global_goal_;
 
-	double rrt_radius = rrt_planner_->get_rrt_planning_radius();
+	double rrt_radius = 0.0;
+	if(rrt_planning_type_ == 1)
+		rrt_radius = rrt_planner_->get_rrt_planning_radius();
+	else if(rrt_planning_type_ == 2)
+		rrt_radius = rrt_planner3_->get_rrt_planning_radius();
 
 	//if the goal is outside the local area, we use the A* and RRT*; if not, we use just the RRT* 
 	//double max_x_from_robot = ((controller_costmap_ros_->getCostmap()->getSizeInMetersX())/2);
@@ -1273,6 +1292,7 @@ namespace upo_nav {
 						return;
 					}
 
+				
 					//get the pose of the robot
     				tf::Stamped<tf::Pose> global_pose;
     				if(!planner_costmap_ros_->getRobotPose(global_pose)) {
@@ -1581,7 +1601,12 @@ namespace upo_nav {
 	//Intermediate point in the A* path which we use as the RRT goal 
 	geometry_msgs::PoseStamped intermediate_goal = global_goal_;
 
-	double rrt_radius = rrt_planner_->get_rrt_planning_radius();
+	double rrt_radius = 0.0;
+	if(rrt_planning_type_ == 1)
+		rrt_radius = rrt_planner_->get_rrt_planning_radius();
+	else if(rrt_planning_type_ == 2)
+		rrt_radius = rrt_planner3_->get_rrt_planning_radius();
+
 
 	//if the goal is outside the local area, we use the A* and RRT*; if not, we use just the RRT* 
 	//double max_x_from_robot = ((controller_costmap_ros_->getCostmap()->getSizeInMetersX())/2);
@@ -1680,7 +1705,11 @@ namespace upo_nav {
 	geometry_msgs::PoseStamped goal_pose = rrt_goal_;
 	rrt_mutex_.unlock();
 		
-	float rrt_radius = rrt_planner_->get_rrt_planning_radius();
+	double rrt_radius = 0.0;
+	if(rrt_planning_type_ == 1)
+		rrt_radius = rrt_planner_->get_rrt_planning_radius();
+	else if(rrt_planning_type_ == 2)
+		rrt_radius = rrt_planner3_->get_rrt_planning_radius();
 
 	//Check the distance of the current goal--------------------------
 	float dist = sqrt(pow((global_goal_.pose.position.x - robot_pose.pose.position.x),2)+pow((global_goal_.pose.position.y - robot_pose.pose.position.y),2));

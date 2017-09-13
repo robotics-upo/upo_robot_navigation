@@ -5,8 +5,8 @@
 *  Author: Noé Pérez Higueras
 *********************************************************************/
 
-#ifndef UPO_RRT_ROS_WRAPPER_
-#define UPO_RRT_ROS_WRAPPER_
+#ifndef UPO_RRT_ROS_WRAPPER3_
+#define UPO_RRT_ROS_WRAPPER3_
 
 //C++
 #include <vector>
@@ -15,26 +15,18 @@
 #include <stdio.h>
 #include <iostream>
 
-//Mutex
-#include <mutex> 
-
 //ROS
 #include <ros/ros.h>
-//#include <costmap_2d/costmap_2d.h>
-//#include <costmap_2d/costmap_2d_ros.h>
-//#include <costmap_2d/cost_values.h>
-//#include <costmap_2d/costmap_2d_publisher.h>
 #include <visualization_msgs/Marker.h>
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/Pose2D.h>
 #include <tf/transform_datatypes.h>
 #include <tf/transform_listener.h>
 #include <nav_msgs/OccupancyGrid.h>
-#include <upo_msgs/PersonPoseArrayUPO.h>
 
 //GMM sampling services
-#include <gmm_sampling/GetApproachGMMSamples.h>
-#include <gmm_sampling/GetApproachGMMProbs.h>
+//#include <gmm_sampling/GetApproachGMMSamples.h>
+//#include <gmm_sampling/GetApproachGMMProbs.h>
 
 //RRT library
 #include <upo_rrt_planners/planners/Planner.h>
@@ -45,38 +37,37 @@
 #include <upo_rrt_planners/planners/control/HalfRRTstar.h>
 //Planning service
 #include <upo_rrt_planners/MakePlan.h>
+//Planning service over a costmap
+#include <upo_rrt_planners/MakePlanCostmap.h>
 
-#include <upo_rrt_planners/ros/ValidityChecker.h>
+#include <upo_rrt_planners/ros/ValidityChecker3.h>
+
 
 //Dynamic reconfigure
-#include <dynamic_reconfigure/server.h>
-#include <upo_rrt_planners/RRTRosWrapperConfig.h>
+//#include <dynamic_reconfigure/server.h>
+//#include <upo_rrt_planners/RRTRosWrapperConfig.h>
 
 
 
 namespace upo_RRT_ros {
 
-	class RRT_ros_wrapper
+	class RRT_ros_wrapper3
 	{
 		public:
 
-			RRT_ros_wrapper();
-			RRT_ros_wrapper(tf::TransformListener* tf);
+			RRT_ros_wrapper3();
+			RRT_ros_wrapper3(tf::TransformListener* tf);	
 			
-			//Only for RRT as a local controller 
-			RRT_ros_wrapper(tf::TransformListener* tf,
-                            float controller_freq,
-							float path_stddev,
-							int planner_type);				
-			
-			~RRT_ros_wrapper();
+			~RRT_ros_wrapper3();
 
 			void setup();
 			
 			////Only for RRT as a local controller
-			void setup_controller(float controller_freq, float path_stddev, int planner_type);
+			//void setup_controller(float controller_freq, float path_stddev, int planner_type);
 	
 			std::vector<geometry_msgs::PoseStamped> RRT_plan(geometry_msgs::Pose2D start, geometry_msgs::Pose2D goal, float start_lin_vel, float start_ang_vel);
+
+			//void costmapCallback(const nav_msgs::OccupancyGrid::ConstPtr& msg);
 
 			float get_rrt_planning_radius();
 			
@@ -84,33 +75,35 @@ namespace upo_RRT_ros {
 			
 			void publish_feature_costmap(ros::Time t);
 			
-			void publish_gmm_costmap(geometry_msgs::PoseStamped person);
+			//void publish_gmm_costmap(geometry_msgs::PoseStamped person);
 
-			void setWeights(std::vector<float> w) {
-				checker_->setWeights(w);
-			}
+			//void setWeights(std::vector<float> w) {
+			//	checker_->setWeights(w);
+			//}
 			
-			void setUseLossFunc(bool l, std::vector<geometry_msgs::PoseStamped> path) {
-				checker_->setUseLossFunc(l, path);
-			}
+			//void setUseLossFunc(bool l, std::vector<geometry_msgs::PoseStamped> path) {
+			//	checker_->setUseLossFunc(l, path);
+			//}
 			
 			//For full path biasing using the kinodynamic RRT local controller
-			int RRT_local_plan(std::vector<geometry_msgs::PoseStamped> path_to_follow, float start_lin_vel, float start_ang_vel, geometry_msgs::Twist& cmd_vel);
+			//int RRT_local_plan(std::vector<geometry_msgs::PoseStamped> path_to_follow, float start_lin_vel, float start_ang_vel, geometry_msgs::Twist& cmd_vel);
 			
 			void setBiasingPath(std::vector<geometry_msgs::PoseStamped>* path_to_follow);
+
+			void setPathPredictionBiasing();
+
 			
 			std::vector<geometry_msgs::PoseStamped> simple_path_smoothing(std::vector<geometry_msgs::PoseStamped>* path);
 			
+
 			//Planning service
 			bool makePlanService(upo_rrt_planners::MakePlan::Request &req, upo_rrt_planners::MakePlan::Response &res);
+			//Planning service over costmap
+			bool makePlanCostmapService(upo_rrt_planners::MakePlanCostmap::Request &req, upo_rrt_planners::MakePlanCostmap::Response &res);
 			
 			
-			//std::vector<float> get_features_count(geometry_msgs::PoseStamped* goal, std::vector<geometry_msgs::PoseStamped>* path, upo_msgs::PersonPoseArrayUPO* people);
 			
-			std::vector<float> get_feature_counts(geometry_msgs::PoseStamped* goal, std::vector<geometry_msgs::PoseStamped>* path); 
-			std::vector<float> get_feature_counts(geometry_msgs::PoseStamped* goal, std::vector<geometry_msgs::PoseStamped>* path, std::vector<upo_msgs::PersonPoseArrayUPO>* people);
-			
-			float get_path_cost(geometry_msgs::PoseStamped* goal, std::vector<geometry_msgs::PoseStamped>* path, std::vector<upo_msgs::PersonPoseArrayUPO>* people);
+			//float get_path_cost(std::vector<geometry_msgs::PoseStamped>* path);
 			float get_path_cost();
 			
 			
@@ -126,7 +119,7 @@ namespace upo_RRT_ros {
 			};
 			
 			
-			bool set_approaching_gmm_sampling(float orientation, int num_samp, geometry_msgs::PoseStamped person);
+			//bool set_approaching_gmm_sampling(float orientation, int num_samp, geometry_msgs::PoseStamped person);
 			
 			
 			inline float normalizeAngle(float val, float min, float max) {
@@ -142,10 +135,10 @@ namespace upo_RRT_ros {
 
 		private:
 
-			boost::recursive_mutex configuration_mutex_;
-			//boost::mutex reconf_mutex_;
-			dynamic_reconfigure::Server<upo_rrt_planners::RRTRosWrapperConfig> *dsrv_;
-			void reconfigureCB(upo_rrt_planners::RRTRosWrapperConfig &config, uint32_t level);
+			//boost::recursive_mutex configuration_mutex_;
+			////boost::mutex reconf_mutex_;
+			//dynamic_reconfigure::Server<upo_rrt_planners::RRTRosWrapperConfig> *dsrv_;
+			//void reconfigureCB(upo_rrt_planners::RRTRosWrapperConfig &config, uint32_t level);
 
 			//ROS
 			//costmap_2d::Costmap2DROS* 		global_costmap_ros_; 
@@ -166,10 +159,15 @@ namespace upo_RRT_ros {
 			upo_RRT::Planner*				rrt_planner_;
 			float							solve_time_;
 			std::vector<geometry_msgs::PoseStamped> rrt_plan_;
-			upo_RRT_ros::ValidityChecker* 	checker_;
+			upo_RRT_ros::ValidityChecker3* 	checker_;
 			int 							rrt_planner_type_;
+
+			//Services
 			ros::ServiceServer 				plan_srv_;
-			
+			ros::ServiceServer 				planCostmap_srv_;
+
+			//Subscription to the costmap
+			ros::Subscriber					costmap_sub_;
 			
 			int 							motionCostType_;
 			
@@ -201,7 +199,7 @@ namespace upo_RRT_ros {
 			bool							path_smoothing_;
 			int								smoothing_samples_;
 			
-			//GMM biasing
+			/*//GMM biasing
 			bool							gmm_biasing_;
 			float 							gmm_bias_;
 			ros::ServiceClient 				gmm_samples_client_;
@@ -209,13 +207,11 @@ namespace upo_RRT_ros {
 			std::vector< std::pair<float,float> > gmm_samples_;
 			geometry_msgs::PoseStamped		gmm_person_;
 			float 							gmm_person_ori_;
-			std::mutex 						gmm_mutex_;
+			boost::mutex 					gmm_mutex_;
 			ros::Publisher					gmm_costmap_pub_;
-			
+			*/
 			
 			//-------------------------------------------
-			//bool							use_uva_lib_;
-			bool 							use_fc_costmap_;
 			float 							goal_bias_;
 			float 							max_range_;
 			bool 							rrtstar_use_k_nearest_;
@@ -226,6 +222,10 @@ namespace upo_RRT_ros {
 			bool							full_path_biasing_;
 			float 							full_path_stddev_;
 			float 							full_path_bias_;
+
+			bool							prediction_biasing_;
+			float							prediction_stddev_;
+  			float							prediction_bias_;         
 			
 			int 							kino_minControlSteps_;
 			int 							kino_maxControlSteps_;

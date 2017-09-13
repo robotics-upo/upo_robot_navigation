@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(upo_navigation)
+
+## Add support for C++11, supported in ROS Kinetic and newer
+add_definitions(-std=c++11)
+
 set (CMAKE_BUILD_TYPE Debug)
 find_package(catkin REQUIRED
     COMPONENTS
@@ -119,6 +123,7 @@ target_link_libraries(upo_navigation
     ${Eigen_LIBRARIES}
 	${OpenCV_LIBRARIES}
 	upo_rrt_planners_ros
+	upo_rrt_planners3_ros
 	upo_social_layer
     )
 

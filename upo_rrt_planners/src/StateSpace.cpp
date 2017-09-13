@@ -224,6 +224,7 @@ bool upo_RRT::StateSpace::isSimpleGoalToleranceSatisfied(State* st, float &dist)
 	//float dx = goal->getX() - st->getX();
 	//float dy = goal->getY() - st->getY();
 	//dist = sqrt(pow(dx,2) + pow(dy,2));
+	//printf("StateSpace. px: %.2f, py: %.2f, gx: %.2f, gy:%.2f\n", st->getX(), st->getY(), goal_->getX(), goal_->getY());
 	dist = euclideanDistance(goal_, st);
 	if(dist <= goal_xy_tolerance_)
 		return true;
