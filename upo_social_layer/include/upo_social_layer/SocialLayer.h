@@ -13,7 +13,8 @@
 #include <upo_social_layer/SocialPluginConfig.h>
 
 //Boost
-#include <boost/thread.hpp>  // Mutex 
+//#include <boost/thread.hpp>  // Mutex 
+#include <mutex>
 
 //Services
 #include <upo_social_layer/Features.h>
@@ -71,7 +72,7 @@ namespace social_layer
 
 		  //Weights to balance the costs
 		  std::vector<float> 			w_;
-		  boost::mutex 					wmutex_;
+		  mutex 						wmutex_;
 
 		  //Services
 		  ros::ServiceServer feat_srv;

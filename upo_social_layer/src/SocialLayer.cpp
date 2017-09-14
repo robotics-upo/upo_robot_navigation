@@ -55,10 +55,11 @@ void SocialLayer::onInitialize()
 	nh.param("size_x", size_x_, 10.0);
 	nh.param("size_y", size_y_, 10.0);
 	nh.param("only_proxemics", only_proxemics_, false);
+	float res = 0.05;
 
 	//robot_frame_ = "base_link";
 	global_frame_ = layered_costmap_->getGlobalFrameID();
-	navfeatures_ = new features::NavFeatures(tf_listener_, size_x_, size_y_); 
+	navfeatures_ = new features::NavFeatures(tf_listener_, size_x_, size_y_, res); 
 	rolling_window_ = layered_costmap_->isRolling();
 
   	matchSize();
