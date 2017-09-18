@@ -169,23 +169,23 @@ target_link_libraries(rrt_ros_wrapper_node
 
 
 # upo_rrt_planners2 (ROS wrapper with use an external costmap)
-#add_executable(rrt_ros_wrapper2_node
-#	src/ros/ValidityChecker2.cpp
-#	src/ros/RRT_ros_wrapper2.cpp
-#	src/ros/ros_wrapper2_node.cpp
-#)
+add_executable(rrt_ros_wrapper2_node
+	src/ros/ValidityChecker2.cpp
+	src/ros/RRT_ros_wrapper2.cpp
+	src/ros/ros_wrapper2_node.cpp
+)
 
-#add_dependencies(rrt_ros_wrapper2_node upo_rrt_planners_gencpp)
-#add_dependencies(rrt_ros_wrapper2_node upo_msgs_gencpp)
-#add_dependencies(rrt_ros_wrapper2_node geometry_msgs_gencpp)
-#add_dependencies(rrt_ros_wrapper2_node nav_msgs_gencpp)
+add_dependencies(rrt_ros_wrapper2_node upo_rrt_planners_gencpp)
+add_dependencies(rrt_ros_wrapper2_node upo_msgs_gencpp)
+add_dependencies(rrt_ros_wrapper2_node geometry_msgs_gencpp)
+add_dependencies(rrt_ros_wrapper2_node nav_msgs_gencpp)
 
-#target_link_libraries(rrt_ros_wrapper2_node
-#    ${catkin_LIBRARIES}
-#    ${Boost_LIBRARIES}
-#    ${Eigen_LIBRARIES}
-#	upo_rrt_planners
-#)
+target_link_libraries(rrt_ros_wrapper2_node
+    ${catkin_LIBRARIES}
+    ${Boost_LIBRARIES}
+    ${Eigen_LIBRARIES}
+	upo_rrt_planners
+)
 
 
 

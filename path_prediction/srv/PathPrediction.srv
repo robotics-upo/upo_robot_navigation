@@ -1,0 +1,7 @@
+int32[] input 
+int16 input_rows
+int16 input_cols
+---
+float32[] prediction
+uint8 pred_rows
+uint8 pred_cols

@@ -9,7 +9,9 @@ This metapackage contains the following packages:
 
 * **upo_rrt_planners**. C++ library of some RRT planners and a wrapper to be used in ROS.
 
-* **navigation_features**. Package that calculates the feature functions employed by the cost function of the RRT*.
+* **navigation_features**. Package that calculates the feature functions employed by the cost function of the RRT*. This cost function is considered as weighted linear combination of features. 
+
+* **path_prediction**. Package, written in Python, used in navigation with path planning prediction. The predicition is done by a Fully Convolutional Network trained in Keras. The package provide a ROS service that receives a flattened input grid, and return the respective path planning predicition. 
 
 * **upo_local_planner**. A local controller that sends the velocity commands to the robot in order to follow a path. It is based on a pure pursuit controller that has been extended to perform collision detection based on DWA. The collision detection is perfomed based on laser range subscription (it does not use the ROS local costmap). It follows the structure of the standard base local planner of ROS.
 
