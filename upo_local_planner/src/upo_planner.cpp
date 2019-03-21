@@ -740,7 +740,7 @@ namespace upo_local_planner{
 				if(valid1 || valid2)
 				{
 					cmd_vel.linear.x = best_vels.vel_x;
-					cmd_vel.linear.y = best_vels.vel_x;
+					cmd_vel.linear.y = best_vels.vel_y;
 					cmd_vel.linear.z = 0.0;
 					cmd_vel.angular.x = 0.0;
 					cmd_vel.angular.y = 0.0;
